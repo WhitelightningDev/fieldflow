@@ -6,43 +6,45 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b-2 border-border">
+    <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary flex items-center justify-center">
+          <a href="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 gradient-bg rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 group-hover:shadow-lg">
               <span className="text-primary-foreground font-bold text-lg">F</span>
             </div>
-            <span className="font-bold text-xl tracking-tight">FieldFlow</span>
+            <span className="font-bold text-xl tracking-tight">
+              Field<span className="gradient-text">Flow</span>
+            </span>
           </a>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium hover:underline underline-offset-4">
+            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Features
             </a>
-            <a href="#pricing" className="text-sm font-medium hover:underline underline-offset-4">
+            <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </a>
-            <a href="#addons" className="text-sm font-medium hover:underline underline-offset-4">
+            <a href="#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Add-ons
             </a>
           </nav>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="outline" size="sm">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               Log in
             </Button>
-            <Button size="sm">
+            <Button size="sm" className="gradient-bg hover:opacity-90 transition-opacity shadow-glow">
               Start Free Trial
             </Button>
           </div>
 
           {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -51,22 +53,22 @@ const Header = () => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t-2 border-border py-4">
+          <div className="md:hidden border-t border-border/50 py-4 animate-fade-in">
             <nav className="flex flex-col gap-4">
-              <a href="#features" className="text-sm font-medium hover:underline">
+              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">
                 Features
               </a>
-              <a href="#pricing" className="text-sm font-medium hover:underline">
+              <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">
                 Pricing
               </a>
-              <a href="#addons" className="text-sm font-medium hover:underline">
+              <a href="#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground">
                 Add-ons
               </a>
-              <div className="flex flex-col gap-2 pt-4 border-t-2 border-border">
-                <Button variant="outline" className="w-full">
+              <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
+                <Button variant="ghost" className="w-full justify-start">
                   Log in
                 </Button>
-                <Button className="w-full">
+                <Button className="w-full gradient-bg">
                   Start Free Trial
                 </Button>
               </div>
