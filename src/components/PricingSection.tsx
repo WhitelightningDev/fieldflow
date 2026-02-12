@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Check, Minus, Zap } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
@@ -169,7 +170,8 @@ const PricingSection = () => {
                   </div>
                 </div>
 
-                <Button 
+                <Button
+                  asChild
                   className={`w-full mb-6 ${
                     plan.popular 
                       ? "gradient-bg hover:opacity-90 shadow-glow" 
@@ -177,7 +179,7 @@ const PricingSection = () => {
                   }`}
                   variant={plan.popular ? "default" : "outline"}
                 >
-                  Start Free Trial
+                  <Link to="/company-signup">Start Free Trial</Link>
                 </Button>
 
                 <ul className="space-y-3">

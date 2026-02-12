@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -10,14 +11,14 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group">
             <div className="w-9 h-9 gradient-bg rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 group-hover:shadow-lg">
               <span className="text-primary-foreground font-bold text-lg">F</span>
             </div>
             <span className="font-bold text-xl tracking-tight">
               Field<span className="gradient-text">Flow</span>
             </span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
@@ -34,11 +35,11 @@ const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              Log in
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/login">Log in</Link>
             </Button>
-            <Button size="sm" className="gradient-bg hover:opacity-90 transition-opacity shadow-glow">
-              Start Free Trial
+            <Button asChild size="sm" className="gradient-bg hover:opacity-90 transition-opacity shadow-glow">
+              <Link to="/company-signup">Start Free Trial</Link>
             </Button>
           </div>
 
@@ -65,11 +66,11 @@ const Header = () => {
                 Add-ons
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                <Button variant="ghost" className="w-full justify-start">
-                  Log in
+                <Button asChild variant="ghost" className="w-full justify-start">
+                  <Link to="/login">Log in</Link>
                 </Button>
-                <Button className="w-full gradient-bg">
-                  Start Free Trial
+                <Button asChild className="w-full gradient-bg">
+                  <Link to="/company-signup">Start Free Trial</Link>
                 </Button>
               </div>
             </nav>

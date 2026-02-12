@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   const benefits = [
@@ -38,12 +39,14 @@ const HeroSection = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-fade-in-up opacity-0 stagger-3">
-              <Button size="lg" className="gradient-bg hover:opacity-90 shadow-glow hover:shadow-lg transition-all">
-                Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button asChild size="lg" className="gradient-bg hover:opacity-90 shadow-glow hover:shadow-lg transition-all">
+                <Link to="/company-signup">
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-              <Button variant="outline" size="lg" className="border-border/50 hover:bg-secondary/50 backdrop-blur-sm">
-                View Demo
+              <Button asChild variant="outline" size="lg" className="border-border/50 hover:bg-secondary/50 backdrop-blur-sm">
+                <a href="#pricing">View Demo</a>
               </Button>
             </div>
 

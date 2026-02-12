@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CTASection = () => {
   return (
@@ -27,20 +28,24 @@ const CTASection = () => {
             Get up and running in minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
+            <Button
+              asChild
+              size="lg"
               variant="secondary"
               className="bg-background text-foreground hover:bg-background/90 shadow-xl"
             >
-              Start Free Trial
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <Link to="/company-signup">
+                Start Free Trial
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
-            <Button 
-              size="lg" 
+            <Button
+              asChild
+              size="lg"
               variant="outline"
               className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 backdrop-blur-sm"
             >
-              Schedule a Demo
+              <a href="#pricing">Schedule a Demo</a>
             </Button>
           </div>
         </div>
