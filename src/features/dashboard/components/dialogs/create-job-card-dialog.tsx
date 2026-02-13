@@ -9,12 +9,13 @@ import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { TRADE_JOB_CHECKLISTS } from "@/features/dashboard/constants/job-checklists";
 import { fromDatetimeLocal } from "@/features/dashboard/lib/datetime";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import type { JobCardStatus } from "@/features/dashboard/types/job-card";
+import type { Database } from "@/integrations/supabase/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
 const STATUSES: JobCardStatus[] = ["new", "scheduled", "in-progress", "completed", "invoiced", "cancelled"];
 const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 
@@ -66,20 +67,20 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
     form.setValue("checklist", checklist, { shouldDirty: true });
   }, [form, open, tradeId]);
 
-  const submit = form.handleSubmit((values) => {
-    actions.addJobCard({
-      tradeId: values.tradeId,
+  const submit = form.handleSubmit(async (values) => {
+    await actions.addJobCard({
+      trade_id: values.tradeId,
       title: values.title,
-      description: values.description || undefined,
+      description: values.description || null,
       status: values.status,
-      customerId: values.customerId,
-      technicianId: values.technicianId || undefined,
-      scheduledAt: values.scheduledAt ? fromDatetimeLocal(values.scheduledAt) : undefined,
+      customer_id: values.customerId,
+      technician_id: values.technicianId || null,
+      scheduled_at: values.scheduledAt ? fromDatetimeLocal(values.scheduledAt) ?? null : null,
       checklist: (values.checklist || "")
         .split("\n")
         .map((s) => s.trim())
         .filter(Boolean),
-      notes: values.notes || undefined,
+      notes: values.notes || null,
     });
     toast({ title: "Job card created" });
     setOpen(false);

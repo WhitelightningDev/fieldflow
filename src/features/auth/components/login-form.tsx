@@ -2,10 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -16,18 +17,25 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
+  const navigate = useNavigate();
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
     mode: "onTouched",
   });
 
-  const submit = React.useMemo(() => {
-    return form.handleSubmit(async () => {
-      await new Promise((r) => setTimeout(r, 250));
-      toast({ title: "Logged in (demo)", description: "Hook this up to your auth provider next." });
+  const submit = form.handleSubmit(async (values) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
     });
-  }, [form]);
+    if (error) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Logged in successfully" });
+    navigate("/dashboard");
+  });
 
   return (
     <div className="space-y-6">
@@ -59,9 +67,6 @@ export default function LoginForm() {
               <FormItem>
                 <div className="flex items-center justify-between">
                   <FormLabel>Password</FormLabel>
-                  <button type="button" className="text-xs text-primary hover:underline">
-                    Forgot password?
-                  </button>
                 </div>
                 <FormControl>
                   <Input type="password" autoComplete="current-password" {...field} />
@@ -87,4 +92,3 @@ export default function LoginForm() {
     </div>
   );
 }
-

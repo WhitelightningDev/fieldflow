@@ -30,13 +30,13 @@ export default function CreateCustomerDialog() {
     mode: "onTouched",
   });
 
-  const submit = form.handleSubmit((values) => {
-    actions.addCustomer({
+  const submit = form.handleSubmit(async (values) => {
+    await actions.addCustomer({
       name: values.name,
-      phone: values.phone || undefined,
-      email: values.email || undefined,
-      address: values.address || undefined,
-      notes: values.notes || undefined,
+      phone: values.phone || null,
+      email: values.email || null,
+      address: values.address || null,
+      notes: values.notes || null,
     });
     toast({ title: "Customer added" });
     setOpen(false);
@@ -138,4 +138,3 @@ export default function CreateCustomerDialog() {
     </Dialog>
   );
 }
-

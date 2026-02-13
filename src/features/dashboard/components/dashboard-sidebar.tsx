@@ -12,10 +12,11 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Briefcase, Boxes, LayoutDashboard, LogOut, Users, Wrench } from "lucide-react";
 import * as React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -27,6 +28,8 @@ const navItems = [
 
 export default function DashboardSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const isActive = React.useCallback(
     (to: string) => {
       if (to === "/dashboard") return location.pathname === "/dashboard";
@@ -34,6 +37,11 @@ export default function DashboardSidebar() {
     },
     [location.pathname],
   );
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-sidebar-border">
@@ -71,14 +79,11 @@ export default function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <Button asChild variant="ghost" className="justify-start text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
-          <Link to="/" className="flex items-center gap-2">
-            <LogOut className="h-4 w-4" />
-            <span>Back to site</span>
-          </Link>
+        <Button variant="ghost" className="justify-start text-sidebar-foreground/80 hover:text-sidebar-accent-foreground" onClick={handleSignOut}>
+          <LogOut className="h-4 w-4 mr-2" />
+          <span>Sign out</span>
         </Button>
       </SidebarFooter>
     </Sidebar>
   );
 }
-

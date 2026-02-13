@@ -10,7 +10,7 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import { AlertTriangle, CalendarClock, PackageSearch } from "lucide-react";
 
 export default function DashboardHome() {
-  const { data } = useDashboardData();
+  const { data, loading } = useDashboardData();
   const { trade } = useTradeFilter();
   const selectors = useDashboardSelectors(data, trade);
   const { lowStock, expiringSoon } = useInventoryAlerts(selectors.inventoryItems);
@@ -20,6 +20,14 @@ export default function DashboardHome() {
 
   const tradeLabel =
     trade === "all" ? "All trades" : TRADES.find((t) => t.id === trade)?.name ?? "Trade";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,7 +91,7 @@ export default function DashboardHome() {
                     <div key={i.id} className="flex items-center justify-between gap-2">
                       <span className="truncate">{i.name}</span>
                       <Badge variant="outline">
-                        {i.quantityOnHand}/{i.reorderPoint} {i.unit}
+                        {i.quantity_on_hand}/{i.reorder_point} {i.unit}
                       </Badge>
                     </div>
                   ))}
@@ -137,4 +145,3 @@ export default function DashboardHome() {
     </div>
   );
 }
-

@@ -8,12 +8,13 @@ import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import type { TradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import type { InventoryUnit } from "@/features/dashboard/types/inventory";
+import type { Database } from "@/integrations/supabase/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+type InventoryUnit = Database["public"]["Enums"]["inventory_unit"];
 const units: InventoryUnit[] = ["each", "meter", "liter", "kg", "box"];
 const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 
@@ -59,17 +60,17 @@ export default function CreateInventoryItemDialog({ tradeFilter }: { tradeFilter
     form.setValue("tradeId", nextTradeId);
   }, [form, open, tradeFilter]);
 
-  const submit = form.handleSubmit((values) => {
-    actions.addInventoryItem({
-      tradeId: values.tradeId,
+  const submit = form.handleSubmit(async (values) => {
+    await actions.addInventoryItem({
+      trade_id: values.tradeId,
       name: values.name,
-      sku: values.sku || undefined,
+      sku: values.sku || null,
       unit: values.unit,
-      quantityOnHand: values.quantityOnHand,
-      reorderPoint: values.reorderPoint,
+      quantity_on_hand: values.quantityOnHand,
+      reorder_point: values.reorderPoint,
       perishable: values.perishable,
-      expiryDate: values.perishable && values.expiryDate ? new Date(values.expiryDate).toISOString() : undefined,
-      location: values.location || undefined,
+      expiry_date: values.perishable && values.expiryDate ? new Date(values.expiryDate).toISOString() : null,
+      location: values.location || null,
     });
     toast({ title: "Inventory item added" });
     setOpen(false);

@@ -12,7 +12,8 @@ import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import { AlertTriangle, Plus, Sparkles } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
+import { AlertTriangle, Plus } from "lucide-react";
 import * as React from "react";
 import { format } from "date-fns";
 
@@ -35,19 +36,6 @@ export default function Inventory() {
         subtitle="Track trade-specific stock (including perishables) and get low-stock warnings."
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (trade === "all") return;
-                actions.addInventoryTemplatesForTrade(trade);
-              }}
-              disabled={!canAddTemplates}
-              className="gap-2"
-            >
-              <Sparkles className="h-4 w-4" />
-              Add templates
-            </Button>
             <CreateInventoryItemDialog tradeFilter={trade} />
           </div>
         }
@@ -64,7 +52,7 @@ export default function Inventory() {
                   <div key={i.id} className="flex items-center justify-between gap-2">
                     <span className="truncate">{i.name}</span>
                     <Badge variant="outline">
-                      {i.quantityOnHand}/{i.reorderPoint} {i.unit}
+                      {i.quantity_on_hand}/{i.reorder_point} {i.unit}
                     </Badge>
                   </div>
                 ))}
@@ -79,7 +67,7 @@ export default function Inventory() {
                 {expiringSoon.slice(0, 6).map((i) => (
                   <div key={i.id} className="flex items-center justify-between gap-2">
                     <span className="truncate">{i.name}</span>
-                    <Badge variant="secondary">{i.expiryDate ? format(new Date(i.expiryDate), "PP") : "Perishable"}</Badge>
+                    <Badge variant="secondary">{i.expiry_date ? format(new Date(i.expiry_date), "PP") : "Perishable"}</Badge>
                   </div>
                 ))}
               </AlertDescription>
@@ -94,7 +82,7 @@ export default function Inventory() {
             <CardTitle className="text-base">Trade templates</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Select a specific trade in the top bar to add recommended inventory templates for that industry.
+            Select a specific trade in the top bar to view recommended inventory templates for that industry.
           </CardContent>
         </Card>
       ) : (
@@ -135,7 +123,7 @@ export default function Inventory() {
               </TableRow>
             ) : null}
             {selectors.inventoryItems.map((i) => {
-              const isLow = i.quantityOnHand <= i.reorderPoint;
+              const isLow = i.quantity_on_hand <= i.reorder_point;
               return (
                 <TableRow key={i.id}>
                   <TableCell>
@@ -146,16 +134,16 @@ export default function Inventory() {
                     <div className="text-xs text-muted-foreground">{i.sku ? `SKU: ${i.sku}` : "—"}</div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {TRADES.find((t) => t.id === i.tradeId)?.shortName ?? i.tradeId}
+                    {TRADES.find((t) => t.id === i.trade_id)?.shortName ?? i.trade_id}
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium">{i.quantityOnHand}</span>{" "}
+                    <span className="font-medium">{i.quantity_on_hand}</span>{" "}
                     <span className="text-sm text-muted-foreground">{i.unit}</span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{i.reorderPoint}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{i.reorder_point}</TableCell>
                   <TableCell>{i.perishable ? <Badge>Yes</Badge> : <Badge variant="outline">No</Badge>}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {i.expiryDate ? format(new Date(i.expiryDate), "PP") : "—"}
+                    {i.expiry_date ? format(new Date(i.expiry_date), "PP") : "—"}
                   </TableCell>
                   <TableCell>
                     <Button
@@ -182,4 +170,3 @@ export default function Inventory() {
     </div>
   );
 }
-

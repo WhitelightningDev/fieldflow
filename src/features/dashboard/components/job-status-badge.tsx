@@ -1,5 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import type { JobCardStatus } from "@/features/dashboard/types/job-card";
+import type { Database } from "@/integrations/supabase/types";
+
+type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
 
 const LABELS: Record<JobCardStatus, string> = {
   new: "New",
@@ -22,4 +24,3 @@ const VARIANTS: Record<JobCardStatus, "default" | "secondary" | "destructive" | 
 export default function JobStatusBadge({ status }: { status: JobCardStatus }) {
   return <Badge variant={VARIANTS[status]}>{LABELS[status]}</Badge>;
 }
-
