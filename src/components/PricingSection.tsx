@@ -3,12 +3,19 @@ import { Check, Minus, Zap } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+const ZAR = new Intl.NumberFormat("en-ZA", {
+  style: "currency",
+  currency: "ZAR",
+  maximumFractionDigits: 0,
+});
+
 const plans = [
   {
     name: "Starter",
     description: "For small teams getting started",
-    basePrice: 29,
-    technicianPrice: 15,
+    basePrice: 449,
+    includedTechnicians: 1,
+    technicianPrice: 149,
     features: [
       { name: "Company dashboard", included: true },
       { name: "Job scheduling", included: true },
@@ -27,8 +34,9 @@ const plans = [
   {
     name: "Pro",
     description: "For growing service companies",
-    basePrice: 79,
-    technicianPrice: 12,
+    basePrice: 899,
+    includedTechnicians: 1,
+    technicianPrice: 129,
     features: [
       { name: "Everything in Starter", included: true },
       { name: "Advanced reporting", included: true },
@@ -47,8 +55,9 @@ const plans = [
   {
     name: "Business",
     description: "For established operations",
-    basePrice: 199,
-    technicianPrice: 9,
+    basePrice: 1799,
+    includedTechnicians: 1,
+    technicianPrice: 99,
     features: [
       { name: "Everything in Pro", included: true },
       { name: "AI job summaries", included: true },
@@ -71,6 +80,7 @@ const PricingSection = () => {
   const [technicianCount, setTechnicianCount] = useState(3);
 
   const discount = billingCycle === "annual" ? 0.8 : 1;
+  const priceSuffix = billingCycle === "annual" ? "/month (billed annually)" : "/month";
 
   return (
     <section id="pricing" className="py-16 md:py-24 relative">
@@ -86,7 +96,7 @@ const PricingSection = () => {
             Simple, <span className="gradient-text">predictable</span> pricing
           </h2>
           <p className="text-muted-foreground text-lg">
-            Base subscription + per-technician billing. Only pay for active seats.
+            Base subscription (includes 1 technician) + per-technician billing. Only pay for active seats.
           </p>
         </div>
 
@@ -137,9 +147,11 @@ const PricingSection = () => {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan, index) => {
+          {plans.map((plan) => {
             const baseMonthly = plan.basePrice * discount;
-            const techMonthly = plan.technicianPrice * discount * technicianCount;
+            const includedTechnicians = plan.includedTechnicians ?? 0;
+            const billableTechnicians = Math.max(0, technicianCount - includedTechnicians);
+            const techMonthly = plan.technicianPrice * discount * billableTechnicians;
             const total = baseMonthly + techMonthly;
 
             return (
@@ -162,13 +174,15 @@ const PricingSection = () => {
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold">${Math.round(total)}</span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    ${Math.round(baseMonthly)} base + ${Math.round(plan.technicianPrice * discount)}/technician
-                  </div>
-                </div>
+                    <span className="text-4xl font-bold">{ZAR.format(Math.round(total))}</span>
+                    <span className="text-muted-foreground">{priceSuffix}</span>
+	                  </div>
+	                  <div className="text-sm text-muted-foreground mt-1">
+	                    {ZAR.format(Math.round(baseMonthly))} base (includes {includedTechnicians} technician
+	                    {includedTechnicians === 1 ? "" : "s"}) +{" "}
+	                    {ZAR.format(Math.round(plan.technicianPrice * discount))}/additional technician
+	                  </div>
+	                </div>
 
                 <Button
                   asChild
@@ -202,7 +216,7 @@ const PricingSection = () => {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
-          All prices in USD. Taxes may apply. Admin and office users are free—only technicians are billed.
+          All prices in ZAR (R). Excludes VAT. Base includes 1 technician; admin and office users are free—only active technicians are billed.
         </p>
       </div>
     </section>
