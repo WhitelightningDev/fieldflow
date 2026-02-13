@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import type { InventoryItem } from "@/features/dashboard/types/inventory";
+import type { Tables } from "@/integrations/supabase/types";
 import * as React from "react";
+
+type InventoryItem = Tables<"inventory_items">;
 
 type Props = {
   item: InventoryItem | null;
@@ -28,7 +30,7 @@ export default function AdjustInventoryDialog({ item, open, onOpenChange }: Prop
         <DialogHeader>
           <DialogTitle>Adjust stock</DialogTitle>
           <DialogDescription>
-            {item.name} — currently {item.quantityOnHand} {item.unit}
+            {item.name} — currently {item.quantity_on_hand} {item.unit}
           </DialogDescription>
         </DialogHeader>
 
@@ -46,8 +48,8 @@ export default function AdjustInventoryDialog({ item, open, onOpenChange }: Prop
 
         <DialogFooter>
           <Button
-            onClick={() => {
-              actions.adjustInventory(item.id, delta);
+            onClick={async () => {
+              await actions.adjustInventory(item.id, delta);
               toast({ title: "Stock updated" });
               onOpenChange(false);
             }}
@@ -61,4 +63,3 @@ export default function AdjustInventoryDialog({ item, open, onOpenChange }: Prop
     </Dialog>
   );
 }
-

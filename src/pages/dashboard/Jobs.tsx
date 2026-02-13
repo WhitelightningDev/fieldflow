@@ -7,9 +7,10 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import type { JobCardStatus } from "@/features/dashboard/types/job-card";
+import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 
+type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
 const STATUSES: JobCardStatus[] = ["new", "scheduled", "in-progress", "completed", "invoiced", "cancelled"];
 
 export default function Jobs() {
@@ -49,8 +50,8 @@ export default function Jobs() {
               </TableRow>
             ) : null}
             {selectors.jobCards.map((job) => {
-              const customer = selectors.customersById.get(job.customerId);
-              const technician = job.technicianId ? selectors.techniciansById.get(job.technicianId) : undefined;
+              const customer = selectors.customersById.get(job.customer_id ?? "");
+              const technician = job.technician_id ? selectors.techniciansById.get(job.technician_id) : undefined;
               return (
                 <TableRow key={job.id}>
                   <TableCell>
@@ -61,12 +62,12 @@ export default function Jobs() {
                     <JobStatusBadge status={job.status} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {TRADES.find((t) => t.id === job.tradeId)?.shortName ?? job.tradeId}
+                    {TRADES.find((t) => t.id === job.trade_id)?.shortName ?? job.trade_id}
                   </TableCell>
                   <TableCell>{customer?.name ?? "—"}</TableCell>
                   <TableCell>{technician?.name ?? "Unassigned"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {job.scheduledAt ? format(new Date(job.scheduledAt), "PPp") : "—"}
+                    {job.scheduled_at ? format(new Date(job.scheduled_at), "PPp") : "—"}
                   </TableCell>
                   <TableCell>
                     <Select value={job.status} onValueChange={(v) => actions.setJobCardStatus(job.id, v as JobCardStatus)}>
@@ -91,4 +92,3 @@ export default function Jobs() {
     </div>
   );
 }
-

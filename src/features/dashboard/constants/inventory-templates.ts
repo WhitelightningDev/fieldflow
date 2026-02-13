@@ -1,7 +1,16 @@
 import type { TradeId } from "@/features/company-signup/content/trades";
-import type { InventoryItem, InventoryUnit } from "@/features/dashboard/types/inventory";
+import type { Database } from "@/integrations/supabase/types";
 
-type InventoryTemplate = Omit<InventoryItem, "id" | "createdAt" | "quantityOnHand"> & {
+type InventoryUnit = Database["public"]["Enums"]["inventory_unit"];
+
+type InventoryTemplate = {
+  tradeId: TradeId;
+  name: string;
+  unit: InventoryUnit;
+  sku?: string;
+  location?: string;
+  reorderPoint: number;
+  perishable: boolean;
   defaultQuantityOnHand: number;
 };
 
@@ -58,4 +67,3 @@ export const INVENTORY_TEMPLATES_BY_TRADE: Record<TradeId, InventoryTemplate[]> 
     template({ tradeId: "appliance-repair", name: "Cleaning/descaling solution", unit: "liter", reorderPoint: 6, perishable: true }),
   ],
 };
-

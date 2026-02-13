@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -24,18 +25,30 @@ export default function SignupForm() {
     mode: "onTouched",
   });
 
-  const submit = React.useMemo(() => {
-    return form.handleSubmit(async () => {
-      await new Promise((r) => setTimeout(r, 300));
-      toast({ title: "Account created (demo)", description: "Next: confirm your email and join your team." });
+  const submit = form.handleSubmit(async (values) => {
+    const { error } = await supabase.auth.signUp({
+      email: values.email,
+      password: values.password,
+      options: {
+        data: { full_name: values.name },
+        emailRedirectTo: window.location.origin,
+      },
     });
-  }, [form]);
+    if (error) {
+      toast({ title: "Signup failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Account created",
+      description: "Check your email to confirm your account before signing in.",
+    });
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <div className="text-2xl font-bold">Create your account</div>
-        <div className="text-sm text-muted-foreground">Join your team’s workspace.</div>
+        <div className="text-sm text-muted-foreground">Join your team's workspace.</div>
       </div>
 
       <Form {...form}>
@@ -112,4 +125,3 @@ export default function SignupForm() {
     </div>
   );
 }
-

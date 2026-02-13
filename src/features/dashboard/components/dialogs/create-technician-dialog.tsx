@@ -33,11 +33,11 @@ export default function CreateTechnicianDialog() {
     mode: "onTouched",
   });
 
-  const submit = form.handleSubmit((values) => {
-    actions.addTechnician({
+  const submit = form.handleSubmit(async (values) => {
+    await actions.addTechnician({
       name: values.name,
-      phone: values.phone || undefined,
-      email: values.email || undefined,
+      phone: values.phone || null,
+      email: values.email || null,
       active: values.active,
       trades: values.trades,
     });
