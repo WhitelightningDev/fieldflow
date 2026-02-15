@@ -53,7 +53,7 @@ export default function AuthCallback() {
 
         if (data.session) {
           // Best-effort: ensure company exists if signup metadata included it.
-          await supabase.rpc("bootstrap_company_from_user_metadata");
+          await supabase.rpc("bootstrap_company_from_user_metadata" as any);
           navigate("/dashboard", { replace: true });
         } else {
           navigate("/login", { replace: true });

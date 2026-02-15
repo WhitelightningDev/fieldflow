@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const shouldBootstrap = !bootstrapAttemptedRef.current.has(userId) && (!data || !data.company_id);
     if (shouldBootstrap) {
       bootstrapAttemptedRef.current.add(userId);
-      const { data: companyId, error } = await supabase.rpc("bootstrap_company_from_user_metadata");
+      const { data: companyId, error } = await supabase.rpc("bootstrap_company_from_user_metadata" as any);
       if (!error && companyId) {
         const { data: updated } = await supabase
           .from("profiles")
