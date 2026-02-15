@@ -75,17 +75,37 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return;
     }
     setLoading(true);
-    const [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
-      supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
-      supabase.from("customers").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("technicians").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("job_cards").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("inventory_items").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("sites").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("teams").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
-      supabase.from("team_members").select("*").order("created_at", { ascending: false }),
-      supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
-    ]);
+    let companyRes: any;
+    let customersRes: any;
+    let techRes: any;
+    let jobsRes: any;
+    let invRes: any;
+    let sitesRes: any;
+    let teamsRes: any;
+    let teamMembersRes: any;
+    let assignmentsRes: any;
+
+    try {
+      [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
+        supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
+        supabase.from("customers").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("technicians").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("job_cards").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("inventory_items").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("sites").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("teams").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("team_members").select("*").order("created_at", { ascending: false }),
+        supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
+      ]);
+    } catch (e: any) {
+      toast({
+        title: "Dashboard data unavailable",
+        description: e?.message ?? "Network error while fetching dashboard data.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     const results = [
       { name: "companies", res: companyRes },

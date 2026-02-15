@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
+import { withTimeout } from "@/lib/with-timeout";
 
 type AuthContextValue = {
   session: Session | null;
@@ -103,32 +104,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
-        setSession(newSession);
-        if (newSession?.user) {
-          await fetchProfile(newSession.user.id);
-        } else {
-          setProfile(null);
+        try {
+          setSession(newSession);
+          if (newSession?.user) {
+            await fetchProfile(newSession.user.id);
+          } else {
+            setProfile(null);
+          }
+        } catch (e) {
+          console.error("Auth state change error", e);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s?.user) {
-        fetchProfile(s.user.id).then(() => setLoading(false));
-      } else {
+    supabase.auth.getSession()
+      .then(({ data: { session: s } }) => {
+        setSession(s);
+        if (s?.user) {
+          fetchProfile(s.user.id).then(() => setLoading(false)).catch(() => setLoading(false));
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        console.error("getSession error", e);
         setLoading(false);
-      }
-    });
+      });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
   const signOut = React.useCallback(async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setProfile(null);
+    try {
+      await withTimeout(supabase.auth.signOut({ scope: "local" }), 8000, "Sign out timed out.");
+    } finally {
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
+    }
   }, []);
 
   const refreshProfile = React.useCallback(async () => {

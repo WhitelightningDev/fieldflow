@@ -3,6 +3,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/with-timeout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -25,16 +26,24 @@ export default function LoginForm() {
   });
 
   const submit = form.handleSubmit(async (values) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
-    if (error) {
-      toastError("Login failed", error.message);
-      return;
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email: values.email,
+          password: values.password,
+        }),
+        15000,
+        "Sign-in timed out. Check your connection and try again.",
+      );
+      if (error) {
+        toastError("Login failed", error.message);
+        return;
+      }
+      toastSuccess("Logged in successfully");
+      navigate("/dashboard");
+    } catch (e: any) {
+      toastError("Login failed", e?.message ?? "Network error");
     }
-    toastSuccess("Logged in successfully");
-    navigate("/dashboard");
   });
 
   return (

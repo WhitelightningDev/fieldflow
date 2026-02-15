@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { withTimeout } from "@/lib/with-timeout";
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -32,28 +33,28 @@ export default function AuthCallback() {
         }
 
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } = await withTimeout(supabase.auth.exchangeCodeForSession(code), 15000, "Auth exchange timed out.");
           if (exchangeError) throw exchangeError;
         } else if (tokenHash && type) {
-          const { error: verifyError } = await supabase.auth.verifyOtp({
+          const { error: verifyError } = await withTimeout(supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: type as any,
-          });
+          }), 15000, "OTP verification timed out.");
           if (verifyError) throw verifyError;
         } else if (accessToken && refreshToken) {
-          const { error: sessionError } = await supabase.auth.setSession({
+          const { error: sessionError } = await withTimeout(supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
-          });
+          }), 15000, "Session setup timed out.");
           if (sessionError) throw sessionError;
         }
 
-        const { data } = await supabase.auth.getSession();
+        const { data } = await withTimeout(supabase.auth.getSession(), 15000, "Session check timed out.");
         if (cancelled) return;
 
         if (data.session) {
           // Best-effort: ensure company exists if signup metadata included it.
-          await supabase.rpc("bootstrap_company_from_user_metadata" as any);
+          await withTimeout(supabase.rpc("bootstrap_company_from_user_metadata" as any), 15000, "Company bootstrap timed out.");
           navigate("/dashboard", { replace: true });
         } else {
           navigate("/login", { replace: true });
