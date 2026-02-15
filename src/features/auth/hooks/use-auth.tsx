@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { clearSupabaseAuthStorage } from "@/integrations/supabase/clear-auth";
 import type { Session, User } from "@supabase/supabase-js";
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
@@ -119,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    supabase.auth.getSession()
+    withTimeout(supabase.auth.getSession(), 8000, "Initial session check timed out.")
       .then(({ data: { session: s } }) => {
         setSession(s);
         if (s?.user) {
@@ -130,6 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((e) => {
         console.error("getSession error", e);
+        clearSupabaseAuthStorage();
+        setSession(null);
+        setProfile(null);
         setLoading(false);
       });
 
@@ -138,7 +142,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = React.useCallback(async () => {
     try {
-      await withTimeout(supabase.auth.signOut({ scope: "local" }), 8000, "Sign out timed out.");
+      // Try to revoke server-side refresh token, but never block UI on it.
+      try {
+        await withTimeout(supabase.auth.signOut(), 8000, "Remote sign out timed out.");
+      } catch {}
+      try {
+        await withTimeout(supabase.auth.signOut({ scope: "local" }), 8000, "Local sign out timed out.");
+      } catch {}
+      clearSupabaseAuthStorage();
+      // If the URL still contains auth hash params, clear them to prevent auto re-auth.
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     } finally {
       setSession(null);
       setProfile(null);
