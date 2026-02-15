@@ -12,8 +12,10 @@ type Site = Tables<"sites">;
 type Team = Tables<"teams">;
 type TeamMember = Tables<"team_members">;
 type SiteTeamAssignment = Tables<"site_team_assignments">;
+type Company = Tables<"companies">;
 
 export type DashboardData = {
+  company: Company | null;
   customers: Customer[];
   technicians: Technician[];
   jobCards: JobCard[];
@@ -54,6 +56,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const companyId = profile?.company_id;
 
   const [data, setData] = React.useState<DashboardData>({
+    company: null,
     customers: [],
     technicians: [],
     jobCards: [],
@@ -71,7 +74,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return;
     }
     setLoading(true);
-    const [customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
+    const [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
+      supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
       supabase.from("customers").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
       supabase.from("technicians").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
       supabase.from("job_cards").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
@@ -82,6 +86,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
     ]);
     setData({
+      company: companyRes.data ?? null,
       customers: customersRes.data ?? [],
       technicians: techRes.data ?? [],
       jobCards: jobsRes.data ?? [],

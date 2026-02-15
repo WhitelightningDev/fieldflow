@@ -32,11 +32,23 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function CreateInventoryItemDialog({ tradeFilter }: { tradeFilter: TradeFilter }) {
+export default function CreateInventoryItemDialog({
+  tradeFilter,
+  allowedTradeIds,
+}: {
+  tradeFilter: TradeFilter;
+  allowedTradeIds?: readonly TradeId[] | null;
+}) {
   const { actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
 
-  const defaultTradeId: TradeId = tradeFilter === "all" ? TRADES[0].id : tradeFilter;
+  const tradesForSelect = React.useMemo(() => {
+    if (!allowedTradeIds || allowedTradeIds.length === 0) return TRADES;
+    return TRADES.filter((t) => allowedTradeIds.includes(t.id));
+  }, [allowedTradeIds]);
+
+  const lockedTradeId = allowedTradeIds && allowedTradeIds.length === 1 ? allowedTradeIds[0] : null;
+  const defaultTradeId: TradeId = lockedTradeId ?? (tradeFilter === "all" ? TRADES[0].id : tradeFilter);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -56,9 +68,9 @@ export default function CreateInventoryItemDialog({ tradeFilter }: { tradeFilter
 
   React.useEffect(() => {
     if (!open) return;
-    const nextTradeId: TradeId = tradeFilter === "all" ? TRADES[0].id : tradeFilter;
+    const nextTradeId: TradeId = lockedTradeId ?? (tradeFilter === "all" ? TRADES[0].id : tradeFilter);
     form.setValue("tradeId", nextTradeId);
-  }, [form, open, tradeFilter]);
+  }, [form, lockedTradeId, open, tradeFilter]);
 
   const submit = form.handleSubmit(async (values) => {
     await actions.addInventoryItem({
@@ -98,20 +110,26 @@ export default function CreateInventoryItemDialog({ tradeFilter }: { tradeFilter
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Trade</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select trade" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {TRADES.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {lockedTradeId ? (
+                    <div className="h-10 px-3 rounded-md border flex items-center text-sm text-muted-foreground">
+                      {TRADES.find((t) => t.id === lockedTradeId)?.name ?? lockedTradeId}
+                    </div>
+                  ) : (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select trade" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {tradesForSelect.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

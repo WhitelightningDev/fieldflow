@@ -13,25 +13,38 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { cn } from "@/lib/utils";
-import { Briefcase, Boxes, Building2, LayoutDashboard, LogOut, Users, Users2, Wrench } from "lucide-react";
+import { Briefcase, Boxes, Building2, LayoutDashboard, LogOut, Sun, Users, Users2, Wrench } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
-const navItems = [
-  { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { to: "/dashboard/jobs", label: "Job cards", icon: Briefcase },
-  { to: "/dashboard/sites", label: "Sites", icon: Building2 },
-  { to: "/dashboard/customers", label: "Customers", icon: Users },
-  { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
-  { to: "/dashboard/teams", label: "Teams", icon: Users2 },
-  { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
-] as const;
 
 export default function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { data } = useDashboardData();
+
+  const navItems = React.useMemo(() => {
+    const base = [
+      { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
+      { to: "/dashboard/jobs", label: "Job cards", icon: Briefcase },
+      { to: "/dashboard/sites", label: "Sites", icon: Building2 },
+      { to: "/dashboard/customers", label: "Customers", icon: Users },
+      { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
+      { to: "/dashboard/teams", label: "Teams", icon: Users2 },
+      { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
+    ] as const;
+
+    if (data.company?.industry === "electrical-contracting") {
+      return [
+        ...base.slice(0, 2),
+        { to: "/dashboard/solar", label: "Solar projects", icon: Sun },
+        ...base.slice(2),
+      ] as const;
+    }
+    return base;
+  }, [data.company?.industry]);
   const isActive = React.useCallback(
     (to: string) => {
       if (to === "/dashboard") return location.pathname === "/dashboard";

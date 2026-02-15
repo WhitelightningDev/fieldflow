@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { supabase } from "@/integrations/supabase/client";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 
@@ -50,7 +51,7 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
             industry: values.industry,
             team_size: values.teamSize,
           },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
         },
       });
 

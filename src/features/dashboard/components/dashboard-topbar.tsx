@@ -1,12 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { isTradeId, type TradeId } from "@/features/company-signup/content/trades";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import TradeFilterSelect from "@/features/dashboard/components/trade-filter-select";
+import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { LayoutGrid } from "lucide-react";
+import * as React from "react";
 import { Link } from "react-router-dom";
 
 export default function DashboardTopbar() {
-  const { trade, setTrade } = useTradeFilter();
+  const { profile } = useAuth();
+  const { data } = useDashboardData();
+
+  const allowedTradeIds = React.useMemo<TradeId[] | null>(() => {
+    const industry = data.company?.industry ?? null;
+    return industry && isTradeId(industry) ? [industry] : null;
+  }, [data.company?.industry]);
+
+  const { trade, setTrade, options } = useTradeFilter(allowedTradeIds);
 
   return (
     <div className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl">
@@ -18,14 +30,19 @@ export default function DashboardTopbar() {
             Dashboard
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <TradeFilterSelect value={trade} onChange={setTrade} />
-            <Button asChild variant="outline" size="sm">
-              <Link to="/company-signup">Add company</Link>
-            </Button>
+            {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
+            {profile?.company_id ? (
+              <div className="hidden sm:block text-sm text-muted-foreground">
+                {data.company?.name ?? "Company"}
+              </div>
+            ) : (
+              <Button asChild variant="outline" size="sm">
+                <Link to="/dashboard/create-company">Create company</Link>
+              </Button>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-

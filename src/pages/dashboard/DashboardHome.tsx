@@ -1,17 +1,20 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TRADES } from "@/features/company-signup/content/trades";
+import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/content/trades";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { AlertTriangle, CalendarClock, PackageSearch } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardHome() {
   const { data, loading } = useDashboardData();
-  const { trade } = useTradeFilter();
+  const allowedTradeIds: TradeId[] | null = data.company?.industry && isTradeId(data.company.industry) ? [data.company.industry] : null;
+  const { trade } = useTradeFilter(allowedTradeIds);
   const selectors = useDashboardSelectors(data, trade);
   const { lowStock, expiringSoon } = useInventoryAlerts(selectors.inventoryItems);
 
@@ -25,6 +28,27 @@ export default function DashboardHome() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!data.company) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Overview" subtitle="Set up your company to start using the dashboard." />
+        <Card className="bg-card/70 backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">No company yet</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-muted-foreground">
+              Create your company to unlock job cards, inventory, teams, and sites.
+            </div>
+            <Button asChild className="gradient-bg hover:opacity-90 shadow-glow">
+              <Link to="/dashboard/create-company">Create company</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toastSuccess, toastError, toastInfo } from "@/lib/toast-helpers";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
@@ -31,7 +32,7 @@ export default function SignupForm() {
       password: values.password,
       options: {
         data: { full_name: values.name },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
       },
     });
     if (error) {

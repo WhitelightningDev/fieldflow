@@ -34,14 +34,27 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId: TradeId }) {
+export default function CreateJobCardDialog({
+  defaultTradeId,
+  allowedTradeIds,
+}: {
+  defaultTradeId: TradeId;
+  allowedTradeIds?: readonly TradeId[] | null;
+}) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
+
+  const tradesForSelect = React.useMemo(() => {
+    if (!allowedTradeIds || allowedTradeIds.length === 0) return TRADES;
+    return TRADES.filter((t) => allowedTradeIds.includes(t.id));
+  }, [allowedTradeIds]);
+
+  const lockedTradeId = allowedTradeIds && allowedTradeIds.length === 1 ? allowedTradeIds[0] : null;
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      tradeId: defaultTradeId,
+      tradeId: lockedTradeId ?? defaultTradeId,
       title: "",
       description: "",
       status: "new",
@@ -57,9 +70,10 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
 
   React.useEffect(() => {
     if (!open) return;
-    form.setValue("tradeId", defaultTradeId);
-    form.setValue("checklist", TRADE_JOB_CHECKLISTS[defaultTradeId].join("\n"));
-  }, [defaultTradeId, form, open]);
+    const nextTradeId = lockedTradeId ?? defaultTradeId;
+    form.setValue("tradeId", nextTradeId);
+    form.setValue("checklist", TRADE_JOB_CHECKLISTS[nextTradeId].join("\n"));
+  }, [defaultTradeId, form, lockedTradeId, open]);
 
   const tradeId = form.watch("tradeId") as TradeId;
   const customerId = form.watch("customerId");
@@ -112,30 +126,39 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
         <Form {...form}>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="tradeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Trade</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select trade" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TRADES.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {lockedTradeId ? (
+                <div className="space-y-2 pt-1">
+                  <div className="text-sm font-medium">Trade</div>
+                  <div className="h-10 px-3 rounded-md border flex items-center text-sm text-muted-foreground">
+                    {TRADES.find((t) => t.id === lockedTradeId)?.name ?? lockedTradeId}
+                  </div>
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="tradeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Trade</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select trade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {tradesForSelect.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="status"

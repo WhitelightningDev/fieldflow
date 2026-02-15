@@ -18,12 +18,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = React.useState<AuthContextValue["profile"]>(null);
   const [loading, setLoading] = React.useState(true);
 
+  const bootstrapAttemptedRef = React.useRef(new Set<string>());
+
   const fetchProfile = React.useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
       .select("id, full_name, email, company_id")
       .eq("user_id", userId)
       .maybeSingle();
+
+    const shouldBootstrap = !bootstrapAttemptedRef.current.has(userId) && (!data || !data.company_id);
+    if (shouldBootstrap) {
+      bootstrapAttemptedRef.current.add(userId);
+      const { data: companyId, error } = await supabase.rpc("bootstrap_company_from_user_metadata");
+      if (!error && companyId) {
+        const { data: updated } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, company_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        setProfile(updated);
+        return;
+      }
+    }
+
     setProfile(data);
   }, []);
 

@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TRADES } from "@/features/company-signup/content/trades";
+import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/content/trades";
 import AdjustInventoryDialog from "@/features/dashboard/components/dialogs/adjust-inventory-dialog";
 import CreateInventoryItemDialog from "@/features/dashboard/components/dialogs/create-inventory-item-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -19,7 +19,8 @@ import { format } from "date-fns";
 
 export default function Inventory() {
   const { data, actions } = useDashboardData();
-  const { trade } = useTradeFilter();
+  const allowedTradeIds: TradeId[] | null = data.company?.industry && isTradeId(data.company.industry) ? [data.company.industry] : null;
+  const { trade } = useTradeFilter(allowedTradeIds);
   const selectors = useDashboardSelectors(data, trade);
   const { lowStock, expiringSoon } = useInventoryAlerts(selectors.inventoryItems);
 
@@ -36,7 +37,7 @@ export default function Inventory() {
         subtitle="Track trade-specific stock (including perishables) and get low-stock warnings."
         actions={
           <div className="flex items-center gap-2">
-            <CreateInventoryItemDialog tradeFilter={trade} />
+            <CreateInventoryItemDialog tradeFilter={trade} allowedTradeIds={allowedTradeIds} />
           </div>
         }
       />

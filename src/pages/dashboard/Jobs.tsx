@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TRADES } from "@/features/company-signup/content/trades";
+import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/content/trades";
 import CreateJobCardDialog from "@/features/dashboard/components/dialogs/create-job-card-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
@@ -16,7 +16,8 @@ const STATUSES: JobCardStatus[] = ["new", "scheduled", "in-progress", "completed
 
 export default function Jobs() {
   const { data, actions } = useDashboardData();
-  const { trade } = useTradeFilter();
+  const allowedTradeIds: TradeId[] | null = data.company?.industry && isTradeId(data.company.industry) ? [data.company.industry] : null;
+  const { trade } = useTradeFilter(allowedTradeIds);
   const selectors = useDashboardSelectors(data, trade);
 
   const defaultTradeId = trade === "all" ? TRADES[0].id : trade;
@@ -26,7 +27,7 @@ export default function Jobs() {
       <PageHeader
         title="Job cards"
         subtitle="Create, assign, and track job cards across all service trades."
-        actions={<CreateJobCardDialog defaultTradeId={defaultTradeId} />}
+        actions={<CreateJobCardDialog defaultTradeId={defaultTradeId} allowedTradeIds={allowedTradeIds} />}
       />
 
       <div className="rounded-xl border bg-card/70 backdrop-blur-sm">
