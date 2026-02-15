@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast";
+import { toastSuccess, toastError, toastInfo } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
@@ -35,13 +35,13 @@ export default function SignupForm() {
       },
     });
     if (error) {
-      toast({ title: "Signup failed", description: error.message, variant: "destructive" });
+      toastError("Signup failed", error.message);
       return;
     }
-    toast({
-      title: "Account created",
-      description: "Check your email to confirm your account before signing in.",
-    });
+    toastInfo(
+      "Account created",
+      "Check your email to confirm your account before signing in.",
+    );
   });
 
   return (
