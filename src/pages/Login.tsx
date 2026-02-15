@@ -1,11 +1,22 @@
 import AuthLayout from "@/features/auth/components/auth-layout";
 import LoginForm from "@/features/auth/components/login-form";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import TradeBadges from "@/features/company-signup/components/trade-badges";
 import { COMPANY_SIGNUP_FEATURES } from "@/features/company-signup/content/features";
 import { CheckCircle2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import * as React from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const { session, loading } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!loading && session) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [loading, session, navigate]);
+
   return (
     <AuthLayout
       title="Welcome back."
@@ -38,4 +49,3 @@ export default function Login() {
     </AuthLayout>
   );
 }
-

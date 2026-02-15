@@ -7,7 +7,7 @@ import { withTimeout } from "@/lib/with-timeout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -18,7 +18,6 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
-  const navigate = useNavigate();
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -27,7 +26,7 @@ export default function LoginForm() {
 
   const submit = form.handleSubmit(async (values) => {
     try {
-      const { error } = await withTimeout(
+      const { data, error } = await withTimeout(
         supabase.auth.signInWithPassword({
           email: values.email,
           password: values.password,
@@ -39,8 +38,11 @@ export default function LoginForm() {
         toastError("Login failed", error.message);
         return;
       }
+      if (!data.session) {
+        toastError("Login failed", "No session returned. Try again.");
+        return;
+      }
       toastSuccess("Logged in successfully");
-      navigate("/dashboard");
     } catch (e: any) {
       toastError("Login failed", e?.message ?? "Network error");
     }
