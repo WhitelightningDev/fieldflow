@@ -612,9 +612,11 @@ export type Database = {
           hourly_bill_rate_cents: number | null
           hourly_cost_cents: number | null
           id: string
+          invite_status: string
           name: string
           phone: string | null
           trades: string[]
+          user_id: string | null
         }
         Insert: {
           active?: boolean
@@ -624,9 +626,11 @@ export type Database = {
           hourly_bill_rate_cents?: number | null
           hourly_cost_cents?: number | null
           id?: string
+          invite_status?: string
           name: string
           phone?: string | null
           trades?: string[]
+          user_id?: string | null
         }
         Update: {
           active?: boolean
@@ -636,9 +640,11 @@ export type Database = {
           hourly_bill_rate_cents?: number | null
           hourly_cost_cents?: number | null
           id?: string
+          invite_status?: string
           name?: string
           phone?: string | null
           trades?: string[]
+          user_id?: string | null
         }
         Relationships: [
           {

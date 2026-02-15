@@ -9,6 +9,25 @@ function parseHashParams() {
   return new URLSearchParams(hash);
 }
 
+async function getRedirectPath(userId: string): Promise<string> {
+  // Check if user has technician role
+  const { data: roles } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+
+  const isTech = roles?.some((r) => r.role === "technician");
+  if (isTech) return "/tech";
+
+  // Mark technician invite as accepted if applicable
+  await supabase
+    .from("technicians")
+    .update({ invite_status: "accepted" } as any)
+    .eq("user_id", userId);
+
+  return "/dashboard";
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = React.useState<string | null>(null);
@@ -54,8 +73,14 @@ export default function AuthCallback() {
 
         if (data.session) {
           // Best-effort: ensure company exists if signup metadata included it.
-          await withTimeout((supabase.rpc as any)("bootstrap_company_from_user_metadata").then(() => {}), 15000, "Company bootstrap timed out.");
-          navigate("/dashboard", { replace: true });
+          await withTimeout(
+            (supabase.rpc as any)("bootstrap_company_from_user_metadata").then(() => {}),
+            15000,
+            "Company bootstrap timed out.",
+          ).catch(() => {});
+
+          const redirectPath = await getRedirectPath(data.session.user.id);
+          navigate(redirectPath, { replace: true });
         } else {
           navigate("/login", { replace: true });
         }
@@ -75,7 +100,7 @@ export default function AuthCallback() {
       <div className="w-full max-w-md space-y-4 text-center">
         <div className="text-2xl font-bold">Finishing sign-in…</div>
         <div className="text-sm text-muted-foreground">
-          You can close this tab once you’re redirected.
+          You can close this tab once you're redirected.
         </div>
 
         {error ? (

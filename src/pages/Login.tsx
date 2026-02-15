@@ -1,6 +1,7 @@
 import AuthLayout from "@/features/auth/components/auth-layout";
 import LoginForm from "@/features/auth/components/login-form";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import TradeBadges from "@/features/company-signup/components/trade-badges";
 import { COMPANY_SIGNUP_FEATURES } from "@/features/company-signup/content/features";
 import { CheckCircle2 } from "lucide-react";
@@ -8,14 +9,22 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { session, loading } = useAuth();
+  const { session, user, loading } = useAuth();
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (!loading && session) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [loading, session, navigate]);
+    if (loading || !session || !user) return;
+
+    // Route based on role
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .then(({ data: roles }) => {
+        const isTech = roles?.some((r) => r.role === "technician");
+        navigate(isTech ? "/tech" : "/dashboard", { replace: true });
+      });
+  }, [loading, session, user, navigate]);
 
   return (
     <AuthLayout
