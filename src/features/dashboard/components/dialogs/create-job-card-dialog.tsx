@@ -23,6 +23,10 @@ const schema = z.object({
   tradeId: z.enum(tradeIds),
   title: z.string().min(2, "Job title is required"),
   description: z.string().optional(),
+  revenue: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d+(\.\d{1,2})?$/.test(v.trim()), "Enter amount like 1200 or 1200.00"),
   status: z.enum(STATUSES as [JobCardStatus, ...JobCardStatus[]]),
   customerId: z.string().min(1, "Select a customer"),
   siteId: z.string().optional(),
@@ -33,6 +37,12 @@ const schema = z.object({
 });
 
 type Values = z.infer<typeof schema>;
+
+function moneyToCents(v?: string) {
+  const s = (v ?? "").trim();
+  if (!s) return null;
+  return Math.round(Number.parseFloat(s) * 100);
+}
 
 export default function CreateJobCardDialog({
   defaultTradeId,
@@ -57,6 +67,7 @@ export default function CreateJobCardDialog({
       tradeId: lockedTradeId ?? defaultTradeId,
       title: "",
       description: "",
+      revenue: "",
       status: "new",
       customerId: data.customers[0]?.id ?? "",
       siteId: "",
@@ -94,6 +105,7 @@ export default function CreateJobCardDialog({
       trade_id: values.tradeId,
       title: values.title,
       description: values.description || null,
+      revenue_cents: moneyToCents(values.revenue),
       status: values.status,
       customer_id: values.customerId,
       technician_id: values.technicianId || null,
@@ -206,6 +218,20 @@ export default function CreateJobCardDialog({
                   <FormLabel>Description (optional)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Short description of the work..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="revenue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Revenue (USD, optional)</FormLabel>
+                  <FormControl>
+                    <Input inputMode="decimal" placeholder="e.g. 1200.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

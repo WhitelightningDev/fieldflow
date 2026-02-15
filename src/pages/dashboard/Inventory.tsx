@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/content/trades";
 import AdjustInventoryDialog from "@/features/dashboard/components/dialogs/adjust-inventory-dialog";
 import CreateInventoryItemDialog from "@/features/dashboard/components/dialogs/create-inventory-item-dialog";
+import EditInventoryCostDialog from "@/features/dashboard/components/dialogs/edit-inventory-cost-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { INVENTORY_TEMPLATES_BY_TRADE } from "@/features/dashboard/constants/inventory-templates";
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
@@ -13,6 +14,7 @@ import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-ale
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Tables } from "@/integrations/supabase/types";
+import { formatUsdFromCents } from "@/lib/money";
 import { AlertTriangle, Plus } from "lucide-react";
 import * as React from "react";
 import { format } from "date-fns";
@@ -109,6 +111,7 @@ export default function Inventory() {
               <TableHead>Item</TableHead>
               <TableHead>Trade</TableHead>
               <TableHead>Qty</TableHead>
+              <TableHead>Unit cost</TableHead>
               <TableHead>Reorder at</TableHead>
               <TableHead>Perishable</TableHead>
               <TableHead>Expiry</TableHead>
@@ -118,7 +121,7 @@ export default function Inventory() {
           <TableBody>
             {selectors.inventoryItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                   No inventory items yet for this trade filter.
                 </TableCell>
               </TableRow>
@@ -141,24 +144,30 @@ export default function Inventory() {
                     <span className="font-medium">{i.quantity_on_hand}</span>{" "}
                     <span className="text-sm text-muted-foreground">{i.unit}</span>
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {typeof (i as any).unit_cost_cents === "number" ? formatUsdFromCents((i as any).unit_cost_cents) : "—"}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{i.reorder_point}</TableCell>
                   <TableCell>{i.perishable ? <Badge>Yes</Badge> : <Badge variant="outline">No</Badge>}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {i.expiry_date ? format(new Date(i.expiry_date), "PP") : "—"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => {
-                        setAdjustItemId(i.id);
-                        setAdjustOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Adjust
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <EditInventoryCostDialog itemId={i.id} />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                          setAdjustItemId(i.id);
+                          setAdjustOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Adjust
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

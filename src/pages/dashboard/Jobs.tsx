@@ -4,12 +4,15 @@ import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/conte
 import CreateJobCardDialog from "@/features/dashboard/components/dialogs/create-job-card-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
+import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
+import { computeJobProfitability } from "@/features/dashboard/lib/profitability";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
+import * as React from "react";
 
 type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
 const STATUSES: JobCardStatus[] = ["new", "scheduled", "in-progress", "completed", "invoiced", "cancelled"];
@@ -21,6 +24,31 @@ export default function Jobs() {
   const selectors = useDashboardSelectors(data, trade);
 
   const defaultTradeId = trade === "all" ? TRADES[0].id : trade;
+
+  const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
+  const inventoryById = React.useMemo(() => new Map(data.inventoryItems.map((i) => [i.id, i])), [data.inventoryItems]);
+  const timeByJobId = React.useMemo(() => {
+    const m = new Map<string, any[]>();
+    for (const e of data.jobTimeEntries) {
+      const jobId = e.job_card_id;
+      if (!jobId) continue;
+      const arr = m.get(jobId) ?? [];
+      arr.push(e);
+      m.set(jobId, arr);
+    }
+    return m;
+  }, [data.jobTimeEntries]);
+  const materialsByJobId = React.useMemo(() => {
+    const m = new Map<string, any[]>();
+    for (const u of data.siteMaterialUsage) {
+      const jobId = u.job_card_id;
+      if (!jobId) continue;
+      const arr = m.get(jobId) ?? [];
+      arr.push(u);
+      m.set(jobId, arr);
+    }
+    return m;
+  }, [data.siteMaterialUsage]);
 
   return (
     <div className="space-y-6">
@@ -41,13 +69,14 @@ export default function Jobs() {
               <TableHead>Site</TableHead>
               <TableHead>Technician</TableHead>
               <TableHead>Scheduled</TableHead>
+              <TableHead>Gross margin</TableHead>
               <TableHead className="w-[220px]">Update</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {selectors.jobCards.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
                   No job cards yet for this trade filter.
                 </TableCell>
               </TableRow>
@@ -56,6 +85,13 @@ export default function Jobs() {
               const customer = selectors.customersById.get(job.customer_id ?? "");
               const site = job.site_id ? selectors.sitesById.get(job.site_id) : undefined;
               const technician = job.technician_id ? selectors.techniciansById.get(job.technician_id) : undefined;
+              const profitability = computeJobProfitability({
+                job,
+                timeEntries: timeByJobId.get(job.id) ?? [],
+                materials: materialsByJobId.get(job.id) ?? [],
+                techniciansById,
+                inventoryById,
+              });
               return (
                 <TableRow key={job.id}>
                   <TableCell>
@@ -73,6 +109,9 @@ export default function Jobs() {
                   <TableCell>{technician?.name ?? "Unassigned"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {job.scheduled_at ? format(new Date(job.scheduled_at), "PPp") : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <ProfitabilityPill value={profitability} />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

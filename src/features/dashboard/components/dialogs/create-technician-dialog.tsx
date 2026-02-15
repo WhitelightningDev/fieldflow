@@ -17,11 +17,25 @@ const schema = z.object({
   name: z.string().min(2, "Technician name is required"),
   phone: z.string().optional(),
   email: z.string().email("Enter a valid email").optional().or(z.literal("")),
+  hourlyCost: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d+(\.\d{1,2})?$/.test(v.trim()), "Enter amount like 35 or 35.50"),
+  hourlyBillRate: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d+(\.\d{1,2})?$/.test(v.trim()), "Enter amount like 95 or 95.50"),
   active: z.boolean().default(true),
   trades: z.array(z.enum(tradeIds)).min(1, "Select at least one trade"),
 });
 
 type Values = z.infer<typeof schema>;
+
+function moneyToCents(v?: string) {
+  const s = (v ?? "").trim();
+  if (!s) return null;
+  return Math.round(Number.parseFloat(s) * 100);
+}
 
 export default function CreateTechnicianDialog() {
   const { actions } = useDashboardData();
@@ -29,7 +43,7 @@ export default function CreateTechnicianDialog() {
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", phone: "", email: "", active: true, trades: [TRADES[0].id] },
+    defaultValues: { name: "", phone: "", email: "", hourlyCost: "", hourlyBillRate: "", active: true, trades: [TRADES[0].id] },
     mode: "onTouched",
   });
 
@@ -38,6 +52,8 @@ export default function CreateTechnicianDialog() {
       name: values.name,
       phone: values.phone || null,
       email: values.email || null,
+      hourly_cost_cents: moneyToCents(values.hourlyCost),
+      hourly_bill_rate_cents: moneyToCents(values.hourlyBillRate),
       active: values.active,
       trades: values.trades,
     });
@@ -97,6 +113,35 @@ export default function CreateTechnicianDialog() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input placeholder="tech@company.com" autoComplete="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="hourlyCost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hourly cost (USD, optional)</FormLabel>
+                    <FormControl>
+                      <Input inputMode="decimal" placeholder="e.g. 35.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="hourlyBillRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Hourly bill rate (USD, optional)</FormLabel>
+                    <FormControl>
+                      <Input inputMode="decimal" placeholder="e.g. 95.00" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

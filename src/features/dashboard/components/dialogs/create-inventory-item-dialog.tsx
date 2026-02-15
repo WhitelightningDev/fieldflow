@@ -23,6 +23,10 @@ const schema = z.object({
   name: z.string().min(2, "Item name is required"),
   sku: z.string().optional(),
   unit: z.enum(["each", "meter", "liter", "kg", "box"]),
+  unitCost: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^\d+(\.\d{1,2})?$/.test(v.trim()), "Enter amount like 2 or 2.50"),
   quantityOnHand: z.coerce.number().min(0),
   reorderPoint: z.coerce.number().min(0),
   perishable: z.boolean(),
@@ -31,6 +35,12 @@ const schema = z.object({
 });
 
 type Values = z.infer<typeof schema>;
+
+function moneyToCents(v?: string) {
+  const s = (v ?? "").trim();
+  if (!s) return null;
+  return Math.round(Number.parseFloat(s) * 100);
+}
 
 export default function CreateInventoryItemDialog({
   tradeFilter,
@@ -57,6 +67,7 @@ export default function CreateInventoryItemDialog({
       name: "",
       sku: "",
       unit: "each",
+      unitCost: "",
       quantityOnHand: 0,
       reorderPoint: 5,
       perishable: false,
@@ -78,6 +89,7 @@ export default function CreateInventoryItemDialog({
       name: values.name,
       sku: values.sku || null,
       unit: values.unit,
+      unit_cost_cents: moneyToCents(values.unitCost),
       quantity_on_hand: values.quantityOnHand,
       reorder_point: values.reorderPoint,
       perishable: values.perishable,
@@ -188,6 +200,20 @@ export default function CreateInventoryItemDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="unitCost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit cost (USD, optional)</FormLabel>
+                  <FormControl>
+                    <Input inputMode="decimal" placeholder="e.g. 2.50" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField

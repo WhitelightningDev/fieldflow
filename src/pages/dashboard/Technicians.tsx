@@ -2,8 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TRADES } from "@/features/company-signup/content/trades";
 import CreateTechnicianDialog from "@/features/dashboard/components/dialogs/create-technician-dialog";
+import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
+import { formatUsdFromCents } from "@/lib/money";
 
 export default function Technicians() {
   const { data } = useDashboardData();
@@ -20,13 +22,15 @@ export default function Technicians() {
               <TableHead>Phone</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Trades</TableHead>
+              <TableHead>Cost/hr</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-[140px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.technicians.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                   No technicians yet.
                 </TableCell>
               </TableRow>
@@ -45,7 +49,13 @@ export default function Technicians() {
                     ))}
                   </div>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {typeof (t as any).hourly_cost_cents === "number" ? `${formatUsdFromCents((t as any).hourly_cost_cents)}/hr` : "—"}
+                </TableCell>
                 <TableCell>{t.active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}</TableCell>
+                <TableCell className="text-right">
+                  <EditTechnicianRatesDialog technicianId={t.id} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -54,4 +64,3 @@ export default function Technicians() {
     </div>
   );
 }
-

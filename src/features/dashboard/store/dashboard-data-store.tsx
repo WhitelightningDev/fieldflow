@@ -13,6 +13,8 @@ type Team = Tables<"teams">;
 type TeamMember = Tables<"team_members">;
 type SiteTeamAssignment = Tables<"site_team_assignments">;
 type Company = Tables<"companies">;
+type JobTimeEntry = any;
+type SiteMaterialUsage = any;
 
 export type DashboardData = {
   company: Company | null;
@@ -24,6 +26,8 @@ export type DashboardData = {
   teams: Team[];
   teamMembers: TeamMember[];
   siteTeamAssignments: SiteTeamAssignment[];
+  jobTimeEntries: JobTimeEntry[];
+  siteMaterialUsage: SiteMaterialUsage[];
 };
 
 type DashboardActions = {
@@ -32,10 +36,13 @@ type DashboardActions = {
   addJobCard: (j: Omit<TablesInsert<"job_cards">, "company_id">) => Promise<JobCard | null>;
   setJobCardStatus: (id: string, status: string) => Promise<void>;
   setJobCardSite: (id: string, siteId: string | null) => Promise<void>;
+  setJobRevenue: (id: string, revenueCents: number | null) => Promise<void>;
   addInventoryItem: (i: Omit<TablesInsert<"inventory_items">, "company_id">) => Promise<InventoryItem | null>;
   adjustInventory: (itemId: string, delta: number) => Promise<void>;
+  setInventoryUnitCost: (itemId: string, unitCostCents: number | null) => Promise<void>;
   addSite: (s: Omit<TablesInsert<"sites">, "company_id">) => Promise<Site | null>;
   addTeam: (t: Omit<TablesInsert<"teams">, "company_id">) => Promise<Team | null>;
+  setTechnicianRates: (technicianId: string, args: { hourlyCostCents: number | null; hourlyBillRateCents: number | null }) => Promise<void>;
   addTeamMember: (teamId: string, technicianId: string) => Promise<TeamMember | null>;
   removeTeamMember: (teamMemberId: string) => Promise<void>;
   assignTeamToSite: (a: { siteId: string; teamId: string; startsAt?: string; endsAt?: string | null; notes?: string | null }) => Promise<SiteTeamAssignment | null>;
@@ -65,6 +72,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     teams: [],
     teamMembers: [],
     siteTeamAssignments: [],
+    jobTimeEntries: [],
+    siteMaterialUsage: [],
   });
   const [loading, setLoading] = React.useState(true);
   const fetchErrorShownRef = React.useRef(new Set<string>());
@@ -84,6 +93,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     let teamsRes: any;
     let teamMembersRes: any;
     let assignmentsRes: any;
+    let timeRes: any;
+    let materialRes: any;
 
     try {
       [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
@@ -96,6 +107,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         supabase.from("teams").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("team_members").select("*").order("created_at", { ascending: false }),
         supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
+      ]);
+
+      const jobIds = (jobsRes.data ?? []).map((j: any) => j.id).filter(Boolean);
+      const siteIds = (sitesRes.data ?? []).map((s: any) => s.id).filter(Boolean);
+      [timeRes, materialRes] = await Promise.all([
+        jobIds.length > 0
+          ? supabase.from("job_time_entries").select("*").in("job_card_id", jobIds).order("started_at", { ascending: false })
+          : Promise.resolve({ data: [], error: null, status: 200 }),
+        siteIds.length > 0
+          ? supabase.from("site_material_usage").select("*").in("site_id", siteIds).order("used_at", { ascending: false })
+          : Promise.resolve({ data: [], error: null, status: 200 }),
       ]);
     } catch (e: any) {
       toast({
@@ -117,6 +139,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       { name: "teams", res: teamsRes },
       { name: "team_members", res: teamMembersRes },
       { name: "site_team_assignments", res: assignmentsRes },
+      { name: "job_time_entries", res: timeRes },
+      { name: "site_material_usage", res: materialRes },
     ] as const;
 
     for (const r of results) {
@@ -151,6 +175,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       teams: teamsRes.data ?? [],
       teamMembers: teamMembersRes.data ?? [],
       siteTeamAssignments: assignmentsRes.data ?? [],
+      jobTimeEntries: timeRes?.data ?? [],
+      siteMaterialUsage: materialRes?.data ?? [],
     });
     setLoading(false);
   }, [companyId]);
@@ -215,6 +241,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         jobCards: prev.jobCards.map((j) => (j.id === id ? { ...j, site_id: siteId, updated_at: new Date().toISOString() } : j)),
       }));
     },
+    setJobRevenue: async (id, revenueCents) => {
+      const { error } = await supabase
+        .from("job_cards")
+        .update({ revenue_cents: revenueCents })
+        .eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({
+        ...prev,
+        jobCards: prev.jobCards.map((j: any) => (j.id === id ? { ...j, revenue_cents: revenueCents, updated_at: new Date().toISOString() } : j)),
+      }));
+    },
     addInventoryItem: async (i) => {
       if (!companyId) return null;
       const { data: row, error } = await supabase
@@ -240,6 +277,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         inventoryItems: prev.inventoryItems.map((i) => (i.id === itemId ? { ...i, quantity_on_hand: newQty } : i)),
       }));
     },
+    setInventoryUnitCost: async (itemId, unitCostCents) => {
+      const { error } = await supabase
+        .from("inventory_items")
+        .update({ unit_cost_cents: unitCostCents })
+        .eq("id", itemId);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({
+        ...prev,
+        inventoryItems: prev.inventoryItems.map((i: any) => (i.id === itemId ? { ...i, unit_cost_cents: unitCostCents } : i)),
+      }));
+    },
     addSite: async (s) => {
       if (!companyId) return null;
       const { data: row, error } = await supabase
@@ -261,6 +309,19 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, teams: [row, ...prev.teams] }));
       return row;
+    },
+    setTechnicianRates: async (technicianId, { hourlyCostCents, hourlyBillRateCents }) => {
+      const { error } = await supabase
+        .from("technicians")
+        .update({ hourly_cost_cents: hourlyCostCents, hourly_bill_rate_cents: hourlyBillRateCents })
+        .eq("id", technicianId);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({
+        ...prev,
+        technicians: prev.technicians.map((t: any) =>
+          t.id === technicianId ? { ...t, hourly_cost_cents: hourlyCostCents, hourly_bill_rate_cents: hourlyBillRateCents } : t
+        ),
+      }));
     },
     addTeamMember: async (teamId, technicianId) => {
       const { data: row, error } = await (supabase as any)

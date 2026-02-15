@@ -9,9 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { fromDatetimeLocal, toDatetimeLocal } from "@/features/dashboard/lib/datetime";
+import { computeJobProfitability } from "@/features/dashboard/lib/profitability";
+import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { formatUsdFromCents } from "@/lib/money";
 import { ExternalLink, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -48,6 +51,9 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
   const [documents, setDocuments] = React.useState<SiteDocument[]>([]);
   const [loading, setLoading] = React.useState(false);
 
+  const [revenue, setRevenue] = React.useState("");
+  const [savingRevenue, setSavingRevenue] = React.useState(false);
+
   const [timeForm, setTimeForm] = React.useState({
     technicianId: "",
     startedAt: "",
@@ -61,8 +67,10 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
   const photoInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [materialItemId, setMaterialItemId] = React.useState("");
-  const [materialQty, setMaterialQty] = React.useState("1");
+  const [materialQtyUsed, setMaterialQtyUsed] = React.useState("1");
+  const [materialQtyWasted, setMaterialQtyWasted] = React.useState("0");
   const [materialNotes, setMaterialNotes] = React.useState("");
+  const [materialWasteNotes, setMaterialWasteNotes] = React.useState("");
 
   const [docFile, setDocFile] = React.useState<File | null>(null);
   const docInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -109,6 +117,8 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
     if (!open) return;
     refresh();
     if (job) {
+      const r = (job as any).revenue_cents;
+      setRevenue(typeof r === "number" ? (r / 100).toFixed(2) : "");
       setTimeForm((prev) => ({
         ...prev,
         technicianId: job.technician_id ?? "",
@@ -118,8 +128,10 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
         notes: "",
       }));
       setMaterialItemId(data.inventoryItems[0]?.id ?? "");
-      setMaterialQty("1");
+      setMaterialQtyUsed("1");
+      setMaterialQtyWasted("0");
       setMaterialNotes("");
+      setMaterialWasteNotes("");
       setPhotoKind("before");
       setPhotoFile(null);
       setDocFile(null);
@@ -130,6 +142,31 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
 
   const siteOptions = data.sites.filter((s) => (s as any).customer_id === job.customer_id);
   const sitesForSelect = siteOptions.length ? siteOptions : data.sites;
+
+  const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
+  const inventoryById = React.useMemo(() => new Map(data.inventoryItems.map((i) => [i.id, i])), [data.inventoryItems]);
+
+  const profitability = React.useMemo(() => {
+    return computeJobProfitability({
+      job,
+      timeEntries,
+      materials,
+      techniciansById,
+      inventoryById,
+    });
+  }, [inventoryById, job, materials, techniciansById, timeEntries]);
+
+  const saveRevenue = async () => {
+    const v = revenue.trim();
+    if (v && !/^\d+(\.\d{1,2})?$/.test(v)) {
+      toast({ title: "Invalid revenue", description: "Use numbers like 1200 or 1200.00.", variant: "destructive" });
+      return;
+    }
+    const cents = v ? Math.round(Number.parseFloat(v) * 100) : null;
+    setSavingRevenue(true);
+    await actions.setJobRevenue(job.id, cents);
+    setSavingRevenue(false);
+  };
 
   const logTime = async () => {
     const started = fromDatetimeLocal(timeForm.startedAt);
@@ -210,26 +247,31 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
       toast({ title: "Set a site first", description: "Material usage is tracked per site.", variant: "destructive" });
       return;
     }
-    const qty = Number(materialQty);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      toast({ title: "Invalid quantity", variant: "destructive" });
+    const used = Number(materialQtyUsed);
+    const wasted = Number(materialQtyWasted);
+    if (!Number.isFinite(used) || used < 0 || !Number.isFinite(wasted) || wasted < 0 || (used + wasted) <= 0) {
+      toast({ title: "Invalid quantities", description: "Used and wasted must be >= 0, and total must be > 0.", variant: "destructive" });
       return;
     }
     const { error } = await (supabase as any).from("site_material_usage").insert({
       site_id: job.site_id,
       job_card_id: job.id,
       inventory_item_id: materialItemId,
-      quantity_used: Math.round(qty),
+      quantity_used: Math.round(used),
+      quantity_wasted: Math.round(wasted),
+      waste_notes: materialWasteNotes ? materialWasteNotes : null,
       notes: materialNotes ? materialNotes : null,
     });
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
-    await actions.adjustInventory(materialItemId, -Math.round(qty));
+    await actions.adjustInventory(materialItemId, -Math.round(used + wasted));
     toast({ title: "Material logged" });
-    setMaterialQty("1");
+    setMaterialQtyUsed("1");
+    setMaterialQtyWasted("0");
     setMaterialNotes("");
+    setMaterialWasteNotes("");
     await refresh();
   };
 
@@ -296,6 +338,34 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="rounded-lg border bg-card/70 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Gross margin</div>
+                <div className="text-xs text-muted-foreground">
+                  Revenue {profitability.revenueCents === null ? "—" : formatUsdFromCents(profitability.revenueCents)} · Labour{" "}
+                  {formatUsdFromCents(profitability.laborCostCents)} · Materials {formatUsdFromCents(profitability.materialCostCents)} · Waste{" "}
+                  {formatUsdFromCents(profitability.wasteCostCents)}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <ProfitabilityPill value={profitability} />
+                <div className="flex items-center gap-2">
+                  <Input
+                    className="h-9 w-[160px]"
+                    inputMode="decimal"
+                    placeholder="Revenue (USD)"
+                    value={revenue}
+                    onChange={(e) => setRevenue(e.target.value)}
+                  />
+                  <Button size="sm" onClick={saveRevenue} disabled={savingRevenue}>
+                    {savingRevenue ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <div className="space-y-1">
               <Label>Job site</Label>
@@ -474,7 +544,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
             </TabsContent>
 
             <TabsContent value="materials" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                 <div className="space-y-1 md:col-span-2">
                   <Label>Inventory item</Label>
                   <Select value={materialItemId} onValueChange={setMaterialItemId}>
@@ -491,13 +561,21 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label>Qty used</Label>
-                  <Input inputMode="numeric" value={materialQty} onChange={(e) => setMaterialQty(e.target.value)} />
+                  <Label>Used</Label>
+                  <Input inputMode="numeric" value={materialQtyUsed} onChange={(e) => setMaterialQtyUsed(e.target.value)} />
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <Label>Notes (optional)</Label>
                   <Input value={materialNotes} onChange={(e) => setMaterialNotes(e.target.value)} />
                 </div>
+                <div className="space-y-1">
+                  <Label>Wasted</Label>
+                  <Input inputMode="numeric" value={materialQtyWasted} onChange={(e) => setMaterialQtyWasted(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Wastage notes (optional)</Label>
+                <Input value={materialWasteNotes} onChange={(e) => setMaterialWasteNotes(e.target.value)} />
               </div>
               <Button onClick={logMaterial} disabled={!materialItemId || loading || !job.site_id}>
                 Log material usage
@@ -508,33 +586,40 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Item</TableHead>
-                      <TableHead>Qty</TableHead>
                       <TableHead>Used</TableHead>
+                      <TableHead>Wasted</TableHead>
+                      <TableHead>Logged</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {!job.site_id ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
                           Set a site on this job to track material usage per site.
                         </TableCell>
                       </TableRow>
                     ) : materials.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
                           No material usage logged for this job.
                         </TableCell>
                       </TableRow>
                     ) : null}
                     {materials.map((m) => {
                       const item = data.inventoryItems.find((i) => i.id === m.inventory_item_id);
+                      const wasted = (m as any).quantity_wasted ?? 0;
+                      const wasteNotes = (m as any).waste_notes ?? null;
                       return (
                         <TableRow key={m.id}>
                           <TableCell>{item?.name ?? "—"}</TableCell>
                           <TableCell>{m.quantity_used}</TableCell>
+                          <TableCell>{wasted}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{new Date(m.used_at).toLocaleString()}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{m.notes ?? "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {m.notes ?? "—"}
+                            {wasteNotes ? <div className="text-xs text-muted-foreground mt-1">Waste: {wasteNotes}</div> : null}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
