@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
     }
 
     // Create the auth user with invite (sends email automatically)
+    console.log("Inviting technician:", { email, name, companyId, redirectTo });
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: {
         full_name: name,
@@ -75,6 +76,8 @@ Deno.serve(async (req) => {
       },
       redirectTo: redirectTo || `${supabaseUrl.replace(".supabase.co", ".lovable.app")}/auth/callback`,
     });
+
+    console.log("Invite result:", { inviteData: inviteData?.user?.id, inviteError });
 
     if (inviteError) {
       return new Response(JSON.stringify({ error: inviteError.message }), {
