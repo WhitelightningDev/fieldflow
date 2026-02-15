@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const fullName = meta.full_name ? meta.full_name.toString() : "";
     const email = userRes.user?.email ?? null;
 
-    // Ensure profile exists (some projects may not have the auth trigger installed).
     await supabase
       .from("profiles")
       .upsert(
@@ -44,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         { onConflict: "user_id" },
       );
 
-    // Create company and link profile.
     const { data: company, error: companyErr } = await supabase
       .from("companies")
       .insert({ name: companyName, industry, team_size: teamSize })
@@ -58,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq("user_id", userId);
     if (linkErr) return false;
 
-    // Best-effort: assign owner role (if policy exists).
     await supabase
       .from("user_roles")
       .insert({ user_id: userId, role: "owner" } as any);
@@ -86,7 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(updated);
         return;
       }
-      // Fallback if the RPC doesn't exist yet or failed: bootstrap from user_metadata client-side.
       const clientBootstrapped = await bootstrapCompanyClientSide(userId);
       if (clientBootstrapped) {
         const { data: updated } = await supabase
@@ -103,47 +99,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [bootstrapCompanyClientSide]);
 
   React.useEffect(() => {
+    let isMounted = true;
+
+    // Listener for ONGOING auth changes — does NOT control isLoading.
+    // CRITICAL: Do NOT await Supabase calls directly inside this callback
+    // to avoid deadlocks during token refresh.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        try {
-          setLoading(true);
-          setSession(newSession);
-          if (newSession?.user) {
-            await fetchProfile(newSession.user.id);
-          } else {
-            setProfile(null);
-          }
-        } catch (e) {
-          console.error("Auth state change error", e);
-        } finally {
-          setLoading(false);
+      (_event, newSession) => {
+        if (!isMounted) return;
+        setSession(newSession);
+
+        if (newSession?.user) {
+          // Dispatch after callback completes to avoid deadlock
+          setTimeout(() => {
+            if (isMounted) {
+              fetchProfile(newSession.user.id).catch(console.error);
+            }
+          }, 0);
+        } else {
+          setProfile(null);
         }
       }
     );
 
-    withTimeout(supabase.auth.getSession(), 8000, "Initial session check timed out.")
-      .then(({ data: { session: s } }) => {
+    // INITIAL load — controls isLoading
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: s } } = await withTimeout(
+          supabase.auth.getSession(),
+          8000,
+          "Initial session check timed out.",
+        );
+        if (!isMounted) return;
+
         setSession(s);
         if (s?.user) {
-          fetchProfile(s.user.id).then(() => setLoading(false)).catch(() => setLoading(false));
-        } else {
-          setLoading(false);
+          await fetchProfile(s.user.id);
         }
-      })
-      .catch((e) => {
+      } catch (e) {
         console.error("getSession error", e);
+        if (!isMounted) return;
         clearSupabaseAuthStorage();
         setSession(null);
         setProfile(null);
-        setLoading(false);
-      });
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signOut = React.useCallback(async () => {
     try {
-      // Try to revoke server-side refresh token, but never block UI on it.
       try {
         await withTimeout(supabase.auth.signOut(), 8000, "Remote sign out timed out.");
       } catch {}
@@ -151,7 +164,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await withTimeout(supabase.auth.signOut({ scope: "local" }), 8000, "Local sign out timed out.");
       } catch {}
       clearSupabaseAuthStorage();
-      // If the URL still contains auth hash params, clear them to prevent auto re-auth.
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     } finally {
       setSession(null);

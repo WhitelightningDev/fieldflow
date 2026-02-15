@@ -100,7 +100,7 @@ export default function Sites() {
               const assignments = data.siteTeamAssignments.filter((a) => a.site_id === site.id);
               const current = getCurrentAssignment(assignments);
               const currentTeam = current ? teamsById.get(current.team_id) : undefined;
-              const currentEndsAt = current?.ends_at ?? null;
+              const currentEndsAt = (current as any)?.ends_at ?? null;
               return (
                 <TableRow key={site.id}>
                   <TableCell>
@@ -124,7 +124,7 @@ export default function Sites() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{site.address ?? "—"}</TableCell>
                   <TableCell>
-                    <ProfitabilityPill value={profitability} />
+                    <ProfitabilityPill value={null as any} />
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <AssignTeamToSiteDialog siteId={site.id} />
