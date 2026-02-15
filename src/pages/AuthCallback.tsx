@@ -24,6 +24,12 @@ export default function AuthCallback() {
         const hashParams = parseHashParams();
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
+        const hashError = hashParams.get("error_description") || hashParams.get("error");
+        const queryError = url.searchParams.get("error_description") || url.searchParams.get("error");
+
+        if (hashError || queryError) {
+          throw new Error(hashError || queryError || "Authentication error.");
+        }
 
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -46,6 +52,8 @@ export default function AuthCallback() {
         if (cancelled) return;
 
         if (data.session) {
+          // Best-effort: ensure company exists if signup metadata included it.
+          await supabase.rpc("bootstrap_company_from_user_metadata");
           navigate("/dashboard", { replace: true });
         } else {
           navigate("/login", { replace: true });
@@ -88,4 +96,3 @@ export default function AuthCallback() {
     </div>
   );
 }
-
