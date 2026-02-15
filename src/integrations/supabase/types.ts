@@ -153,6 +153,7 @@ export type Database = {
           description: string | null
           id: string
           notes: string | null
+          priority: string
           revenue_cents: number | null
           scheduled_at: string | null
           site_id: string | null
@@ -170,6 +171,7 @@ export type Database = {
           description?: string | null
           id?: string
           notes?: string | null
+          priority?: string
           revenue_cents?: number | null
           scheduled_at?: string | null
           site_id?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           description?: string | null
           id?: string
           notes?: string | null
+          priority?: string
           revenue_cents?: number | null
           scheduled_at?: string | null
           site_id?: string | null

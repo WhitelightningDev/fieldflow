@@ -32,6 +32,7 @@ import RepairHistory from "./pages/dashboard/RepairHistory";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
+import TechJobDetail from "./pages/tech/TechJobDetail";
 import TechInventory from "./pages/tech/TechInventory";
 import TechPlaceholder from "./pages/tech/TechPlaceholder";
 import NotFound from "./pages/NotFound";
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/tech" element={<TechDashboard />}>
               <Route index element={<TechDispatch />} />
               <Route path="my-jobs" element={<TechMyJobs />} />
+              <Route path="job/:jobId" element={<TechJobDetail />} />
               <Route path="inventory" element={<TechInventory />} />
               <Route path="solar" element={<TechPlaceholder title="Solar Tasks" />} />
               <Route path="coc" element={<TechPlaceholder title="COC Certificates" />} />
