@@ -246,6 +246,144 @@ export type Database = {
           },
         ]
       }
+      site_team_assignments: {
+        Row: {
+          assigned_at: string
+          company_id: string | null
+          created_at: string
+          id: string
+          site_id: string
+          status: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          site_id: string
+          status?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          site_id?: string
+          status?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sites: {
+        Row: {
+          address: string | null
+          code: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          code?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          phone: string | null
+          role: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          role?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          role?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       technicians: {
         Row: {
           active: boolean
