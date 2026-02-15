@@ -40,47 +40,24 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
 
   const submit = React.useMemo(() => {
     return form.handleSubmit(async (values) => {
-      // 1. Sign up the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
-          data: { full_name: values.contactName },
+          data: {
+            full_name: values.contactName,
+            company_name: values.companyName,
+            industry: values.industry,
+            team_size: values.teamSize,
+          },
           emailRedirectTo: window.location.origin,
         },
       });
 
-      if (authError || !authData.user) {
-        toastError("Signup failed", authError?.message ?? "Unknown error");
+      if (authError) {
+        toastError("Signup failed", authError.message);
         return;
       }
-
-      // 2. Create the company
-      const { data: company, error: companyError } = await supabase
-        .from("companies")
-        .insert({
-          name: values.companyName,
-          industry: values.industry,
-          team_size: values.teamSize,
-        })
-        .select("id")
-        .single();
-
-      if (companyError || !company) {
-        toastError("Failed to create company", companyError?.message);
-        return;
-      }
-
-      // 3. Link profile to company
-      await supabase
-        .from("profiles")
-        .update({ company_id: company.id })
-        .eq("user_id", authData.user.id);
-
-      // 4. Assign owner role
-      await supabase
-        .from("user_roles")
-        .insert({ user_id: authData.user.id, role: "owner" });
 
       toastSuccess(
         "Company created!",
