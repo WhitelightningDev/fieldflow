@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import {
   Briefcase,
   CheckCircle2,
+  ChevronRight,
   Clock,
   FileSignature,
   MapPin,
@@ -14,6 +15,7 @@ import {
   Play,
 } from "lucide-react";
 import * as React from "react";
+import { Link } from "react-router-dom";
 
 function isToday(dateStr: string | null) {
   if (!dateStr) return false;
@@ -154,60 +156,63 @@ export default function TechDispatch() {
             ) : (
               <div className="space-y-3">
                 {todayJobs.map((job) => (
-                  <Card key={job.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold">{job.title}</span>
-                            <Badge className={statusColor[job.status] ?? ""}>{job.status}</Badge>
+                  <Link key={job.id} to={`/tech/job/${job.id}`} className="block">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold">{job.title}</span>
+                              <Badge className={statusColor[job.status] ?? ""}>{job.status}</Badge>
+                            </div>
+                            {job.description && (
+                              <p className="text-sm text-muted-foreground mb-2">{job.description}</p>
+                            )}
+                            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                              {(job as any).customers?.name && (
+                                <span>Customer: {(job as any).customers.name}</span>
+                              )}
+                              {(job as any).sites?.name && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {(job as any).sites.name}
+                                </span>
+                              )}
+                              {job.scheduled_at && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(job.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          {job.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{job.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                            {(job as any).customers?.name && (
-                              <span>Customer: {(job as any).customers.name}</span>
-                            )}
-                            {(job as any).sites?.name && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {(job as any).sites.name}
-                              </span>
-                            )}
-                            {job.scheduled_at && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(job.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                              </span>
-                            )}
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            {job.status === "new" || job.status === "scheduled" ? (
+                              <Button
+                                size="sm"
+                                onClick={(e) => { e.preventDefault(); updateStatus(job.id, "in-progress"); }}
+                                className="gradient-bg hover:opacity-90 shadow-glow gap-1"
+                              >
+                                <Play className="h-3.5 w-3.5" />
+                                Start Job
+                              </Button>
+                            ) : job.status === "in-progress" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => { e.preventDefault(); updateStatus(job.id, "completed"); }}
+                                className="gap-1"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Complete
+                              </Button>
+                            ) : null}
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          {job.status === "new" || job.status === "scheduled" ? (
-                            <Button
-                              size="sm"
-                              onClick={() => updateStatus(job.id, "in-progress")}
-                              className="gradient-bg hover:opacity-90 shadow-glow gap-1"
-                            >
-                              <Play className="h-3.5 w-3.5" />
-                              Start Job
-                            </Button>
-                          ) : job.status === "in-progress" ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateStatus(job.id, "completed")}
-                              className="gap-1"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Complete
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             )}
