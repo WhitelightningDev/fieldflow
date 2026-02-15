@@ -56,7 +56,7 @@ export default function CreateTechnicianDialog() {
       hourly_bill_rate_cents: moneyToCents(values.hourlyBillRate),
       active: values.active,
       trades: values.trades,
-    });
+    } as any);
     toast({ title: "Technician added" });
     setOpen(false);
     form.reset();

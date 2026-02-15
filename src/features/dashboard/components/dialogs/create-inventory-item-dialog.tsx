@@ -95,7 +95,7 @@ export default function CreateInventoryItemDialog({
       perishable: values.perishable,
       expiry_date: values.perishable && values.expiryDate ? new Date(values.expiryDate).toISOString() : null,
       location: values.location || null,
-    });
+    } as any);
     toast({ title: "Inventory item added" });
     setOpen(false);
     form.reset({ ...form.getValues(), name: "", sku: "", quantityOnHand: 0, location: "" });

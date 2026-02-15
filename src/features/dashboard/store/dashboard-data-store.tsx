@@ -244,7 +244,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     setJobRevenue: async (id, revenueCents) => {
       const { error } = await supabase
         .from("job_cards")
-        .update({ revenue_cents: revenueCents })
+        .update({ revenue_cents: revenueCents } as any)
         .eq("id", id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       setData((prev) => ({
@@ -280,7 +280,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     setInventoryUnitCost: async (itemId, unitCostCents) => {
       const { error } = await supabase
         .from("inventory_items")
-        .update({ unit_cost_cents: unitCostCents })
+        .update({ unit_cost_cents: unitCostCents } as any)
         .eq("id", itemId);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       setData((prev) => ({
@@ -313,7 +313,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     setTechnicianRates: async (technicianId, { hourlyCostCents, hourlyBillRateCents }) => {
       const { error } = await supabase
         .from("technicians")
-        .update({ hourly_cost_cents: hourlyCostCents, hourly_bill_rate_cents: hourlyBillRateCents })
+        .update({ hourly_cost_cents: hourlyCostCents, hourly_bill_rate_cents: hourlyBillRateCents } as any)
         .eq("id", technicianId);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       setData((prev) => ({
