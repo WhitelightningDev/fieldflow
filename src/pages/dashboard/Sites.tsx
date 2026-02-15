@@ -13,11 +13,11 @@ function getCurrentAssignment(assignments: SiteTeamAssignment[]) {
   const now = Date.now();
   const active = assignments
     .filter((a) => {
-      const start = new Date(a.starts_at).getTime();
-      const end = a.ends_at ? new Date(a.ends_at).getTime() : Infinity;
+      const start = new Date((a as any).starts_at ?? a.assigned_at).getTime();
+      const end = (a as any).ends_at ? new Date((a as any).ends_at).getTime() : Infinity;
       return start <= now && end >= now;
     })
-    .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+    .sort((a, b) => new Date((b as any).starts_at ?? b.assigned_at).getTime() - new Date((a as any).starts_at ?? a.assigned_at).getTime());
   return active[0];
 }
 
@@ -56,11 +56,11 @@ export default function Sites() {
             ) : null}
 
             {data.sites.map((site) => {
-              const customer = site.customer_id ? customersById.get(site.customer_id) : undefined;
+              const customer = (site as any).customer_id ? customersById.get((site as any).customer_id) : undefined;
               const assignments = data.siteTeamAssignments.filter((a) => a.site_id === site.id);
               const current = getCurrentAssignment(assignments);
               const currentTeam = current ? teamsById.get(current.team_id) : undefined;
-              const currentEndsAt = current?.ends_at ?? null;
+              const currentEndsAt = (current as any)?.ends_at ?? null;
               return (
                 <TableRow key={site.id}>
                   <TableCell>
