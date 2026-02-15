@@ -14,15 +14,17 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { Briefcase, Boxes, LayoutDashboard, LogOut, Users, Wrench } from "lucide-react";
+import { Briefcase, Boxes, Building2, LayoutDashboard, LogOut, Users, Users2, Wrench } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/dashboard/jobs", label: "Job cards", icon: Briefcase },
+  { to: "/dashboard/sites", label: "Sites", icon: Building2 },
   { to: "/dashboard/customers", label: "Customers", icon: Users },
   { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
+  { to: "/dashboard/teams", label: "Teams", icon: Users2 },
   { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
 ] as const;
 

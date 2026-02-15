@@ -8,12 +8,20 @@ type Customer = Tables<"customers">;
 type Technician = Tables<"technicians">;
 type JobCard = Tables<"job_cards">;
 type InventoryItem = Tables<"inventory_items">;
+type Site = Tables<"sites">;
+type Team = Tables<"teams">;
+type TeamMember = Tables<"team_members">;
+type SiteTeamAssignment = Tables<"site_team_assignments">;
 
 export type DashboardData = {
   customers: Customer[];
   technicians: Technician[];
   jobCards: JobCard[];
   inventoryItems: InventoryItem[];
+  sites: Site[];
+  teams: Team[];
+  teamMembers: TeamMember[];
+  siteTeamAssignments: SiteTeamAssignment[];
 };
 
 type DashboardActions = {
@@ -21,8 +29,15 @@ type DashboardActions = {
   addTechnician: (t: Omit<TablesInsert<"technicians">, "company_id">) => Promise<Technician | null>;
   addJobCard: (j: Omit<TablesInsert<"job_cards">, "company_id">) => Promise<JobCard | null>;
   setJobCardStatus: (id: string, status: string) => Promise<void>;
+  setJobCardSite: (id: string, siteId: string | null) => Promise<void>;
   addInventoryItem: (i: Omit<TablesInsert<"inventory_items">, "company_id">) => Promise<InventoryItem | null>;
   adjustInventory: (itemId: string, delta: number) => Promise<void>;
+  addSite: (s: Omit<TablesInsert<"sites">, "company_id">) => Promise<Site | null>;
+  addTeam: (t: Omit<TablesInsert<"teams">, "company_id">) => Promise<Team | null>;
+  addTeamMember: (teamId: string, technicianId: string) => Promise<TeamMember | null>;
+  removeTeamMember: (teamMemberId: string) => Promise<void>;
+  assignTeamToSite: (a: { siteId: string; teamId: string; startsAt?: string; endsAt?: string | null; notes?: string | null }) => Promise<SiteTeamAssignment | null>;
+  endSiteAssignment: (assignmentId: string, endsAt: string) => Promise<void>;
   refreshData: () => Promise<void>;
 };
 
@@ -43,6 +58,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     technicians: [],
     jobCards: [],
     inventoryItems: [],
+    sites: [],
+    teams: [],
+    teamMembers: [],
+    siteTeamAssignments: [],
   });
   const [loading, setLoading] = React.useState(true);
 
@@ -52,17 +71,25 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return;
     }
     setLoading(true);
-    const [customersRes, techRes, jobsRes, invRes] = await Promise.all([
+    const [customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
       supabase.from("customers").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
       supabase.from("technicians").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
       supabase.from("job_cards").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
       supabase.from("inventory_items").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+      supabase.from("sites").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+      supabase.from("teams").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+      supabase.from("team_members").select("*").order("created_at", { ascending: false }),
+      supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
     ]);
     setData({
       customers: customersRes.data ?? [],
       technicians: techRes.data ?? [],
       jobCards: jobsRes.data ?? [],
       inventoryItems: invRes.data ?? [],
+      sites: sitesRes.data ?? [],
+      teams: teamsRes.data ?? [],
+      teamMembers: teamMembersRes.data ?? [],
+      siteTeamAssignments: assignmentsRes.data ?? [],
     });
     setLoading(false);
   }, [companyId]);
@@ -116,6 +143,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         jobCards: prev.jobCards.map((j) => (j.id === id ? { ...j, status: status as any, updated_at: new Date().toISOString() } : j)),
       }));
     },
+    setJobCardSite: async (id, siteId) => {
+      const { error } = await supabase
+        .from("job_cards")
+        .update({ site_id: siteId })
+        .eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({
+        ...prev,
+        jobCards: prev.jobCards.map((j) => (j.id === id ? { ...j, site_id: siteId, updated_at: new Date().toISOString() } : j)),
+      }));
+    },
     addInventoryItem: async (i) => {
       if (!companyId) return null;
       const { data: row, error } = await supabase
@@ -139,6 +177,75 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setData((prev) => ({
         ...prev,
         inventoryItems: prev.inventoryItems.map((i) => (i.id === itemId ? { ...i, quantity_on_hand: newQty } : i)),
+      }));
+    },
+    addSite: async (s) => {
+      if (!companyId) return null;
+      const { data: row, error } = await supabase
+        .from("sites")
+        .insert({ ...s, company_id: companyId })
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({ ...prev, sites: [row, ...prev.sites] }));
+      return row;
+    },
+    addTeam: async (t) => {
+      if (!companyId) return null;
+      const { data: row, error } = await supabase
+        .from("teams")
+        .insert({ ...t, company_id: companyId })
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({ ...prev, teams: [row, ...prev.teams] }));
+      return row;
+    },
+    addTeamMember: async (teamId, technicianId) => {
+      const { data: row, error } = await supabase
+        .from("team_members")
+        .insert({ team_id: teamId, technician_id: technicianId })
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({ ...prev, teamMembers: [row, ...prev.teamMembers] }));
+      return row;
+    },
+    removeTeamMember: async (teamMemberId) => {
+      const { error } = await supabase
+        .from("team_members")
+        .delete()
+        .eq("id", teamMemberId);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== teamMemberId) }));
+    },
+    assignTeamToSite: async ({ siteId, teamId, startsAt, endsAt, notes }) => {
+      const { data: row, error } = await supabase
+        .from("site_team_assignments")
+        .insert({
+          site_id: siteId,
+          team_id: teamId,
+          starts_at: startsAt ?? undefined,
+          ends_at: endsAt ?? null,
+          notes: notes ?? null,
+        })
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({ ...prev, siteTeamAssignments: [row, ...prev.siteTeamAssignments] }));
+      return row;
+    },
+    endSiteAssignment: async (assignmentId, endsAt) => {
+      const { data: row, error } = await supabase
+        .from("site_team_assignments")
+        .update({ ends_at: endsAt })
+        .eq("id", assignmentId)
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({
+        ...prev,
+        siteTeamAssignments: prev.siteTeamAssignments.map((a) => (a.id === assignmentId ? row : a)),
       }));
     },
     refreshData: fetchAll,

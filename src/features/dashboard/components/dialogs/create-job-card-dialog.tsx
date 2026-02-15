@@ -25,6 +25,7 @@ const schema = z.object({
   description: z.string().optional(),
   status: z.enum(STATUSES as [JobCardStatus, ...JobCardStatus[]]),
   customerId: z.string().min(1, "Select a customer"),
+  siteId: z.string().optional(),
   technicianId: z.string().optional(),
   scheduledAt: z.string().optional(),
   checklist: z.string().optional(),
@@ -45,6 +46,7 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
       description: "",
       status: "new",
       customerId: data.customers[0]?.id ?? "",
+      siteId: "",
       technicianId: "",
       scheduledAt: "",
       checklist: TRADE_JOB_CHECKLISTS[defaultTradeId].join("\n"),
@@ -60,6 +62,12 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
   }, [defaultTradeId, form, open]);
 
   const tradeId = form.watch("tradeId") as TradeId;
+  const customerId = form.watch("customerId");
+  const sitesForCustomer = React.useMemo(
+    () => data.sites.filter((s) => s.customer_id === customerId),
+    [customerId, data.sites],
+  );
+  const sitesForSelect = sitesForCustomer.length > 0 ? sitesForCustomer : data.sites;
 
   React.useEffect(() => {
     if (!open) return;
@@ -74,6 +82,7 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
       description: values.description || null,
       status: values.status,
       customer_id: values.customerId,
+      site_id: values.siteId ? values.siteId : null,
       technician_id: values.technicianId || null,
       scheduled_at: values.scheduledAt ? fromDatetimeLocal(values.scheduledAt) ?? null : null,
       checklist: (values.checklist || "")
@@ -198,6 +207,31 @@ export default function CreateJobCardDialog({ defaultTradeId }: { defaultTradeId
                         {data.customers.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="siteId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site (optional)</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="No site" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">No site</SelectItem>
+                        {sitesForSelect.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
