@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -16,7 +19,7 @@ const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 const schema = z.object({
   name: z.string().min(2, "Technician name is required"),
   phone: z.string().optional(),
-  email: z.string().email("Enter a valid email").optional().or(z.literal("")),
+  email: z.string().email("Email is required to send the invite"),
   hourlyCost: z
     .string()
     .optional()
@@ -38,7 +41,8 @@ function moneyToCents(v?: string) {
 }
 
 export default function CreateTechnicianDialog() {
-  const { actions } = useDashboardData();
+  const { actions, data } = useDashboardData();
+  const { profile } = useAuth();
   const [open, setOpen] = React.useState(false);
 
   const form = useForm<Values>({
@@ -48,7 +52,8 @@ export default function CreateTechnicianDialog() {
   });
 
   const submit = form.handleSubmit(async (values) => {
-    await actions.addTechnician({
+    // 1. Create technician record
+    const tech = await actions.addTechnician({
       name: values.name,
       phone: values.phone || null,
       email: values.email || null,
@@ -57,7 +62,34 @@ export default function CreateTechnicianDialog() {
       active: values.active,
       trades: values.trades,
     });
-    toast({ title: "Technician added" });
+
+    if (!tech) return;
+
+    // 2. Send invite email via edge function
+    if (values.email && profile?.company_id) {
+      try {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("invite-technician", {
+          body: {
+            technicianId: tech.id,
+            email: values.email,
+            name: values.name,
+            companyId: profile.company_id,
+            industry: data.company?.industry,
+            redirectTo: `${getPublicSiteUrl()}/auth/callback`,
+          },
+        });
+        if (fnError) {
+          toast({ title: "Technician added", description: `Invite email failed: ${fnError.message}. You can resend later.` });
+        } else {
+          toast({ title: "Technician added & invited", description: `Invite email sent to ${values.email}` });
+        }
+      } catch {
+        toast({ title: "Technician added", description: "Invite email could not be sent. You can resend later." });
+      }
+    } else {
+      toast({ title: "Technician added" });
+    }
+
     setOpen(false);
     form.reset();
   });
@@ -72,7 +104,7 @@ export default function CreateTechnicianDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add technician</DialogTitle>
-          <DialogDescription>Assign one or more trades to the technician.</DialogDescription>
+          <DialogDescription>Add a technician and send them an invite email to log in.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -110,7 +142,7 @@ export default function CreateTechnicianDialog() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email (invite will be sent)</FormLabel>
                     <FormControl>
                       <Input placeholder="tech@company.com" autoComplete="email" {...field} />
                     </FormControl>
@@ -175,7 +207,7 @@ export default function CreateTechnicianDialog() {
 
             <DialogFooter>
               <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
-                Add technician
+                {form.formState.isSubmitting ? "Adding & inviting..." : "Add & invite technician"}
               </Button>
             </DialogFooter>
           </form>

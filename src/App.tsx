@@ -29,6 +29,11 @@ import ServiceLogs from "./pages/dashboard/ServiceLogs";
 import ComplianceRecords from "./pages/dashboard/ComplianceRecords";
 import WarrantyTracker from "./pages/dashboard/WarrantyTracker";
 import RepairHistory from "./pages/dashboard/RepairHistory";
+import TechDashboard from "./pages/TechDashboard";
+import TechDispatch from "./pages/tech/TechDispatch";
+import TechMyJobs from "./pages/tech/TechMyJobs";
+import TechInventory from "./pages/tech/TechInventory";
+import TechPlaceholder from "./pages/tech/TechPlaceholder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +71,20 @@ const App = () => (
               <Route path="compliance" element={<ComplianceRecords />} />
               <Route path="warranty-tracker" element={<WarrantyTracker />} />
               <Route path="repair-history" element={<RepairHistory />} />
+            </Route>
+            {/* Technician dashboard */}
+            <Route path="/tech" element={<TechDashboard />}>
+              <Route index element={<TechDispatch />} />
+              <Route path="my-jobs" element={<TechMyJobs />} />
+              <Route path="inventory" element={<TechInventory />} />
+              <Route path="solar" element={<TechPlaceholder title="Solar Tasks" />} />
+              <Route path="coc" element={<TechPlaceholder title="COC Certificates" />} />
+              <Route path="service-calls" element={<TechPlaceholder title="Service Calls" />} />
+              <Route path="vehicle-logs" element={<TechPlaceholder title="Vehicle Logs" />} />
+              <Route path="service-logs" element={<TechPlaceholder title="Service Logs" />} />
+              <Route path="compliance" element={<TechPlaceholder title="Compliance" />} />
+              <Route path="warranty" element={<TechPlaceholder title="Warranty" />} />
+              <Route path="repairs" element={<TechPlaceholder title="Repairs" />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
