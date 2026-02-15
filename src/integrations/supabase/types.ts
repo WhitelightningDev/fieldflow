@@ -151,6 +151,7 @@ export type Database = {
           id: string
           notes: string | null
           scheduled_at: string | null
+          site_id: string | null
           status: Database["public"]["Enums"]["job_card_status"]
           technician_id: string | null
           title: string
@@ -166,6 +167,7 @@ export type Database = {
           id?: string
           notes?: string | null
           scheduled_at?: string | null
+          site_id?: string | null
           status?: Database["public"]["Enums"]["job_card_status"]
           technician_id?: string | null
           title: string
@@ -181,6 +183,7 @@ export type Database = {
           id?: string
           notes?: string | null
           scheduled_at?: string | null
+          site_id?: string | null
           status?: Database["public"]["Enums"]["job_card_status"]
           technician_id?: string | null
           title?: string
@@ -203,7 +206,100 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "job_cards_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "job_cards_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          job_card_id: string
+          kind: string
+          storage_path: string
+          taken_at: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          job_card_id: string
+          kind?: string
+          storage_path: string
+          taken_at?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          job_card_id?: string
+          kind?: string
+          storage_path?: string
+          taken_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_photos_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_time_entries: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          job_card_id: string
+          minutes: number | null
+          notes: string | null
+          started_at: string
+          technician_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          job_card_id: string
+          minutes?: number | null
+          notes?: string | null
+          started_at?: string
+          technician_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          job_card_id?: string
+          minutes?: number | null
+          notes?: string | null
+          started_at?: string
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_time_entries_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_time_entries_technician_id_fkey"
             columns: ["technician_id"]
             isOneToOne: false
             referencedRelation: "technicians"
@@ -242,6 +338,109 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_documents: {
+        Row: {
+          created_at: string
+          id: string
+          job_card_id: string | null
+          kind: string
+          metadata: Json | null
+          site_id: string
+          storage_path: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_card_id?: string | null
+          kind?: string
+          metadata?: Json | null
+          site_id: string
+          storage_path: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_card_id?: string | null
+          kind?: string
+          metadata?: Json | null
+          site_id?: string
+          storage_path?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_documents_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_documents_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_material_usage: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_item_id: string
+          job_card_id: string
+          notes: string | null
+          quantity_used: number
+          site_id: string
+          used_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_item_id: string
+          job_card_id: string
+          notes?: string | null
+          quantity_used?: number
+          site_id: string
+          used_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_item_id?: string
+          job_card_id?: string
+          notes?: string | null
+          quantity_used?: number
+          site_id?: string
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_material_usage_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_material_usage_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_material_usage_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
@@ -285,6 +484,7 @@ export type Database = {
           code: string | null
           company_id: string
           created_at: string
+          customer_id: string | null
           id: string
           is_active: boolean
           name: string
@@ -296,6 +496,7 @@ export type Database = {
           code?: string | null
           company_id: string
           created_at?: string
+          customer_id?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -307,13 +508,22 @@ export type Database = {
           code?: string | null
           company_id?: string
           created_at?: string
+          customer_id?: string | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {

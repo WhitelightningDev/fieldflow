@@ -15,11 +15,11 @@ import type { Tables } from "@/integrations/supabase/types";
 import { ExternalLink, Trash2 } from "lucide-react";
 import * as React from "react";
 
-type JobCard = Tables<"job_cards">;
-type JobTimeEntry = Tables<"job_time_entries">;
-type JobPhoto = Tables<"job_photos">;
-type SiteMaterialUsage = Tables<"site_material_usage">;
-type SiteDocument = Tables<"site_documents">;
+type JobCard = Tables<"job_cards"> & { site_id?: string | null };
+type JobTimeEntry = any;
+type JobPhoto = any;
+type SiteMaterialUsage = any;
+type SiteDocument = any;
 
 function sanitizeFilename(name: string) {
   return name.replace(/[^\w.\-]+/g, "_");
@@ -73,8 +73,8 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
     if (!job) return;
     setLoading(true);
     const [tRes, pRes] = await Promise.all([
-      supabase.from("job_time_entries").select("*").eq("job_card_id", job.id).order("started_at", { ascending: false }),
-      supabase.from("job_photos").select("*").eq("job_card_id", job.id).order("created_at", { ascending: false }),
+      (supabase as any).from("job_time_entries").select("*").eq("job_card_id", job.id).order("started_at", { ascending: false }),
+      (supabase as any).from("job_photos").select("*").eq("job_card_id", job.id).order("created_at", { ascending: false }),
     ]);
 
     setTimeEntries(tRes.data ?? []);
@@ -83,13 +83,13 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
     const siteId = siteIdOverride === undefined ? job.site_id : siteIdOverride;
     if (siteId) {
       const [mRes, dRes] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("site_material_usage")
           .select("*")
           .eq("site_id", siteId)
           .eq("job_card_id", job.id)
           .order("used_at", { ascending: false }),
-        supabase
+        (supabase as any)
           .from("site_documents")
           .select("*")
           .eq("site_id", siteId)
@@ -128,7 +128,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
 
   if (!job) return null;
 
-  const siteOptions = data.sites.filter((s) => s.customer_id === job.customer_id);
+  const siteOptions = data.sites.filter((s) => (s as any).customer_id === job.customer_id);
   const sitesForSelect = siteOptions.length ? siteOptions : data.sites;
 
   const logTime = async () => {
@@ -146,7 +146,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
           ? Math.max(0, Math.round((new Date(ended).getTime() - new Date(started).getTime()) / 60000))
           : undefined;
 
-    const { error } = await supabase.from("job_time_entries").insert({
+    const { error } = await (supabase as any).from("job_time_entries").insert({
       job_card_id: job.id,
       technician_id: timeForm.technicianId ? timeForm.technicianId : null,
       started_at: started,
@@ -176,7 +176,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
       return;
     }
 
-    const { error: rowErr } = await supabase.from("job_photos").insert({
+    const { error: rowErr } = await (supabase as any).from("job_photos").insert({
       job_card_id: job.id,
       kind: photoKind,
       storage_path: path,
@@ -196,7 +196,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
 
   const deletePhoto = async (p: JobPhoto) => {
     await supabase.storage.from("job-photos").remove([p.storage_path]);
-    const { error } = await supabase.from("job_photos").delete().eq("id", p.id);
+    const { error } = await (supabase as any).from("job_photos").delete().eq("id", p.id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
@@ -215,7 +215,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
       toast({ title: "Invalid quantity", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from("site_material_usage").insert({
+    const { error } = await (supabase as any).from("site_material_usage").insert({
       site_id: job.site_id,
       job_card_id: job.id,
       inventory_item_id: materialItemId,
@@ -250,7 +250,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
       toast({ title: "Upload failed", description: uploadErr.message, variant: "destructive" });
       return;
     }
-    const { error: rowErr } = await supabase.from("site_documents").insert({
+    const { error: rowErr } = await (supabase as any).from("site_documents").insert({
       site_id: job.site_id,
       job_card_id: job.id,
       kind: "coc",
@@ -271,7 +271,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
 
   const deleteDoc = async (d: SiteDocument) => {
     await supabase.storage.from("site-documents").remove([d.storage_path]);
-    const { error } = await supabase.from("site_documents").delete().eq("id", d.id);
+    const { error } = await (supabase as any).from("site_documents").delete().eq("id", d.id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;

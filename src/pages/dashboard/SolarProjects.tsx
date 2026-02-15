@@ -9,21 +9,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as _supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+
+// Solar tables not yet in generated types — cast supabase to any
+const supabase = _supabase as any;
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatDistanceToNowStrict } from "date-fns";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-type SolarProject = Tables<"solar_projects">;
-type SolarBattery = Tables<"solar_batteries">;
-type SolarProjectBattery = Tables<"solar_project_batteries">;
-type SolarPanelModel = Tables<"solar_panel_models">;
-type SolarProjectPanel = Tables<"solar_project_panels">;
-type SolarChecklistItem = Tables<"solar_project_checklist_items">;
-type SolarSignoff = Tables<"solar_project_signoffs">;
+type SolarProject = any;
+type SolarBattery = any;
+type SolarProjectBattery = any;
+type SolarPanelModel = any;
+type SolarProjectPanel = any;
+type SolarChecklistItem = any;
+type SolarSignoff = any;
 
 const createProjectSchema = z.object({
   title: z.string().min(2, "Project title is required"),

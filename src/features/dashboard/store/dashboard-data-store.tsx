@@ -263,7 +263,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return row;
     },
     addTeamMember: async (teamId, technicianId) => {
-      const { data: row, error } = await supabase
+      const { data: row, error } = await (supabase as any)
         .from("team_members")
         .insert({ team_id: teamId, technician_id: technicianId })
         .select()
@@ -281,7 +281,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== teamMemberId) }));
     },
     assignTeamToSite: async ({ siteId, teamId, startsAt, endsAt, notes }) => {
-      const { data: row, error } = await supabase
+      const { data: row, error } = await (supabase as any)
         .from("site_team_assignments")
         .insert({
           site_id: siteId,
@@ -297,7 +297,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return row;
     },
     endSiteAssignment: async (assignmentId, endsAt) => {
-      const { data: row, error } = await supabase
+      const { data: row, error } = await (supabase as any)
         .from("site_team_assignments")
         .update({ ends_at: endsAt })
         .eq("id", assignmentId)

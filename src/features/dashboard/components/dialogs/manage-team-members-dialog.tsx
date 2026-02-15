@@ -14,7 +14,7 @@ export default function ManageTeamMembersDialog({ teamId }: { teamId: string }) 
 
   const team = data.teams.find((t) => t.id === teamId);
   const members = data.teamMembers.filter((m) => m.team_id === teamId);
-  const memberTechIds = new Set(members.map((m) => m.technician_id));
+  const memberTechIds = new Set(members.map((m) => (m as any).technician_id));
   const availableTechs = data.technicians.filter((t) => !memberTechIds.has(t.id));
 
   React.useEffect(() => {
@@ -78,7 +78,7 @@ export default function ManageTeamMembersDialog({ teamId }: { teamId: string }) 
                 </TableRow>
               ) : null}
               {members.map((m) => {
-                const tech = data.technicians.find((t) => t.id === m.technician_id);
+                const tech = data.technicians.find((t) => t.id === (m as any).technician_id);
                 return (
                   <TableRow key={m.id}>
                     <TableCell>{tech?.name ?? "—"}</TableCell>

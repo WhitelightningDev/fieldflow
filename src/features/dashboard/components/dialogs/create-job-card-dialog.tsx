@@ -78,7 +78,7 @@ export default function CreateJobCardDialog({
   const tradeId = form.watch("tradeId") as TradeId;
   const customerId = form.watch("customerId");
   const sitesForCustomer = React.useMemo(
-    () => data.sites.filter((s) => s.customer_id === customerId),
+    () => data.sites.filter((s) => (s as any).customer_id === customerId),
     [customerId, data.sites],
   );
   const sitesForSelect = sitesForCustomer.length > 0 ? sitesForCustomer : data.sites;
@@ -96,7 +96,6 @@ export default function CreateJobCardDialog({
       description: values.description || null,
       status: values.status,
       customer_id: values.customerId,
-      site_id: values.siteId ? values.siteId : null,
       technician_id: values.technicianId || null,
       scheduled_at: values.scheduledAt ? fromDatetimeLocal(values.scheduledAt) ?? null : null,
       checklist: (values.checklist || "")
@@ -104,7 +103,7 @@ export default function CreateJobCardDialog({
         .map((s) => s.trim())
         .filter(Boolean),
       notes: values.notes || null,
-    });
+    } as any);
     toast({ title: "Job card created" });
     setOpen(false);
     form.reset({ ...form.getValues(), title: "", description: "", notes: "" });
