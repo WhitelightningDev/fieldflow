@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast";
+import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
@@ -30,10 +30,10 @@ export default function LoginForm() {
       password: values.password,
     });
     if (error) {
-      toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      toastError("Login failed", error.message);
       return;
     }
-    toast({ title: "Logged in successfully" });
+    toastSuccess("Logged in successfully");
     navigate("/dashboard");
   });
 

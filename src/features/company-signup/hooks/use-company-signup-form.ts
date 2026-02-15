@@ -2,7 +2,7 @@ import * as React from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "@/components/ui/use-toast";
+import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -51,7 +51,7 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
       });
 
       if (authError || !authData.user) {
-        toast({ title: "Signup failed", description: authError?.message ?? "Unknown error", variant: "destructive" });
+        toastError("Signup failed", authError?.message ?? "Unknown error");
         return;
       }
 
@@ -67,7 +67,7 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
         .single();
 
       if (companyError || !company) {
-        toast({ title: "Failed to create company", description: companyError?.message, variant: "destructive" });
+        toastError("Failed to create company", companyError?.message);
         return;
       }
 
@@ -82,10 +82,10 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
         .from("user_roles")
         .insert({ user_id: authData.user.id, role: "owner" });
 
-      toast({
-        title: "Company created!",
-        description: "Check your email to confirm your account, then log in.",
-      });
+      toastSuccess(
+        "Company created!",
+        "Check your email to confirm your account, then log in.",
+      );
       args?.onSuccess?.(values);
     });
   }, [args, form]);
