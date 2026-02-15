@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
+import { getIndustryNav } from "@/features/dashboard/constants/industry-nav";
 import { cn } from "@/lib/utils";
-import { Briefcase, Boxes, Building2, LayoutDashboard, LogOut, Sun, Users, Users2, Wrench } from "lucide-react";
+import { LogOut } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -25,26 +26,10 @@ export default function DashboardSidebar() {
   const { signOut } = useAuth();
   const { data } = useDashboardData();
 
-  const navItems = React.useMemo(() => {
-    const base = [
-      { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-      { to: "/dashboard/jobs", label: "Job cards", icon: Briefcase },
-      { to: "/dashboard/sites", label: "Sites", icon: Building2 },
-      { to: "/dashboard/customers", label: "Customers", icon: Users },
-      { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
-      { to: "/dashboard/teams", label: "Teams", icon: Users2 },
-      { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
-    ] as const;
-
-    if (data.company?.industry === "electrical-contracting") {
-      return [
-        ...base.slice(0, 2),
-        { to: "/dashboard/solar", label: "Solar projects", icon: Sun },
-        ...base.slice(2),
-      ] as const;
-    }
-    return base;
-  }, [data.company?.industry]);
+  const navItems = React.useMemo(
+    () => getIndustryNav(data.company?.industry),
+    [data.company?.industry],
+  );
   const isActive = React.useCallback(
     (to: string) => {
       if (to === "/dashboard") return location.pathname === "/dashboard";

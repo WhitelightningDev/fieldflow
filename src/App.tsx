@@ -20,6 +20,15 @@ import Sites from "./pages/dashboard/Sites";
 import Teams from "./pages/dashboard/Teams";
 import CreateCompany from "./pages/dashboard/CreateCompany";
 import SolarProjects from "./pages/dashboard/SolarProjects";
+import CocCertificates from "./pages/dashboard/CocCertificates";
+import ServiceCalls from "./pages/dashboard/ServiceCalls";
+import MaintenanceSchedules from "./pages/dashboard/MaintenanceSchedules";
+import VehicleLogs from "./pages/dashboard/VehicleLogs";
+import PartsCatalog from "./pages/dashboard/PartsCatalog";
+import ServiceLogs from "./pages/dashboard/ServiceLogs";
+import ComplianceRecords from "./pages/dashboard/ComplianceRecords";
+import WarrantyTracker from "./pages/dashboard/WarrantyTracker";
+import RepairHistory from "./pages/dashboard/RepairHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +57,15 @@ const App = () => (
               <Route path="sites" element={<Sites />} />
               <Route path="teams" element={<Teams />} />
               <Route path="solar" element={<SolarProjects />} />
+              <Route path="coc-certificates" element={<CocCertificates />} />
+              <Route path="service-calls" element={<ServiceCalls />} />
+              <Route path="maintenance-schedules" element={<MaintenanceSchedules />} />
+              <Route path="vehicle-logs" element={<VehicleLogs />} />
+              <Route path="parts-catalog" element={<PartsCatalog />} />
+              <Route path="service-logs" element={<ServiceLogs />} />
+              <Route path="compliance" element={<ComplianceRecords />} />
+              <Route path="warranty-tracker" element={<WarrantyTracker />} />
+              <Route path="repair-history" element={<RepairHistory />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
