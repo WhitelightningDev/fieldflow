@@ -25,7 +25,7 @@ type Values = z.infer<typeof schema>;
 
 export default function CreateCompany() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
 
   React.useEffect(() => {
     if (profile?.company_id) navigate("/dashboard", { replace: true });
@@ -91,6 +91,7 @@ export default function CreateCompany() {
     }
 
     toast({ title: "Company created" });
+    await refreshProfile();
     navigate("/dashboard", { replace: true });
   });
 
@@ -181,4 +182,3 @@ export default function CreateCompany() {
     </div>
   );
 }
-

@@ -9,6 +9,7 @@ type AuthContextValue = {
   profile: { id: string; full_name: string; email: string | null; company_id: string | null } | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -19,6 +20,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);
 
   const bootstrapAttemptedRef = React.useRef(new Set<string>());
+
+  const bootstrapCompanyClientSide = React.useCallback(async (userId: string) => {
+    const { data: userRes, error: userErr } = await supabase.auth.getUser();
+    if (userErr) return false;
+    const meta: any = userRes.user?.user_metadata ?? {};
+
+    const companyName = (meta.company_name ?? "").toString().trim();
+    if (!companyName) return false;
+
+    const industry = (meta.industry ?? "general").toString();
+    const teamSize = meta.team_size ? meta.team_size.toString() : null;
+    const fullName = meta.full_name ? meta.full_name.toString() : "";
+    const email = userRes.user?.email ?? null;
+
+    // Ensure profile exists (some projects may not have the auth trigger installed).
+    await supabase
+      .from("profiles")
+      .upsert(
+        { user_id: userId, full_name: fullName, email },
+        { onConflict: "user_id" },
+      );
+
+    // Create company and link profile.
+    const { data: company, error: companyErr } = await supabase
+      .from("companies")
+      .insert({ name: companyName, industry, team_size: teamSize })
+      .select("id")
+      .single();
+    if (companyErr || !company?.id) return false;
+
+    const { error: linkErr } = await supabase
+      .from("profiles")
+      .update({ company_id: company.id })
+      .eq("user_id", userId);
+    if (linkErr) return false;
+
+    // Best-effort: assign owner role (if policy exists).
+    await supabase
+      .from("user_roles")
+      .insert({ user_id: userId, role: "owner" } as any);
+
+    return true;
+  }, []);
 
   const fetchProfile = React.useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -40,10 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(updated);
         return;
       }
+      // Fallback if the RPC doesn't exist yet or failed: bootstrap from user_metadata client-side.
+      const clientBootstrapped = await bootstrapCompanyClientSide(userId);
+      if (clientBootstrapped) {
+        const { data: updated } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, company_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        setProfile(updated);
+        return;
+      }
     }
 
     setProfile(data);
-  }, []);
+  }, [bootstrapCompanyClientSide]);
 
   React.useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -76,9 +131,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
   }, []);
 
+  const refreshProfile = React.useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
+    if (!userId) return;
+    await fetchProfile(userId);
+  }, [fetchProfile]);
+
   const value = React.useMemo<AuthContextValue>(
-    () => ({ session, user: session?.user ?? null, profile, loading, signOut }),
-    [session, profile, loading, signOut]
+    () => ({ session, user: session?.user ?? null, profile, loading, signOut, refreshProfile }),
+    [session, profile, loading, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

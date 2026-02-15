@@ -10,7 +10,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 
 export default function DashboardTopbar() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { data } = useDashboardData();
 
   const allowedTradeIds = React.useMemo<TradeId[] | null>(() => {
@@ -31,15 +31,15 @@ export default function DashboardTopbar() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
-            {profile?.company_id ? (
+            {!authLoading && profile?.company_id ? (
               <div className="hidden sm:block text-sm text-muted-foreground">
                 {data.company?.name ?? "Company"}
               </div>
-            ) : (
+            ) : !authLoading ? (
               <Button asChild variant="outline" size="sm">
                 <Link to="/dashboard/create-company">Create company</Link>
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
