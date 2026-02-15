@@ -324,9 +324,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       }));
     },
     addTeamMember: async (teamId, technicianId) => {
-      const { data: row, error } = await (supabase as any)
+      const tech = data.technicians.find((t) => t.id === technicianId);
+      if (!tech) { toast({ title: "Error", description: "Technician not found", variant: "destructive" }); return null; }
+      const companyId = data.company?.id;
+      const { data: row, error } = await supabase
         .from("team_members")
-        .insert({ team_id: teamId, technician_id: technicianId })
+        .insert({ team_id: teamId, full_name: tech.name, email: tech.email, phone: tech.phone, company_id: companyId })
         .select()
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
