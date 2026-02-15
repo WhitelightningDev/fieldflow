@@ -102,6 +102,7 @@ export type Database = {
           sku: string | null
           trade_id: string
           unit: Database["public"]["Enums"]["inventory_unit"]
+          unit_cost_cents: number | null
         }
         Insert: {
           company_id: string
@@ -116,6 +117,7 @@ export type Database = {
           sku?: string | null
           trade_id: string
           unit?: Database["public"]["Enums"]["inventory_unit"]
+          unit_cost_cents?: number | null
         }
         Update: {
           company_id?: string
@@ -130,6 +132,7 @@ export type Database = {
           sku?: string | null
           trade_id?: string
           unit?: Database["public"]["Enums"]["inventory_unit"]
+          unit_cost_cents?: number | null
         }
         Relationships: [
           {
@@ -150,6 +153,7 @@ export type Database = {
           description: string | null
           id: string
           notes: string | null
+          revenue_cents: number | null
           scheduled_at: string | null
           site_id: string | null
           status: Database["public"]["Enums"]["job_card_status"]
@@ -166,6 +170,7 @@ export type Database = {
           description?: string | null
           id?: string
           notes?: string | null
+          revenue_cents?: number | null
           scheduled_at?: string | null
           site_id?: string | null
           status?: Database["public"]["Enums"]["job_card_status"]
@@ -182,6 +187,7 @@ export type Database = {
           description?: string | null
           id?: string
           notes?: string | null
+          revenue_cents?: number | null
           scheduled_at?: string | null
           site_id?: string | null
           status?: Database["public"]["Enums"]["job_card_status"]
@@ -450,6 +456,7 @@ export type Database = {
           assigned_at: string
           company_id: string | null
           created_at: string
+          ends_at: string | null
           id: string
           site_id: string
           status: string
@@ -460,6 +467,7 @@ export type Database = {
           assigned_at?: string
           company_id?: string | null
           created_at?: string
+          ends_at?: string | null
           id?: string
           site_id: string
           status?: string
@@ -470,6 +478,7 @@ export type Database = {
           assigned_at?: string
           company_id?: string | null
           created_at?: string
+          ends_at?: string | null
           id?: string
           site_id?: string
           status?: string
@@ -600,6 +609,8 @@ export type Database = {
           company_id: string
           created_at: string
           email: string | null
+          hourly_bill_rate_cents: number | null
+          hourly_cost_cents: number | null
           id: string
           name: string
           phone: string | null
@@ -610,6 +621,8 @@ export type Database = {
           company_id: string
           created_at?: string
           email?: string | null
+          hourly_bill_rate_cents?: number | null
+          hourly_cost_cents?: number | null
           id?: string
           name: string
           phone?: string | null
@@ -620,6 +633,8 @@ export type Database = {
           company_id?: string
           created_at?: string
           email?: string | null
+          hourly_bill_rate_cents?: number | null
+          hourly_cost_cents?: number | null
           id?: string
           name?: string
           phone?: string | null
