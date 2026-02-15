@@ -38,13 +38,14 @@ export default function CreateSiteDialog() {
   const submit = form.handleSubmit(async (values) => {
     const created = await actions.addSite({
       name: values.name,
+      customer_id: values.customerId || null,
       address: values.address || null,
       notes: values.notes || null,
     } as any);
     if (!created) return;
     toast({ title: "Site created" });
     setOpen(false);
-    form.reset({ name: "", customerId: values.customerId ?? "", address: "", notes: "" });
+    form.reset({ name: "", customerId: "", address: "", notes: "" });
   });
 
   return (
