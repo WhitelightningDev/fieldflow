@@ -20,6 +20,8 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+const NONE = "__none__";
+
 export default function CreateSiteDialog() {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
@@ -28,7 +30,7 @@ export default function CreateSiteDialog() {
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
-      customerId: "",
+      customerId: NONE,
       address: "",
       notes: "",
     },
@@ -38,14 +40,14 @@ export default function CreateSiteDialog() {
   const submit = form.handleSubmit(async (values) => {
     const created = await actions.addSite({
       name: values.name,
-      customer_id: values.customerId || null,
+      customer_id: values.customerId && values.customerId !== NONE ? values.customerId : null,
       address: values.address || null,
       notes: values.notes || null,
     } as any);
     if (!created) return;
     toast({ title: "Site created" });
     setOpen(false);
-    form.reset({ name: "", customerId: "", address: "", notes: "" });
+    form.reset({ name: "", customerId: NONE, address: "", notes: "" });
   });
 
   return (
@@ -89,8 +91,8 @@ export default function CreateSiteDialog() {
                         <SelectValue placeholder="No customer" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">No customer</SelectItem>
+                  <SelectContent>
+                      <SelectItem value={NONE}>No customer</SelectItem>
                       {data.customers.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -142,4 +144,3 @@ export default function CreateSiteDialog() {
     </Dialog>
   );
 }
-
