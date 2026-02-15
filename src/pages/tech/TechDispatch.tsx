@@ -3,16 +3,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import {
+  AlertTriangle,
   Briefcase,
   CheckCircle2,
   ChevronRight,
   Clock,
+  Droplets,
   FileSignature,
+  Flame,
   MapPin,
   Navigation,
+  Phone,
   Play,
+  RefreshCcw,
+  User,
 } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
@@ -24,11 +32,27 @@ function isToday(dateStr: string | null) {
   return d.toDateString() === now.toDateString();
 }
 
+const statusColor: Record<string, string> = {
+  new: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  scheduled: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  "in-progress": "bg-green-500/10 text-green-700 dark:text-green-400",
+  completed: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  invoiced: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  cancelled: "bg-destructive/10 text-destructive",
+};
+
+const priorityColor: Record<string, string> = {
+  urgent: "bg-destructive/10 text-destructive",
+  emergency: "bg-destructive/10 text-destructive",
+  high: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  normal: "",
+  low: "bg-muted text-muted-foreground",
+};
+
 export default function TechDispatch() {
   const { user, profile } = useAuth();
   const [jobs, setJobs] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [techId, setTechId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!user) return;
@@ -39,10 +63,9 @@ export default function TechDispatch() {
       .single()
       .then(({ data: tech }) => {
         if (!tech) { setLoading(false); return; }
-        setTechId(tech.id);
         supabase
           .from("job_cards")
-          .select("*, customers(name), sites(name, address)")
+          .select("*, customers(name, phone, address), sites(name, address)")
           .eq("technician_id", tech.id)
           .order("scheduled_at", { ascending: true })
           .then(({ data }) => {
@@ -69,17 +92,14 @@ export default function TechDispatch() {
 
   const todayJobs = jobs.filter((j) => isToday(j.scheduled_at) && !["completed", "invoiced", "cancelled"].includes(j.status));
   const completedJobs = jobs.filter((j) => j.status === "completed" || j.status === "invoiced");
-  const pendingSignatures = jobs.filter((j) => j.status === "completed"); // completed but not invoiced = needs signature
+  const pendingSignatures = jobs.filter((j) => j.status === "completed");
   const activeJobs = jobs.filter((j) => ["new", "scheduled", "in-progress"].includes(j.status));
+  const emergencyJobs = todayJobs.filter((j) => j.priority === "urgent" || j.priority === "emergency");
+  const awaitingParts = jobs.filter((j) => j.notes?.toLowerCase().includes("awaiting parts"));
+  const callbackJobs = jobs.filter((j) => j.notes?.toLowerCase().includes("callback") || j.notes?.toLowerCase().includes("return"));
 
-  const statusColor: Record<string, string> = {
-    new: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-    scheduled: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    "in-progress": "bg-green-500/10 text-green-700 dark:text-green-400",
-    completed: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-    invoiced: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
-    cancelled: "bg-destructive/10 text-destructive",
-  };
+  // Time logged today (from time entries)
+  const inProgressJobs = jobs.filter((j) => j.status === "in-progress");
 
   return (
     <div className="space-y-6">
@@ -97,11 +117,11 @@ export default function TechDispatch() {
       ) : (
         <>
           {/* KPI Cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
             <Card className="bg-card/70 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5" /> My Jobs Today
+                  <Briefcase className="h-3.5 w-3.5" /> Jobs Today
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -112,11 +132,11 @@ export default function TechDispatch() {
             <Card className="bg-card/70 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Play className="h-3.5 w-3.5" /> Active
+                  <Play className="h-3.5 w-3.5" /> In Progress
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{activeJobs.length}</div>
+                <div className="text-2xl font-bold">{inProgressJobs.length}</div>
               </CardContent>
             </Card>
 
@@ -143,6 +163,27 @@ export default function TechDispatch() {
             </Card>
           </div>
 
+          {/* Emergency / Alerts strip */}
+          {(emergencyJobs.length > 0 || callbackJobs.length > 0) && (
+            <div className="flex flex-wrap gap-3">
+              {emergencyJobs.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs font-medium text-destructive bg-destructive/10 rounded-md px-3 py-1.5">
+                  <Flame className="h-3.5 w-3.5" /> {emergencyJobs.length} emergency job{emergencyJobs.length > 1 ? "s" : ""}
+                </div>
+              )}
+              {callbackJobs.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-500/10 rounded-md px-3 py-1.5">
+                  <RefreshCcw className="h-3.5 w-3.5" /> {callbackJobs.length} callback{callbackJobs.length > 1 ? "s" : ""}
+                </div>
+              )}
+              {awaitingParts.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-md px-3 py-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" /> {awaitingParts.length} awaiting parts
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Today's Jobs */}
           <div>
             <h2 className="text-lg font-semibold mb-3">Today's Jobs</h2>
@@ -156,69 +197,13 @@ export default function TechDispatch() {
             ) : (
               <div className="space-y-3">
                 {todayJobs.map((job) => (
-                  <Link key={job.id} to={`/tech/job/${job.id}`} className="block">
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardContent className="py-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold">{job.title}</span>
-                              <Badge className={statusColor[job.status] ?? ""}>{job.status}</Badge>
-                            </div>
-                            {job.description && (
-                              <p className="text-sm text-muted-foreground mb-2">{job.description}</p>
-                            )}
-                            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                              {(job as any).customers?.name && (
-                                <span>Customer: {(job as any).customers.name}</span>
-                              )}
-                              {(job as any).sites?.name && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {(job as any).sites.name}
-                                </span>
-                              )}
-                              {job.scheduled_at && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(job.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            {job.status === "new" || job.status === "scheduled" ? (
-                              <Button
-                                size="sm"
-                                onClick={(e) => { e.preventDefault(); updateStatus(job.id, "in-progress"); }}
-                                className="gradient-bg hover:opacity-90 shadow-glow gap-1"
-                              >
-                                <Play className="h-3.5 w-3.5" />
-                                Start Job
-                              </Button>
-                            ) : job.status === "in-progress" ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => { e.preventDefault(); updateStatus(job.id, "completed"); }}
-                                className="gap-1"
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Complete
-                              </Button>
-                            ) : null}
-                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <JobCard key={job.id} job={job} statusColor={statusColor} priorityColor={priorityColor} onStatusChange={updateStatus} />
                 ))}
               </div>
             )}
           </div>
 
-          {/* All Active Jobs (not just today) */}
+          {/* Upcoming */}
           {activeJobs.filter((j) => !isToday(j.scheduled_at)).length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-3">Upcoming Jobs</h2>
@@ -233,6 +218,9 @@ export default function TechDispatch() {
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-sm">{job.title}</span>
                               <Badge variant="outline" className="text-[10px]">{job.status}</Badge>
+                              {(job.priority === "urgent" || job.priority === "emergency") && (
+                                <Badge className={priorityColor[job.priority]}>{job.priority}</Badge>
+                              )}
                             </div>
                             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                               {job.scheduled_at && (
@@ -241,10 +229,10 @@ export default function TechDispatch() {
                                   {new Date(job.scheduled_at).toLocaleDateString()}
                                 </span>
                               )}
-                              {(job as any).sites?.name && (
+                              {job.sites?.name && (
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
-                                  {(job as any).sites.name}
+                                  {job.sites.name}
                                 </span>
                               )}
                             </div>
@@ -268,25 +256,27 @@ export default function TechDispatch() {
             </div>
           )}
 
-          {/* Completed Jobs */}
+          {/* Completed */}
           {completedJobs.length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-3">Completed Jobs</h2>
               <div className="space-y-2">
                 {completedJobs.slice(0, 5).map((job) => (
-                  <Card key={job.id} className="opacity-75">
-                    <CardContent className="py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium">{job.title}</span>
+                  <Link key={job.id} to={`/tech/job/${job.id}`} className="block">
+                    <Card className="opacity-75 hover:opacity-100 transition-opacity">
+                      <CardContent className="py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium">{job.title}</span>
+                          </div>
+                          <Badge className={statusColor[job.status] ?? ""} variant="secondary">
+                            {job.status}
+                          </Badge>
                         </div>
-                        <Badge className={statusColor[job.status] ?? ""} variant="secondary">
-                          {job.status}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
                 {completedJobs.length > 5 && (
                   <div className="text-xs text-muted-foreground text-center py-2">
@@ -299,5 +289,114 @@ export default function TechDispatch() {
         </>
       )}
     </div>
+  );
+}
+
+/* ─── Job Card sub-component ─── */
+function JobCard({
+  job,
+  statusColor,
+  priorityColor,
+  onStatusChange,
+}: {
+  job: any;
+  statusColor: Record<string, string>;
+  priorityColor: Record<string, string>;
+  onStatusChange: (id: string, status: string) => void;
+}) {
+  const customer = job.customers;
+  const site = job.sites;
+
+  return (
+    <Link to={`/tech/job/${job.id}`} className="block">
+      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              {/* Title + badges */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold">{job.title}</span>
+                <Badge className={statusColor[job.status] ?? ""}>{job.status}</Badge>
+                {(job.priority === "urgent" || job.priority === "emergency" || job.priority === "high") && (
+                  <Badge className={priorityColor[job.priority] ?? ""}>{job.priority}</Badge>
+                )}
+              </div>
+
+              {/* Description */}
+              {job.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">{job.description}</p>
+              )}
+
+              {/* Client & contact details */}
+              {customer && (
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3" /> {customer.name}
+                  </span>
+                  {customer.phone && (
+                    <a
+                      href={`tel:${customer.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Phone className="h-3 w-3" /> {customer.phone}
+                    </a>
+                  )}
+                  {customer.address && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> {customer.address}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Site & schedule */}
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                {site?.name && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {site.name}
+                    {site.address && ` · ${site.address}`}
+                  </span>
+                )}
+                {job.scheduled_at && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(job.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
+                {job.trade_id && (
+                  <Badge variant="outline" className="text-[10px]">{job.trade_id}</Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              {job.status === "new" || job.status === "scheduled" ? (
+                <Button
+                  size="sm"
+                  onClick={(e) => { e.preventDefault(); onStatusChange(job.id, "in-progress"); }}
+                  className="gradient-bg hover:opacity-90 shadow-glow gap-1"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  Start
+                </Button>
+              ) : job.status === "in-progress" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => { e.preventDefault(); onStatusChange(job.id, "completed"); }}
+                  className="gap-1"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Complete
+                </Button>
+              ) : null}
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
