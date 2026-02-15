@@ -537,6 +537,302 @@ export type Database = {
           },
         ]
       }
+      solar_batteries: {
+        Row: {
+          capacity_kwh: number | null
+          company_id: string
+          created_at: string
+          id: string
+          manufacturer: string | null
+          model: string | null
+          notes: string | null
+          serial: string
+        }
+        Insert: {
+          capacity_kwh?: number | null
+          company_id: string
+          created_at?: string
+          id?: string
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          serial: string
+        }
+        Update: {
+          capacity_kwh?: number | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          serial?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_batteries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solar_panel_models: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          manufacturer: string | null
+          model: string
+          sku: string | null
+          wattage: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          manufacturer?: string | null
+          model: string
+          sku?: string | null
+          wattage?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          manufacturer?: string | null
+          model?: string
+          sku?: string | null
+          wattage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_panel_models_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solar_project_batteries: {
+        Row: {
+          battery_id: string
+          created_at: string
+          id: string
+          installed_at: string | null
+          project_id: string
+          removed_at: string | null
+          status: string
+        }
+        Insert: {
+          battery_id: string
+          created_at?: string
+          id?: string
+          installed_at?: string | null
+          project_id: string
+          removed_at?: string | null
+          status?: string
+        }
+        Update: {
+          battery_id?: string
+          created_at?: string
+          id?: string
+          installed_at?: string | null
+          project_id?: string
+          removed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_project_batteries_battery_id_fkey"
+            columns: ["battery_id"]
+            isOneToOne: false
+            referencedRelation: "solar_batteries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solar_project_batteries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "solar_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solar_project_checklist_items: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          label: string
+          project_id: string
+          required: boolean
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          project_id: string
+          required?: boolean
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          project_id?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_project_checklist_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "solar_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solar_project_panels: {
+        Row: {
+          created_at: string
+          id: string
+          panel_model_id: string
+          project_id: string
+          quantity_allocated: number
+          quantity_installed: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          panel_model_id: string
+          project_id: string
+          quantity_allocated?: number
+          quantity_installed?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          panel_model_id?: string
+          project_id?: string
+          quantity_allocated?: number
+          quantity_installed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_project_panels_panel_model_id_fkey"
+            columns: ["panel_model_id"]
+            isOneToOne: false
+            referencedRelation: "solar_panel_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solar_project_panels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "solar_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solar_project_signoffs: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          signed_at: string | null
+          signed_by: string | null
+          status: string
+          step: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          step: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          step?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_project_signoffs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "solar_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solar_projects: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          site_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          site_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          site_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solar_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solar_projects_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           company_id: string | null
