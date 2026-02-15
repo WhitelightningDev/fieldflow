@@ -33,6 +33,8 @@ export type DashboardData = {
 type DashboardActions = {
   addCustomer: (c: Omit<TablesInsert<"customers">, "company_id">) => Promise<Customer | null>;
   addTechnician: (t: Omit<TablesInsert<"technicians">, "company_id">) => Promise<Technician | null>;
+  updateTechnician: (technicianId: string, t: Partial<Omit<TablesInsert<"technicians">, "company_id">>) => Promise<Technician | null>;
+  deleteTechnician: (technicianId: string) => Promise<void>;
   addJobCard: (j: Omit<TablesInsert<"job_cards">, "company_id">) => Promise<JobCard | null>;
   setJobCardStatus: (id: string, status: string) => Promise<void>;
   setJobCardSite: (id: string, siteId: string | null) => Promise<void>;
@@ -207,6 +209,38 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, technicians: [row, ...prev.technicians] }));
       return row;
+    },
+    updateTechnician: async (technicianId, t) => {
+      const { data: row, error } = await supabase
+        .from("technicians")
+        .update(t as any)
+        .eq("id", technicianId)
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({
+        ...prev,
+        technicians: prev.technicians.map((x) => (x.id === technicianId ? row : x)),
+      }));
+      return row;
+    },
+    deleteTechnician: async (technicianId) => {
+      const { error } = await supabase
+        .from("technicians")
+        .delete()
+        .eq("id", technicianId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+      setData((prev) => ({
+        ...prev,
+        technicians: prev.technicians.filter((t) => t.id !== technicianId),
+        teamMembers: prev.teamMembers.filter((m: any) => m.technician_id !== technicianId),
+        jobCards: prev.jobCards.map((j: any) => (j.technician_id === technicianId ? { ...j, technician_id: null } : j)),
+        jobTimeEntries: prev.jobTimeEntries.map((e: any) => (e.technician_id === technicianId ? { ...e, technician_id: null } : e)),
+      }));
+      toast({ title: "Technician deleted" });
     },
     addJobCard: async (j) => {
       if (!companyId) return null;

@@ -2,6 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TRADES } from "@/features/company-signup/content/trades";
 import CreateTechnicianDialog from "@/features/dashboard/components/dialogs/create-technician-dialog";
+import DeleteTechnicianAlertDialog from "@/features/dashboard/components/dialogs/delete-technician-alert-dialog";
+import EditTechnicianDialog from "@/features/dashboard/components/dialogs/edit-technician-dialog";
 import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -54,7 +56,11 @@ export default function Technicians() {
                 </TableCell>
                 <TableCell>{t.active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}</TableCell>
                 <TableCell className="text-right">
-                  <EditTechnicianRatesDialog technicianId={t.id} />
+                  <div className="inline-flex items-center gap-2">
+                    <EditTechnicianDialog technicianId={t.id} />
+                    <EditTechnicianRatesDialog technicianId={t.id} />
+                    <DeleteTechnicianAlertDialog technicianId={t.id} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
