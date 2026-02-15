@@ -5,8 +5,10 @@ function hasAuthParams(search: string, hash: string) {
   const qs = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   if (qs.get("code")) return true;
   if (qs.get("token_hash") && qs.get("type")) return true;
+  if (qs.get("error") || qs.get("error_description")) return true;
   const hs = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
   if (hs.get("access_token") && hs.get("refresh_token")) return true;
+  if (hs.get("error") || hs.get("error_description")) return true;
   return false;
 }
 

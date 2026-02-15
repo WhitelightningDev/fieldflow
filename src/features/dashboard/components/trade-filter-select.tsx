@@ -7,7 +7,7 @@ type Props = {
   options: { value: TradeFilter; label: string }[];
 };
 
-export default function TradeFilterSelect({ value, onChange }: Props) {
+export default function TradeFilterSelect({ value, onChange, options }: Props) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as TradeFilter)}>
       <SelectTrigger className="w-[220px]">
