@@ -67,6 +67,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     siteTeamAssignments: [],
   });
   const [loading, setLoading] = React.useState(true);
+  const fetchErrorShownRef = React.useRef(new Set<string>());
 
   const fetchAll = React.useCallback(async () => {
     if (!companyId) {
@@ -85,6 +86,41 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       supabase.from("team_members").select("*").order("created_at", { ascending: false }),
       supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
     ]);
+
+    const results = [
+      { name: "companies", res: companyRes },
+      { name: "customers", res: customersRes },
+      { name: "technicians", res: techRes },
+      { name: "job_cards", res: jobsRes },
+      { name: "inventory_items", res: invRes },
+      { name: "sites", res: sitesRes },
+      { name: "teams", res: teamsRes },
+      { name: "team_members", res: teamMembersRes },
+      { name: "site_team_assignments", res: assignmentsRes },
+    ] as const;
+
+    for (const r of results) {
+      const err: any = (r.res as any).error;
+      if (!err) continue;
+      const key = `${r.name}:${err.code ?? err.message ?? "unknown"}`;
+      if (fetchErrorShownRef.current.has(key)) continue;
+      fetchErrorShownRef.current.add(key);
+
+      const status = (r.res as any).status ?? err.status;
+      const isMissingOrNoPriv =
+        status === 404 ||
+        String(err.message ?? "").toLowerCase().includes("could not find the table") ||
+        String(err.message ?? "").toLowerCase().includes("schema cache");
+
+      toast({
+        title: "Dashboard data unavailable",
+        description: isMissingOrNoPriv
+          ? `Supabase REST can't access "${r.name}" (404). Apply migrations and grants, then redeploy.`
+          : `${r.name}: ${err.message ?? "Unknown error"}`,
+        variant: "destructive",
+      });
+    }
+
     setData({
       company: companyRes.data ?? null,
       customers: customersRes.data ?? [],
