@@ -108,6 +108,7 @@ export default function CreateJobCardDialog({
       revenue_cents: moneyToCents(values.revenue),
       status: values.status,
       customer_id: values.customerId,
+      site_id: values.siteId || null,
       technician_id: values.technicianId || null,
       scheduled_at: values.scheduledAt ? fromDatetimeLocal(values.scheduledAt) ?? null : null,
       checklist: (values.checklist || "")
