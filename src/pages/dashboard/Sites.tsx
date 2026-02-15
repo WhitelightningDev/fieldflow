@@ -101,6 +101,17 @@ export default function Sites() {
               const current = getCurrentAssignment(assignments);
               const currentTeam = current ? teamsById.get(current.team_id) : undefined;
               const currentEndsAt = current?.ends_at ?? null;
+
+              const jobs = jobsBySiteId.get(site.id) ?? [];
+              const timeEntries = jobs.flatMap((j: any) => timeByJobId.get(j.id) ?? []);
+              const materials = materialsBySiteId.get(site.id) ?? [];
+              const profitability = computeSiteProfitability({
+                jobs,
+                timeEntries,
+                materials,
+                techniciansById,
+                inventoryById,
+              });
               return (
                 <TableRow key={site.id}>
                   <TableCell>
@@ -124,7 +135,7 @@ export default function Sites() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{site.address ?? "—"}</TableCell>
                   <TableCell>
-                    <ProfitabilityPill value={null} />
+                    <ProfitabilityPill value={profitability} />
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <AssignTeamToSiteDialog siteId={site.id} />

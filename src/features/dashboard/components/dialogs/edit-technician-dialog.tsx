@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
+import { isTradeId, TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
@@ -27,10 +27,13 @@ export default function EditTechnicianDialog({ technicianId }: { technicianId: s
   const { data, actions } = useDashboardData();
   const technician = data.technicians.find((t) => t.id === technicianId) as any;
 
+  const lockedTradeId: TradeId | null =
+    data.company?.industry && isTradeId(data.company.industry) ? data.company.industry : null;
+
   const [open, setOpen] = React.useState(false);
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", phone: "", email: "", active: true, trades: [TRADES[0].id] },
+    defaultValues: { name: "", phone: "", email: "", active: true, trades: [lockedTradeId ?? TRADES[0].id] },
     mode: "onTouched",
   });
 
@@ -41,9 +44,13 @@ export default function EditTechnicianDialog({ technicianId }: { technicianId: s
       phone: technician.phone ?? "",
       email: technician.email ?? "",
       active: Boolean(technician.active),
-      trades: Array.isArray(technician.trades) && technician.trades.length > 0 ? technician.trades : [TRADES[0].id],
+      trades: lockedTradeId
+        ? [lockedTradeId]
+        : Array.isArray(technician.trades) && technician.trades.length > 0
+          ? technician.trades
+          : [TRADES[0].id],
     });
-  }, [form, open, technician]);
+  }, [form, lockedTradeId, open, technician]);
 
   if (!technician) return null;
 
@@ -53,7 +60,7 @@ export default function EditTechnicianDialog({ technicianId }: { technicianId: s
       phone: values.phone || null,
       email: values.email || null,
       active: values.active,
-      trades: values.trades,
+      trades: lockedTradeId ? [lockedTradeId] : values.trades,
     } as any);
     if (!updated) return;
     toast({ title: "Technician updated" });
@@ -134,26 +141,34 @@ export default function EditTechnicianDialog({ technicianId }: { technicianId: s
 
             <div className="space-y-2">
               <div className="text-sm font-medium">Trades</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {TRADES.map((t) => {
-                  const checked = selectedTrades.includes(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
-                      onClick={() => {
-                        const next = checked ? selectedTrades.filter((x) => x !== t.id) : [...selectedTrades, t.id];
-                        form.setValue("trades", next, { shouldValidate: true, shouldDirty: true });
-                      }}
-                    >
-                      <Checkbox checked={checked} />
-                      <span className="text-sm">{t.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <FormField control={form.control} name="trades" render={() => <FormMessage />} />
+              {lockedTradeId ? (
+                <div className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                  {TRADES.find((t) => t.id === lockedTradeId)?.name ?? lockedTradeId}
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {TRADES.map((t) => {
+                      const checked = selectedTrades.includes(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
+                          onClick={() => {
+                            const next = checked ? selectedTrades.filter((x) => x !== t.id) : [...selectedTrades, t.id];
+                            form.setValue("trades", next, { shouldValidate: true, shouldDirty: true });
+                          }}
+                        >
+                          <Checkbox checked={checked} />
+                          <span className="text-sm">{t.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <FormField control={form.control} name="trades" render={() => <FormMessage />} />
+                </>
+              )}
             </div>
 
             <DialogFooter>
@@ -167,4 +182,3 @@ export default function EditTechnicianDialog({ technicianId }: { technicianId: s
     </Dialog>
   );
 }
-

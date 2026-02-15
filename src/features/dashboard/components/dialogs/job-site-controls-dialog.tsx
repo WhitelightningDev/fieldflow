@@ -24,6 +24,8 @@ type JobPhoto = any;
 type SiteMaterialUsage = any;
 type SiteDocument = any;
 
+const NONE = "__none__";
+
 function sanitizeFilename(name: string) {
   return name.replace(/[^\w.\-]+/g, "_");
 }
@@ -55,7 +57,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
   const [savingRevenue, setSavingRevenue] = React.useState(false);
 
   const [timeForm, setTimeForm] = React.useState({
-    technicianId: "",
+    technicianId: NONE,
     startedAt: "",
     endedAt: "",
     minutes: "",
@@ -121,7 +123,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
       setRevenue(typeof r === "number" ? (r / 100).toFixed(2) : "");
       setTimeForm((prev) => ({
         ...prev,
-        technicianId: job.technician_id ?? "",
+        technicianId: job.technician_id ?? NONE,
         startedAt: toDatetimeLocal(new Date().toISOString()),
         endedAt: "",
         minutes: "",
@@ -185,7 +187,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
 
     const { error } = await (supabase as any).from("job_time_entries").insert({
       job_card_id: job.id,
-      technician_id: timeForm.technicianId ? timeForm.technicianId : null,
+      technician_id: timeForm.technicianId && timeForm.technicianId !== NONE ? timeForm.technicianId : null,
       started_at: started,
       ended_at: ended ?? null,
       minutes: minutes ?? null,
@@ -370,9 +372,9 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
             <div className="space-y-1">
               <Label>Job site</Label>
               <Select
-                value={job.site_id ?? ""}
+                value={job.site_id ?? NONE}
                 onValueChange={async (v) => {
-                  const nextSiteId = v || null;
+                  const nextSiteId = v === NONE ? null : v;
                   await actions.setJobCardSite(job.id, nextSiteId);
                   await refresh(nextSiteId);
                 }}
@@ -381,7 +383,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
                   <SelectValue placeholder="No site" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No site</SelectItem>
+                  <SelectItem value={NONE}>No site</SelectItem>
                   {sitesForSelect.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -412,7 +414,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
                       <SelectValue placeholder="Unassigned" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value={NONE}>Unassigned</SelectItem>
                       {data.technicians.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
                           {t.name}

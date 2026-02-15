@@ -44,6 +44,8 @@ function moneyToCents(v?: string) {
   return Math.round(Number.parseFloat(s) * 100);
 }
 
+const NONE = "__none__";
+
 export default function CreateJobCardDialog({
   defaultTradeId,
   allowedTradeIds,
@@ -69,9 +71,9 @@ export default function CreateJobCardDialog({
       description: "",
       revenue: "",
       status: "new",
-      customerId: data.customers[0]?.id ?? "",
-      siteId: "",
-      technicianId: "",
+      customerId: data.customers[0]?.id ?? NONE,
+      siteId: NONE,
+      technicianId: NONE,
       scheduledAt: "",
       checklist: TRADE_JOB_CHECKLISTS[defaultTradeId].join("\n"),
       notes: "",
@@ -85,6 +87,14 @@ export default function CreateJobCardDialog({
     form.setValue("tradeId", nextTradeId);
     form.setValue("checklist", TRADE_JOB_CHECKLISTS[nextTradeId].join("\n"));
   }, [defaultTradeId, form, lockedTradeId, open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const current = form.getValues("customerId");
+    if ((current === NONE || !current) && data.customers.length > 0) {
+      form.setValue("customerId", data.customers[0].id, { shouldValidate: true });
+    }
+  }, [data.customers, form, open]);
 
   const tradeId = form.watch("tradeId") as TradeId;
   const customerId = form.watch("customerId");
@@ -101,15 +111,20 @@ export default function CreateJobCardDialog({
   }, [form, open, tradeId]);
 
   const submit = form.handleSubmit(async (values) => {
-    await actions.addJobCard({
+    if (!values.customerId || values.customerId === NONE) {
+      form.setError("customerId", { type: "validate", message: "Select a customer" });
+      toast({ title: "Select a customer", description: "Create a customer first, then create the job card.", variant: "destructive" });
+      return;
+    }
+    const created = await actions.addJobCard({
       trade_id: values.tradeId,
       title: values.title,
       description: values.description || null,
       revenue_cents: moneyToCents(values.revenue),
       status: values.status,
       customer_id: values.customerId,
-      site_id: values.siteId || null,
-      technician_id: values.technicianId || null,
+      site_id: values.siteId && values.siteId !== NONE ? values.siteId : null,
+      technician_id: values.technicianId && values.technicianId !== NONE ? values.technicianId : null,
       scheduled_at: values.scheduledAt ? fromDatetimeLocal(values.scheduledAt) ?? null : null,
       checklist: (values.checklist || "")
         .split("\n")
@@ -117,6 +132,7 @@ export default function CreateJobCardDialog({
         .filter(Boolean),
       notes: values.notes || null,
     } as any);
+    if (!created) return;
     toast({ title: "Job card created" });
     setOpen(false);
     form.reset({ ...form.getValues(), title: "", description: "", notes: "" });
@@ -129,7 +145,7 @@ export default function CreateJobCardDialog({
           Create job card
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create job card</DialogTitle>
           <DialogDescription>Job cards are unified across trades, with trade-specific checklists.</DialogDescription>
@@ -152,7 +168,7 @@ export default function CreateJobCardDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Trade</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select trade" />
@@ -177,7 +193,7 @@ export default function CreateJobCardDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -246,13 +262,22 @@ export default function CreateJobCardDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Customer</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || NONE}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {data.customers.length === 0 ? (
+                          <SelectItem value={NONE} disabled>
+                            No customers yet
+                          </SelectItem>
+                        ) : (
+                          <SelectItem value={NONE} disabled>
+                            Select customer…
+                          </SelectItem>
+                        )}
                         {data.customers.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name}
@@ -270,14 +295,14 @@ export default function CreateJobCardDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Site (optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || NONE}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="No site" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No site</SelectItem>
+                        <SelectItem value={NONE}>No site</SelectItem>
                         {sitesForSelect.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             {s.name}
@@ -295,14 +320,14 @@ export default function CreateJobCardDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Technician (optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || NONE}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Unassigned" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Unassigned</SelectItem>
+                        <SelectItem value={NONE}>Unassigned</SelectItem>
                         {data.technicians.map((t) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.name}
@@ -337,7 +362,7 @@ export default function CreateJobCardDialog({
                 <FormItem>
                   <FormLabel>Checklist</FormLabel>
                   <FormControl>
-                    <Textarea rows={6} {...field} />
+                    <Textarea rows={4} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

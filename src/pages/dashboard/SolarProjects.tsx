@@ -55,6 +55,8 @@ const addPanelModelSchema = z.object({
 
 type AddPanelModelValues = z.infer<typeof addPanelModelSchema>;
 
+const NONE = "__none__";
+
 function defaultSolarChecklistLabels() {
   return [
     "Site assessment completed (roof, shading, structure)",
@@ -99,7 +101,7 @@ function CreateSolarProjectDialog({ onCreated }: { onCreated: () => void }) {
     resolver: zodResolver(createProjectSchema),
     defaultValues: {
       title: "",
-      siteId: "",
+      siteId: NONE,
       notes: "",
     },
     mode: "onTouched",
@@ -112,7 +114,7 @@ function CreateSolarProjectDialog({ onCreated }: { onCreated: () => void }) {
       .insert({
         company_id: data.company.id,
         title: values.title,
-        site_id: values.siteId ? values.siteId : null,
+        site_id: values.siteId && values.siteId !== NONE ? values.siteId : null,
         notes: values.notes || null,
       })
       .select()
@@ -163,8 +165,8 @@ function CreateSolarProjectDialog({ onCreated }: { onCreated: () => void }) {
                         <SelectValue placeholder="No site" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">No site</SelectItem>
+                  <SelectContent>
+                      <SelectItem value={NONE}>No site</SelectItem>
                       {data.sites.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.name}
@@ -931,4 +933,3 @@ export default function SolarProjects() {
     </div>
   );
 }
-

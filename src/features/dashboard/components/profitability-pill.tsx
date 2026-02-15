@@ -1,8 +1,8 @@
 import { formatUsdFromCents } from "@/lib/money";
 import type { Profitability } from "@/features/dashboard/lib/profitability";
 
-export default function ProfitabilityPill({ value }: { value: Profitability }) {
-  if (!value.complete || value.grossMarginCents === null) {
+export default function ProfitabilityPill({ value }: { value: Profitability | null | undefined }) {
+  if (!value || !value.complete || value.grossMarginCents === null) {
     return (
       <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
         Needs revenue/rates
@@ -25,4 +25,3 @@ export default function ProfitabilityPill({ value }: { value: Profitability }) {
     </span>
   );
 }
-

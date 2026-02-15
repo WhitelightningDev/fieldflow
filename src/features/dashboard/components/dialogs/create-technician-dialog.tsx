@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
+import { isTradeId, TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,11 +45,28 @@ export default function CreateTechnicianDialog() {
   const { profile } = useAuth();
   const [open, setOpen] = React.useState(false);
 
+  const lockedTradeId: TradeId | null =
+    data.company?.industry && isTradeId(data.company.industry) ? data.company.industry : null;
+
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", phone: "", email: "", hourlyCost: "", hourlyBillRate: "", active: true, trades: [TRADES[0].id] },
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      hourlyCost: "",
+      hourlyBillRate: "",
+      active: true,
+      trades: [lockedTradeId ?? TRADES[0].id],
+    },
     mode: "onTouched",
   });
+
+  React.useEffect(() => {
+    if (!open) return;
+    if (!lockedTradeId) return;
+    form.setValue("trades", [lockedTradeId], { shouldValidate: true });
+  }, [form, lockedTradeId, open]);
 
   const submit = form.handleSubmit(async (values) => {
     // 1. Create technician record
@@ -60,7 +77,7 @@ export default function CreateTechnicianDialog() {
       hourly_cost_cents: moneyToCents(values.hourlyCost),
       hourly_bill_rate_cents: moneyToCents(values.hourlyBillRate),
       active: values.active,
-      trades: values.trades,
+      trades: lockedTradeId ? [lockedTradeId] : values.trades,
     });
 
     if (!tech) return;
@@ -79,7 +96,25 @@ export default function CreateTechnicianDialog() {
           },
         });
         if (fnError) {
-          toast({ title: "Technician added", description: `Invite email failed: ${fnError.message}. You can resend later.` });
+          let details = fnError.message;
+          const ctx: any = (fnError as any).context;
+          const res: Response | undefined = ctx?.response;
+          if (res) {
+            try {
+              const text = await res.text();
+              const parsed = text ? JSON.parse(text) : null;
+              details = parsed?.error ?? text ?? details;
+            } catch {
+              // ignore
+            }
+            if (res.status === 404) {
+              details = 'Edge function "invite-technician" is not deployed.';
+            }
+            if (res.status === 401) {
+              details = "Not authorized to send invites. Please re-login and try again.";
+            }
+          }
+          toast({ title: "Technician added", description: `Invite email failed: ${details}. You can resend later.` });
         } else {
           toast({ title: "Technician added & invited", description: `Invite email sent to ${values.email}` });
         }
@@ -183,26 +218,34 @@ export default function CreateTechnicianDialog() {
 
             <div className="space-y-2">
               <div className="text-sm font-medium">Trades</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {TRADES.map((t) => {
-                  const checked = selectedTrades.includes(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
-                      onClick={() => {
-                        const next = checked ? selectedTrades.filter((x) => x !== t.id) : [...selectedTrades, t.id];
-                        form.setValue("trades", next, { shouldValidate: true, shouldDirty: true });
-                      }}
-                    >
-                      <Checkbox checked={checked} />
-                      <span className="text-sm">{t.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <FormField control={form.control} name="trades" render={() => <FormMessage />} />
+              {lockedTradeId ? (
+                <div className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                  {TRADES.find((t) => t.id === lockedTradeId)?.name ?? lockedTradeId}
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {TRADES.map((t) => {
+                      const checked = selectedTrades.includes(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
+                          onClick={() => {
+                            const next = checked ? selectedTrades.filter((x) => x !== t.id) : [...selectedTrades, t.id];
+                            form.setValue("trades", next, { shouldValidate: true, shouldDirty: true });
+                          }}
+                        >
+                          <Checkbox checked={checked} />
+                          <span className="text-sm">{t.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <FormField control={form.control} name="trades" render={() => <FormMessage />} />
+                </>
+              )}
             </div>
 
             <DialogFooter>
