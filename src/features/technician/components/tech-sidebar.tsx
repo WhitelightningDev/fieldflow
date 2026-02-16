@@ -8,7 +8,7 @@ import NotificationBell from "@/components/notification-bell";
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export default function TechSidebar() {
+export default function TechSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { profile, signOut, user } = useAuth();
   const location = useLocation();
   const [industry, setIndustry] = React.useState<string | null>(null);
@@ -56,6 +56,7 @@ export default function TechSidebar() {
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
               )}
+              onClick={() => onNavigate?.()}
             >
               <item.icon className="h-4 w-4 shrink-0" />
               {item.label}

@@ -12,9 +12,11 @@ import { INVENTORY_TEMPLATES_BY_TRADE } from "@/features/dashboard/constants/inv
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
+import { getInventoryRecommendations } from "@/features/dashboard/lib/inventory-recommendations";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatZarFromCents } from "@/lib/money";
+import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, Plus } from "lucide-react";
 import * as React from "react";
 import { format } from "date-fns";
@@ -29,8 +31,21 @@ export default function Inventory() {
   const [adjustOpen, setAdjustOpen] = React.useState(false);
   const [adjustItemId, setAdjustItemId] = React.useState<string | null>(null);
   const adjustItem = selectors.inventoryItems.find((i) => i.id === adjustItemId) ?? null;
+  const [addingSmart, setAddingSmart] = React.useState<string | null>(null);
 
   const canAddTemplates = trade !== "all";
+  const tradeId = trade === "all" ? null : trade;
+
+  const lastAddedName = selectors.inventoryItems[0]?.name ?? "";
+  const smartAddOns = React.useMemo(() => {
+    if (!tradeId) return [];
+    return getInventoryRecommendations({
+      tradeId,
+      itemName: lastAddedName,
+      existingItems: selectors.inventoryItems,
+      max: 4,
+    });
+  }, [lastAddedName, selectors.inventoryItems, tradeId]);
 
   return (
     <div className="space-y-6">
@@ -93,13 +108,62 @@ export default function Inventory() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Recommended for {TRADES.find((t) => t.id === trade)?.shortName}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {INVENTORY_TEMPLATES_BY_TRADE[trade].map((t) => (
-              <Badge key={t.name} variant={t.perishable ? "default" : "secondary"} className="gap-1.5">
-                {t.name}
-                {t.perishable ? <span className="opacity-80">(perishable)</span> : null}
-              </Badge>
-            ))}
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {INVENTORY_TEMPLATES_BY_TRADE[trade].map((t) => (
+                <Badge key={t.name} variant={t.perishable ? "default" : "secondary"} className="gap-1.5">
+                  {t.name}
+                  {t.perishable ? <span className="opacity-80">(perishable)</span> : null}
+                </Badge>
+              ))}
+            </div>
+
+            {tradeId === "electrical-contracting" && smartAddOns.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-medium">AI add-ons</div>
+                  {lastAddedName ? <div className="text-xs text-muted-foreground truncate">Based on: {lastAddedName}</div> : null}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {smartAddOns.map((r) => (
+                    <div key={r.name} className="flex items-start justify-between gap-3 rounded-md border px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{r.name}</div>
+                        <div className="text-xs text-muted-foreground">{r.reason}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={addingSmart === r.name}
+                        onClick={async () => {
+                          if (!tradeId) return;
+                          setAddingSmart(r.name);
+                          try {
+                            const row = await actions.addInventoryItem({
+                              trade_id: tradeId,
+                              name: r.name,
+                              sku: r.sku ?? null,
+                              unit: r.unit,
+                              unit_cost_cents: null,
+                              quantity_on_hand: 0,
+                              reorder_point: r.reorderPoint,
+                              perishable: r.perishable,
+                              expiry_date: null,
+                              location: r.location ?? null,
+                            });
+                            if (row) toast({ title: "Added recommended item", description: r.name });
+                          } finally {
+                            setAddingSmart(null);
+                          }
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )}

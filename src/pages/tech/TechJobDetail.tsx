@@ -125,9 +125,9 @@ export default function TechJobDetail() {
   const checklist = Array.isArray(job.checklist) ? job.checklist : [];
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <Button variant="ghost" size="sm" asChild className="gap-1.5 mb-2 -ml-3">
             <Link to="/tech/my-jobs"><ArrowLeft className="h-4 w-4" /> Back to jobs</Link>
@@ -140,14 +140,14 @@ export default function TechJobDetail() {
             </Badge>
           </div>
         </div>
-        <div className="flex flex-col gap-1.5 shrink-0">
+        <div className="flex gap-2 sm:flex-col w-full sm:w-auto">
           {(job.status === "new" || job.status === "scheduled") && (
-            <Button size="sm" onClick={() => updateStatus("in-progress")} className="gradient-bg hover:opacity-90 shadow-glow gap-1.5">
+            <Button size="sm" onClick={() => updateStatus("in-progress")} className="w-full sm:w-auto gradient-bg hover:opacity-90 shadow-glow gap-1.5">
               <Play className="h-3.5 w-3.5" /> Start Job
             </Button>
           )}
           {job.status === "in-progress" && (
-            <Button size="sm" variant="outline" onClick={() => updateStatus("completed")} className="gap-1.5">
+            <Button size="sm" variant="outline" onClick={() => updateStatus("completed")} className="w-full sm:w-auto gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5" /> Complete
             </Button>
           )}

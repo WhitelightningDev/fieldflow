@@ -3,10 +3,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import type { TradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
+import { getInventoryRecommendations, type InventoryRecommendation } from "@/features/dashboard/lib/inventory-recommendations";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Database } from "@/integrations/supabase/types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,8 +51,9 @@ export default function CreateInventoryItemDialog({
   tradeFilter: TradeFilter;
   allowedTradeIds?: readonly TradeId[] | null;
 }) {
-  const { actions } = useDashboardData();
+  const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
+  const [addingRecommendation, setAddingRecommendation] = React.useState(false);
 
   const tradesForSelect = React.useMemo(() => {
     if (!allowedTradeIds || allowedTradeIds.length === 0) return TRADES;
@@ -102,13 +105,74 @@ export default function CreateInventoryItemDialog({
   });
 
   const perishable = form.watch("perishable");
+  const tradeId = form.watch("tradeId");
+  const itemName = form.watch("name");
+
+  const recommendations = React.useMemo(() => {
+    return getInventoryRecommendations({
+      tradeId,
+      itemName,
+      existingItems: data.inventoryItems,
+      max: 6,
+    });
+  }, [data.inventoryItems, itemName, tradeId]);
+
+  const addRecommendation = React.useCallback(
+    async (r: InventoryRecommendation) => {
+      setAddingRecommendation(true);
+      try {
+        const row = await actions.addInventoryItem({
+          trade_id: tradeId,
+          name: r.name,
+          sku: r.sku ?? null,
+          unit: r.unit,
+          unit_cost_cents: null,
+          quantity_on_hand: 0,
+          reorder_point: r.reorderPoint,
+          perishable: r.perishable,
+          expiry_date: null,
+          location: r.location ?? null,
+        });
+        if (row) toast({ title: "Added recommended item", description: r.name });
+      } finally {
+        setAddingRecommendation(false);
+      }
+    },
+    [actions, tradeId],
+  );
+
+  const addAllRecommendations = React.useCallback(async () => {
+    if (recommendations.length === 0) return;
+    setAddingRecommendation(true);
+    try {
+      let added = 0;
+      for (const r of recommendations) {
+        const row = await actions.addInventoryItem({
+          trade_id: tradeId,
+          name: r.name,
+          sku: r.sku ?? null,
+          unit: r.unit,
+          unit_cost_cents: null,
+          quantity_on_hand: 0,
+          reorder_point: r.reorderPoint,
+          perishable: r.perishable,
+          expiry_date: null,
+          location: r.location ?? null,
+        });
+        if (row) added += 1;
+      }
+      if (added > 0) toast({ title: "Added recommended items", description: `${added} item(s) added` });
+    } finally {
+      setAddingRecommendation(false);
+    }
+  }, [actions, recommendations, tradeId]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">Add item</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add inventory item</DialogTitle>
           <DialogDescription>Track stock counts and get low-stock reminders.</DialogDescription>
@@ -160,6 +224,43 @@ export default function CreateInventoryItemDialog({
                 </FormItem>
               )}
             />
+
+            {tradeId === "electrical-contracting" ? (
+              <Card className="bg-card/70 backdrop-blur-sm">
+                <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base">Recommended for Electrical</CardTitle>
+                    <div className="text-xs text-muted-foreground">Smart add-ons based on what you’re adding.</div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={addingRecommendation || recommendations.length === 0}
+                    onClick={addAllRecommendations}
+                  >
+                    Add all
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {recommendations.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No suggestions right now.</div>
+                  ) : (
+                    recommendations.map((r) => (
+                      <div key={r.name} className="flex items-start justify-between gap-3 rounded-md border px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{r.name}</div>
+                          <div className="text-xs text-muted-foreground">{r.reason}</div>
+                        </div>
+                        <Button type="button" size="sm" variant="secondary" disabled={addingRecommendation} onClick={() => addRecommendation(r)}>
+                          Add
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField

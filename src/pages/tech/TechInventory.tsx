@@ -42,30 +42,56 @@ export default function TechInventory() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Location</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.sku ?? "—"}</TableCell>
-                  <TableCell className="text-right">{item.quantity_on_hand}</TableCell>
-                  <TableCell>{item.unit}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.location ?? "—"}</TableCell>
+        <>
+          {/* Mobile cards */}
+          <div className="grid gap-3 sm:hidden">
+            {items.map((item) => (
+              <Card key={item.id} className="bg-card/70 backdrop-blur-sm">
+                <CardContent className="py-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{item.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{item.sku ? `SKU: ${item.sku}` : "No SKU"}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-lg font-bold leading-none">{item.quantity_on_hand}</div>
+                      <div className="text-xs text-muted-foreground">{item.unit}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Location: {item.location ?? "—"}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Location</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.sku ?? "—"}</TableCell>
+                    <TableCell className="text-right">{item.quantity_on_hand}</TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.location ?? "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );
