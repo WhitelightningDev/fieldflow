@@ -2,25 +2,44 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 
 type InviteTechnicianPayload = {
   technicianId: string;
-  email: string;
-  name: string;
   companyId: string;
   industry?: string | null;
-  redirectTo?: string | null;
+  password?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function getString(obj: Record<string, unknown>, key: string) {
-  const value = obj[key];
-  return typeof value === "string" ? value : "";
+function unwrapPayload(raw: unknown): Record<string, unknown> {
+  if (!isRecord(raw)) return {};
+  const body = raw["body"];
+  if (isRecord(body)) return body;
+  const data = raw["data"];
+  if (isRecord(data)) return data;
+  return raw;
 }
 
-function getOptionalString(obj: Record<string, unknown>, key: string) {
-  const value = obj[key];
-  return typeof value === "string" ? value : undefined;
+function getStringAny(obj: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function getOptionalStringAny(obj: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === "string") return value;
+  }
+  return undefined;
+}
+
+function joinUrl(base: string, path: string) {
+  const b = base.replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${b}${p}`;
 }
 
 const corsHeaders = {
@@ -46,68 +65,59 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
     const serviceRoleKey = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
-    const anonKey = (
-      Deno.env.get("SUPABASE_ANON_KEY") ??
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
-      req.headers.get("apikey") ??
-      req.headers.get("x-supabase-anon-key") ??
-      ""
-    ).trim();
-    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       const missing: string[] = [];
       if (!supabaseUrl) missing.push("SUPABASE_URL");
       if (!serviceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-      if (!anonKey) missing.push("SUPABASE_ANON_KEY (or apikey header)");
       return new Response(
         JSON.stringify({
           error: `Missing Supabase function env vars: ${missing.join(", ")}`,
           hint: "Set SUPABASE_SERVICE_ROLE_KEY via `supabase secrets set` and redeploy the function.",
         }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser(token);
-    if (callerError || !caller) {
-      console.log("Auth validation failed:", callerError?.message);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    const callerClient = createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser(token);
+    if (callerError || !caller) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let rawBody: unknown = null;
     try {
-      rawBody = await req.json();
+      const text = await req.text();
+      rawBody = text ? JSON.parse(text) : null;
     } catch {
       rawBody = null;
     }
 
-    const bodyObj = isRecord(rawBody) ? rawBody : {};
+    const bodyObj = unwrapPayload(rawBody);
     const body: InviteTechnicianPayload = {
-      technicianId: getString(bodyObj, "technicianId"),
-      email: getString(bodyObj, "email"),
-      name: getString(bodyObj, "name"),
-      companyId: getString(bodyObj, "companyId"),
-      industry: getOptionalString(bodyObj, "industry"),
-      redirectTo: getOptionalString(bodyObj, "redirectTo"),
+      technicianId: getStringAny(bodyObj, ["technicianId", "technician_id"]),
+      companyId: getStringAny(bodyObj, ["companyId", "company_id"]),
+      industry: getOptionalStringAny(bodyObj, ["industry"]),
+      password: getOptionalStringAny(bodyObj, ["password"]),
     };
 
-    const { technicianId, email, name, companyId, industry, redirectTo } = body;
-
-    if (!technicianId || !email || !name || !companyId) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    const { technicianId, companyId, industry, password } = body;
+    if (!technicianId || !companyId || !password) {
+      const missing: string[] = [];
+      if (!technicianId) missing.push("technicianId");
+      if (!companyId) missing.push("companyId");
+      if (!password) missing.push("password");
+      return new Response(JSON.stringify({ error: "Missing required fields", missing, receivedKeys: Object.keys(bodyObj) }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -119,7 +129,6 @@ Deno.serve(async (req) => {
       .select("company_id")
       .eq("user_id", caller.id)
       .single();
-
     if (!callerProfile || callerProfile.company_id !== companyId) {
       return new Response(JSON.stringify({ error: "Not authorized for this company" }), {
         status: 403,
@@ -127,7 +136,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify caller has permission to invite
+    // Verify caller has permission to provision technicians
     const { data: callerRoles } = await adminClient
       .from("user_roles")
       .select("role")
@@ -145,10 +154,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify the technician record is in this company
+    // Verify technician exists and belongs to this company
     const { data: techRow } = await adminClient
       .from("technicians")
-      .select("id, company_id, email")
+      .select("id, company_id, email, name, user_id")
       .eq("id", technicianId)
       .maybeSingle();
     if (!techRow || techRow.company_id !== companyId) {
@@ -158,61 +167,90 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create the auth user with invite (sends email automatically)
-    console.log("Inviting technician:", { email, name, companyId, redirectTo });
-    const publicSiteUrl = Deno.env.get("PUBLIC_SITE_URL")?.trim();
-    const fallbackRedirectTo = publicSiteUrl ? `${publicSiteUrl.replace(/\/+$/, "")}/auth/callback` : undefined;
-    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: {
-        full_name: name,
-        company_id: companyId,
-        industry: industry ?? "general",
-        role: "technician",
-      },
-      redirectTo: redirectTo || fallbackRedirectTo,
-    });
-
-    console.log("Invite result:", { inviteData: inviteData?.user?.id, inviteError });
-
-    if (inviteError) {
-      return new Response(JSON.stringify({ error: inviteError.message }), {
+    const email = (techRow.email ?? "").trim();
+    const name = (techRow.name ?? "").trim();
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Technician must have an email to create login access" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const newUserId = inviteData?.user?.id ?? null;
+    // IMPORTANT: force redirect to your canonical frontend (prevents lovableproject.com links)
+    const publicSiteUrl = (Deno.env.get("PUBLIC_SITE_URL") ?? "").trim();
+    const effectiveRedirectTo = publicSiteUrl ? joinUrl(publicSiteUrl, "/auth/callback?next=/tech") : undefined;
 
-    if (newUserId) {
-      // Link technician to auth user
-      const { error: techUpdateError } = await adminClient
-        .from("technicians")
-        .update({ user_id: newUserId, invite_status: "invited" })
-        .eq("id", technicianId);
-      if (techUpdateError) {
-        console.error("CRITICAL: Technician user_id link failed:", techUpdateError.message);
-      } else {
-        console.log("Technician linked to user:", { technicianId, newUserId });
+    const userMetadata = {
+      full_name: name,
+      company_id: companyId,
+      industry: industry ?? "general",
+      role: "technician",
+    };
+
+    let userId: string | null = techRow.user_id ?? null;
+    if (userId) {
+      const { data: updated, error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: userMetadata,
+      });
+      if (updateError || !updated.user) {
+        return new Response(JSON.stringify({ error: updateError?.message ?? "Failed to update technician auth user" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-
-      // Create profile for the technician
-      await adminClient
-        .from("profiles")
-        .upsert(
-          { user_id: newUserId, full_name: name, email, company_id: companyId },
-          { onConflict: "user_id" },
-        );
-
-      // Assign technician role
-      await adminClient
-        .from("user_roles")
-        .upsert(
-          { user_id: newUserId, role: "technician" },
-          { onConflict: "user_id,role" },
-        );
+      userId = updated.user.id;
+    } else {
+      const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: userMetadata,
+      });
+      if (createError || !created.user) {
+        return new Response(JSON.stringify({ error: createError?.message ?? "Failed to create technician auth user" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = created.user.id;
     }
 
-    return new Response(JSON.stringify({ success: true, userId: newUserId }), {
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: effectiveRedirectTo ? { redirectTo: effectiveRedirectTo } : undefined,
+    } as any);
+    if (linkError) {
+      return new Response(JSON.stringify({ error: linkError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const loginLink = linkData.properties?.action_link ?? null;
+
+    await adminClient
+      .from("technicians")
+      .update({ user_id: userId, invite_status: "invited", invited_at: new Date().toISOString() })
+      .eq("id", technicianId);
+
+    await adminClient
+      .from("profiles")
+      .upsert(
+        { user_id: userId, full_name: name, email, company_id: companyId },
+        { onConflict: "user_id" },
+      );
+
+    await adminClient
+      .from("user_roles")
+      .upsert(
+        { user_id: userId, role: "technician" },
+        { onConflict: "user_id,role" },
+      );
+
+    return new Response(JSON.stringify({ success: true, userId, loginLink }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -224,3 +262,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
