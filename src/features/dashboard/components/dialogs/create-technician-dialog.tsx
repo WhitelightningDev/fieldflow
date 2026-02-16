@@ -114,6 +114,10 @@ export default function CreateTechnicianDialog() {
               details = "Not authorized to send invites. Please re-login and try again.";
             }
           }
+          if (details.toLowerCase().includes("supabasekey is required")) {
+            details =
+              "Supabase Edge Function is missing required secrets (usually `SUPABASE_SERVICE_ROLE_KEY`). Set the secret and redeploy the function.";
+          }
           toast({ title: "Technician added", description: `Invite email failed: ${details}. You can resend later.` });
         } else {
           toast({ title: "Technician added & invited", description: `Invite email sent to ${values.email}` });

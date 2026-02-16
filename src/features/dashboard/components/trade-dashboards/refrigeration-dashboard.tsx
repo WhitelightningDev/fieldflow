@@ -10,6 +10,7 @@ import {
   KpiCard,
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
+import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
 import { formatUsdFromCents } from "@/lib/money";
 import {
   AlertTriangle,
@@ -69,6 +70,14 @@ export default function RefrigerationDashboard({ data, allJobs }: Props) {
           <KpiCard icon={Clock} label="Avg Response" value={`${base.avgResponseHrs}h`} sub="cold chain = urgency" />
         </div>
       </div>
+
+      <OpsSnapshot
+        title="Operations Snapshot"
+        inventoryItems={data.inventoryItems}
+        technicians={data.technicians}
+        jobs={allJobs}
+        sites={data.sites}
+      />
 
       {/* LOSING MONEY */}
       <div>

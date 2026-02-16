@@ -13,6 +13,7 @@ import {
   KpiCard,
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
+import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
 import { formatUsdFromCents } from "@/lib/money";
 import {
   AlertTriangle,
@@ -66,6 +67,14 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
           <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={base.unbilledJobs.length > 0 ? formatUsdFromCents(base.unbilledRevenue) + " at risk" : undefined} />
         </div>
       </div>
+
+      <OpsSnapshot
+        title="Operations Snapshot"
+        inventoryItems={data.inventoryItems}
+        technicians={data.technicians}
+        jobs={allJobs}
+        sites={data.sites}
+      />
 
       {/* ─── LOSING MONEY ─── */}
       <div>

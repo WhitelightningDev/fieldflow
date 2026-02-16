@@ -10,6 +10,7 @@ import {
   KpiCard,
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
+import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
 import { formatUsdFromCents } from "@/lib/money";
 import {
   AlertTriangle,
@@ -61,6 +62,14 @@ export default function MobileMechanicsDashboard({ data, allJobs }: Props) {
           <KpiCard icon={MapPin} label="No Location Set" value={noSiteJobs.length} accent={noSiteJobs.length > 0 ? "warning" : undefined} sub="wasted travel risk" />
         </div>
       </div>
+
+      <OpsSnapshot
+        title="Operations Snapshot"
+        inventoryItems={data.inventoryItems}
+        technicians={data.technicians}
+        jobs={allJobs}
+        sites={data.sites}
+      />
 
       {/* LOSING MONEY */}
       <div>

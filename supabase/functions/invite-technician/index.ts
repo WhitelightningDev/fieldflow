@@ -1,5 +1,28 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 
+type InviteTechnicianPayload = {
+  technicianId: string;
+  email: string;
+  name: string;
+  companyId: string;
+  industry?: string | null;
+  redirectTo?: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getString(obj: Record<string, unknown>, key: string) {
+  const value = obj[key];
+  return typeof value === "string" ? value : "";
+}
+
+function getOptionalString(obj: Record<string, unknown>, key: string) {
+  const value = obj[key];
+  return typeof value === "string" ? value : undefined;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -20,17 +43,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey =
+    const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
+    const serviceRoleKey = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
+    const anonKey = (
       Deno.env.get("SUPABASE_ANON_KEY") ??
       Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
-      "";
+      req.headers.get("apikey") ??
+      req.headers.get("x-supabase-anon-key") ??
+      ""
+    ).trim();
     if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-      return new Response(JSON.stringify({ error: "Missing Supabase function env vars" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const missing: string[] = [];
+      if (!supabaseUrl) missing.push("SUPABASE_URL");
+      if (!serviceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+      if (!anonKey) missing.push("SUPABASE_ANON_KEY (or apikey header)");
+      return new Response(
+        JSON.stringify({
+          error: `Missing Supabase function env vars: ${missing.join(", ")}`,
+          hint: "Set SUPABASE_SERVICE_ROLE_KEY via `supabase secrets set` and redeploy the function.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Caller client (to verify identity)
@@ -51,14 +87,24 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    let body: any = null;
+    let rawBody: unknown = null;
     try {
-      body = await req.json();
+      rawBody = await req.json();
     } catch {
-      body = null;
+      rawBody = null;
     }
 
-    const { technicianId, email, name, companyId, industry, redirectTo } = body ?? {};
+    const bodyObj = isRecord(rawBody) ? rawBody : {};
+    const body: InviteTechnicianPayload = {
+      technicianId: getString(bodyObj, "technicianId"),
+      email: getString(bodyObj, "email"),
+      name: getString(bodyObj, "name"),
+      companyId: getString(bodyObj, "companyId"),
+      industry: getOptionalString(bodyObj, "industry"),
+      redirectTo: getOptionalString(bodyObj, "redirectTo"),
+    };
+
+    const { technicianId, email, name, companyId, industry, redirectTo } = body;
 
     if (!technicianId || !email || !name || !companyId) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -87,7 +133,11 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("user_id", caller.id);
     const allowedRoles = new Set(["owner", "admin", "office_staff"]);
-    const canInvite = (callerRoles ?? []).some((r: any) => allowedRoles.has(r.role));
+    const canInvite = (Array.isArray(callerRoles) ? callerRoles : []).some((row) => {
+      if (!isRecord(row)) return false;
+      const role = row.role;
+      return typeof role === "string" && allowedRoles.has(role);
+    });
     if (!canInvite) {
       return new Response(JSON.stringify({ error: "Insufficient permissions to invite technicians" }), {
         status: 403,
@@ -131,13 +181,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const newUserId = inviteData.user?.id;
+    const newUserId = inviteData?.user?.id ?? null;
 
     if (newUserId) {
       // Link technician to auth user (optional columns; safe if present).
       const { error: techUpdateError } = await adminClient
         .from("technicians")
-        .update({ user_id: newUserId, invite_status: "invited", invited_at: new Date().toISOString() } as any)
+        .update({ user_id: newUserId, invite_status: "invited", invited_at: new Date().toISOString() })
         .eq("id", technicianId);
       if (techUpdateError) {
         console.log("Technician update failed (safe to ignore):", techUpdateError.message);
@@ -165,7 +215,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error)?.message ?? String(err) }), {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

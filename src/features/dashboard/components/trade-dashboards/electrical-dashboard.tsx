@@ -11,6 +11,7 @@ import {
   KpiCard,
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
+import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
 import { formatUsdFromCents } from "@/lib/money";
 import {
   AlertTriangle,
@@ -67,6 +68,14 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
           <KpiCard icon={Clock} label="Awaiting Inspection" value={awaitingInspection.length} accent={awaitingInspection.length > 0 ? "warning" : undefined} />
         </div>
       </div>
+
+      <OpsSnapshot
+        title="Operations Snapshot"
+        inventoryItems={data.inventoryItems}
+        technicians={data.technicians}
+        jobs={allJobs}
+        sites={data.sites}
+      />
 
       {/* LOSING MONEY */}
       <div>

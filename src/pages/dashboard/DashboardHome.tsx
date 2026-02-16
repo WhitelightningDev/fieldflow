@@ -11,11 +11,11 @@ import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import {
   computeBaseMetrics,
-  computeTechMetrics,
   isToday,
   KpiCard,
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
+import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
 import { formatUsdFromCents } from "@/lib/money";
 import {
   AlertTriangle,
@@ -31,7 +31,6 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
 
 /* ─── Trade-specific dashboard imports ─── */
 import PlumbingDashboard from "@/features/dashboard/components/trade-dashboards/plumbing-dashboard";
@@ -43,7 +42,6 @@ import ApplianceRepairDashboard from "@/features/dashboard/components/trade-dash
 /* ─── Fallback generic dashboard ─── */
 function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
   const base = computeBaseMetrics(allJobs, data.technicians);
-  const techMetrics = computeTechMetrics(allJobs, data.technicians);
   const { lowStock, expiringSoon } = useInventoryAlerts(data.inventoryItems);
 
   const jobsToday = allJobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
@@ -64,6 +62,15 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
           <KpiCard icon={Users} label="Active Techs" value={data.technicians.filter((t: any) => t.active).length} sub={`${data.technicians.length} total`} />
         </div>
       </div>
+
+      {/* SNAPSHOT */}
+      <OpsSnapshot
+        title="Operations Snapshot"
+        inventoryItems={data.inventoryItems}
+        technicians={data.technicians}
+        jobs={allJobs}
+        sites={data.sites}
+      />
 
       {/* LOSING MONEY */}
       <div>
@@ -96,42 +103,6 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
           <KpiCard icon={CalendarClock} label="Expiring Stock" value={expiringSoon.length} accent={expiringSoon.length > 0 ? "warning" : undefined} />
           <KpiCard icon={PackageSearch} label="Below Reorder" value={lowStock.length} accent={lowStock.length > 0 ? "warning" : undefined} />
         </div>
-      </div>
-
-      {/* TECH METRICS */}
-      <div>
-        <SectionHeader title="Technician Metrics" question="Who's making money and who's costing you?" />
-        {techMetrics.length === 0 ? (
-          <Card className="bg-card/70 backdrop-blur-sm">
-            <CardContent className="py-8 text-center text-muted-foreground text-sm">No active technicians yet.</CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-card/70 backdrop-blur-sm">
-            <CardContent className="pt-6 space-y-4">
-              {techMetrics.map((tech) => (
-                <div key={tech.id}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{tech.name}</div>
-                      <div className="text-xs text-muted-foreground">{tech.completed} completed · {tech.returnVisits} returns</div>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm shrink-0">
-                      <div className="text-center">
-                        <div className={`font-bold ${tech.firstTimeFix < 80 ? "text-destructive" : ""}`}>{tech.firstTimeFix}%</div>
-                        <div className="text-[10px] text-muted-foreground">Fix rate</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold">{formatUsdFromCents(tech.revenue)}</div>
-                        <div className="text-[10px] text-muted-foreground">Revenue</div>
-                      </div>
-                    </div>
-                  </div>
-                  <Separator className="mt-3" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
