@@ -50,33 +50,51 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          billing_email: string | null
+          billing_phone: string | null
+          billing_reference: string | null
+          code: string | null
           company_id: string
           created_at: string
           email: string | null
           id: string
           name: string
           notes: string | null
+          payment_terms: number | null
           phone: string | null
+          vat_number: string | null
         }
         Insert: {
           address?: string | null
+          billing_email?: string | null
+          billing_phone?: string | null
+          billing_reference?: string | null
+          code?: string | null
           company_id: string
           created_at?: string
           email?: string | null
           id?: string
           name: string
           notes?: string | null
+          payment_terms?: number | null
           phone?: string | null
+          vat_number?: string | null
         }
         Update: {
           address?: string | null
+          billing_email?: string | null
+          billing_phone?: string | null
+          billing_reference?: string | null
+          code?: string | null
           company_id?: string
           created_at?: string
           email?: string | null
           id?: string
           name?: string
           notes?: string | null
+          payment_terms?: number | null
           phone?: string | null
+          vat_number?: string | null
         }
         Relationships: [
           {
