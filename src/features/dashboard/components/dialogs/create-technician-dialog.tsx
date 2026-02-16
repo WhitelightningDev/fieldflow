@@ -197,7 +197,7 @@ export default function CreateTechnicianDialog() {
                 name="hourlyCost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hourly cost (USD, optional)</FormLabel>
+                    <FormLabel>Hourly cost (R, optional)</FormLabel>
                     <FormControl>
                       <Input inputMode="decimal" placeholder="e.g. 35.00" {...field} />
                     </FormControl>
@@ -210,7 +210,7 @@ export default function CreateTechnicianDialog() {
                 name="hourlyBillRate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hourly bill rate (USD, optional)</FormLabel>
+                    <FormLabel>Hourly bill rate (R, optional)</FormLabel>
                     <FormControl>
                       <Input inputMode="decimal" placeholder="e.g. 95.00" {...field} />
                     </FormControl>

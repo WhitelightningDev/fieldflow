@@ -206,7 +206,7 @@ export default function CreateInventoryItemDialog({
               name="unitCost"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Unit cost (USD, optional)</FormLabel>
+                  <FormLabel>Unit cost (R, optional)</FormLabel>
                   <FormControl>
                     <Input inputMode="decimal" placeholder="e.g. 2.50" {...field} />
                   </FormControl>

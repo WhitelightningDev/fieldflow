@@ -14,7 +14,7 @@ import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-ale
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Tables } from "@/integrations/supabase/types";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import { AlertTriangle, Plus } from "lucide-react";
 import * as React from "react";
 import { format } from "date-fns";
@@ -145,7 +145,7 @@ export default function Inventory() {
                     <span className="text-sm text-muted-foreground">{i.unit}</span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {typeof (i as any).unit_cost_cents === "number" ? formatUsdFromCents((i as any).unit_cost_cents) : "—"}
+                    {typeof (i as any).unit_cost_cents === "number" ? formatZarFromCents((i as any).unit_cost_cents) : "—"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{i.reorder_point}</TableCell>
                   <TableCell>{i.perishable ? <Badge>Yes</Badge> : <Badge variant="outline">No</Badge>}</TableCell>

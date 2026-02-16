@@ -1,6 +1,8 @@
-const usd = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
+const zar = new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" });
 
-export function formatUsdFromCents(cents: number) {
-  return usd.format((cents || 0) / 100);
+export function formatZarFromCents(cents: number) {
+  return zar.format((cents || 0) / 100);
 }
 
+// Backwards-compat alias (app displays ZAR everywhere).
+export const formatUsdFromCents = formatZarFromCents;

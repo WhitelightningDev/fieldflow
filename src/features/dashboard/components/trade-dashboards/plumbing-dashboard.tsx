@@ -14,7 +14,7 @@ import {
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
   Clock,
@@ -64,7 +64,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
           <KpiCard icon={Droplets} label="Leak Callouts (24h)" value={leakCallouts24h.length} accent={leakCallouts24h.length > 0 ? "warning" : undefined} />
           <KpiCard icon={Clock} label="Avg Response Time" value={`${base.avgResponseHrs}h`} />
           <KpiCard icon={PackageSearch} label="Awaiting Parts" value={awaitingParts.length} accent={awaitingParts.length > 0 ? "warning" : undefined} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={base.unbilledJobs.length > 0 ? formatUsdFromCents(base.unbilledRevenue) + " at risk" : undefined} />
+          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={base.unbilledJobs.length > 0 ? formatZarFromCents(base.unbilledRevenue) + " at risk" : undefined} />
         </div>
       </div>
 
@@ -80,13 +80,13 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       <div>
         <SectionHeader title="Financial" question="Where am I losing money?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatUsdFromCents(base.avgRevenuePerJob)} />
+          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
           <KpiCard icon={Wrench} label="Water Heater Installs" value={waterHeaterJobs.length} sub="this month" />
-          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatUsdFromCents(base.revenueThisMonth)} />
+          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
-          <KpiCard icon={PhoneCall} label="After-Hours Revenue" value={formatUsdFromCents(afterHoursRevenue)} />
+          <KpiCard icon={PhoneCall} label="After-Hours Revenue" value={formatZarFromCents(afterHoursRevenue)} />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">
@@ -144,7 +144,7 @@ function TechMetricsTable({ techMetrics }: { techMetrics: any[] }) {
                   <div className="text-[10px] text-muted-foreground">Fix rate</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-bold">{formatUsdFromCents(tech.revenue)}</div>
+                  <div className="font-bold">{formatZarFromCents(tech.revenue)}</div>
                   <div className="text-[10px] text-muted-foreground">Revenue</div>
                 </div>
               </div>

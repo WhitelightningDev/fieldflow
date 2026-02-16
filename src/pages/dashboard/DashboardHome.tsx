@@ -16,7 +16,7 @@ import {
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
   Briefcase,
@@ -57,7 +57,7 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <KpiCard icon={Flame} label="Emergency Today" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
           <KpiCard icon={Briefcase} label="Jobs Today" value={jobsToday.length} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatUsdFromCents(base.unbilledRevenue) + " at risk"} />
+          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatZarFromCents(base.unbilledRevenue) + " at risk"} />
           <KpiCard icon={PackageSearch} label="Low Stock Items" value={lowStock.length} accent={lowStock.length > 0 ? "warning" : undefined} />
           <KpiCard icon={Users} label="Active Techs" value={data.technicians.filter((t: any) => t.active).length} sub={`${data.technicians.length} total`} />
         </div>
@@ -76,13 +76,13 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
       <div>
         <SectionHeader title="Financial" question="Where am I losing money?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatUsdFromCents(base.avgRevenuePerJob)} />
-          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatUsdFromCents(base.revenueThisMonth)} />
+          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
+          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
           <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="rework erodes profit" />
-          <KpiCard icon={FileWarning} label="Unbilled Revenue" value={formatUsdFromCents(base.unbilledRevenue)} accent={base.unbilledRevenue > 0 ? "warning" : undefined} />
+          <KpiCard icon={FileWarning} label="Unbilled Revenue" value={formatZarFromCents(base.unbilledRevenue)} accent={base.unbilledRevenue > 0 ? "warning" : undefined} />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">

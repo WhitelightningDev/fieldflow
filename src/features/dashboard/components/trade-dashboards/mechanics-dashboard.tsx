@@ -11,7 +11,7 @@ import {
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
   Briefcase,
@@ -57,7 +57,7 @@ export default function MobileMechanicsDashboard({ data, allJobs }: Props) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <KpiCard icon={Flame} label="Emergency Callouts" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
           <KpiCard icon={Briefcase} label="Jobs Today" value={jobsToday.length} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatUsdFromCents(base.unbilledRevenue) + " at risk"} />
+          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatZarFromCents(base.unbilledRevenue) + " at risk"} />
           <KpiCard icon={Package} label="Awaiting Parts" value={partsWaiting.length} accent={partsWaiting.length > 0 ? "warning" : undefined} />
           <KpiCard icon={MapPin} label="No Location Set" value={noSiteJobs.length} accent={noSiteJobs.length > 0 ? "warning" : undefined} sub="wasted travel risk" />
         </div>
@@ -75,9 +75,9 @@ export default function MobileMechanicsDashboard({ data, allJobs }: Props) {
       <div>
         <SectionHeader title="Financial" question="Where am I losing money?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatUsdFromCents(base.avgRevenuePerJob)} />
+          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
           <KpiCard icon={Car} label="Roadside Calls" value={roadside.length} sub="high urgency, price accordingly" />
-          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatUsdFromCents(base.revenueThisMonth)} />
+          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
@@ -129,7 +129,7 @@ function TechTable({ techMetrics, label }: { techMetrics: any[]; label: string }
               </div>
               <div className="flex items-center gap-4 text-sm shrink-0">
                 <div className="text-center"><div className={`font-bold ${t.firstTimeFix < 80 ? "text-destructive" : ""}`}>{t.firstTimeFix}%</div><div className="text-[10px] text-muted-foreground">Fix rate</div></div>
-                <div className="text-center"><div className="font-bold">{formatUsdFromCents(t.revenue)}</div><div className="text-[10px] text-muted-foreground">Revenue</div></div>
+                <div className="text-center"><div className="font-bold">{formatZarFromCents(t.revenue)}</div><div className="text-[10px] text-muted-foreground">Revenue</div></div>
               </div>
             </div>
             <Separator className="mt-3" />

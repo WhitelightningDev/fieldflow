@@ -1,4 +1,4 @@
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import type { Profitability } from "@/features/dashboard/lib/profitability";
 
 export default function ProfitabilityPill({ value }: { value: Profitability | null | undefined }) {
@@ -20,7 +20,7 @@ export default function ProfitabilityPill({ value }: { value: Profitability | nu
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${classes}`}>
-      {label}: {formatUsdFromCents(margin)}
+      {label}: {formatZarFromCents(margin)}
       {pct !== null ? ` (${Math.round(pct * 100)}%)` : ""}
     </span>
   );

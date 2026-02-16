@@ -7,7 +7,7 @@ import EditTechnicianDialog from "@/features/dashboard/components/dialogs/edit-t
 import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 
 export default function Technicians() {
   const { data } = useDashboardData();
@@ -52,7 +52,7 @@ export default function Technicians() {
                   </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {typeof (t as any).hourly_cost_cents === "number" ? `${formatUsdFromCents((t as any).hourly_cost_cents)}/hr` : "—"}
+                  {typeof (t as any).hourly_cost_cents === "number" ? `${formatZarFromCents((t as any).hourly_cost_cents)}/hr` : "—"}
                 </TableCell>
                 <TableCell>{t.active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}</TableCell>
                 <TableCell className="text-right">

@@ -246,7 +246,7 @@ export default function CreateJobCardDialog({
               name="revenue"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Revenue (USD, optional)</FormLabel>
+                  <FormLabel>Revenue (R, optional)</FormLabel>
                   <FormControl>
                     <Input inputMode="decimal" placeholder="e.g. 1200.00" {...field} />
                   </FormControl>

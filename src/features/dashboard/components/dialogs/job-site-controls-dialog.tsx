@@ -14,7 +14,7 @@ import ProfitabilityPill from "@/features/dashboard/components/profitability-pil
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import { ExternalLink, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -345,9 +345,9 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
               <div className="space-y-1">
                 <div className="text-sm font-medium">Gross margin</div>
                 <div className="text-xs text-muted-foreground">
-                  Revenue {profitability.revenueCents === null ? "—" : formatUsdFromCents(profitability.revenueCents)} · Labour{" "}
-                  {formatUsdFromCents(profitability.laborCostCents)} · Materials {formatUsdFromCents(profitability.materialCostCents)} · Waste{" "}
-                  {formatUsdFromCents(profitability.wasteCostCents)}
+                  Revenue {profitability.revenueCents === null ? "—" : formatZarFromCents(profitability.revenueCents)} · Labour{" "}
+                  {formatZarFromCents(profitability.laborCostCents)} · Materials {formatZarFromCents(profitability.materialCostCents)} · Waste{" "}
+                  {formatZarFromCents(profitability.wasteCostCents)}
                 </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -356,7 +356,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
                   <Input
                     className="h-9 w-[160px]"
                     inputMode="decimal"
-                    placeholder="Revenue (USD)"
+                    placeholder="Revenue (R)"
                     value={revenue}
                     onChange={(e) => setRevenue(e.target.value)}
                   />

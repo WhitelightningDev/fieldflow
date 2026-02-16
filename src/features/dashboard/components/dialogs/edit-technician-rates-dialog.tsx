@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import * as React from "react";
 
@@ -66,17 +66,17 @@ export default function EditTechnicianRatesDialog({ technicianId }: { technician
             <div className="text-sm font-medium">{technician.name}</div>
             <div className="text-xs text-muted-foreground">
               Current cost:{" "}
-              {typeof technician.hourly_cost_cents === "number" ? `${formatUsdFromCents(technician.hourly_cost_cents)}/hr` : "—"}
+              {typeof technician.hourly_cost_cents === "number" ? `${formatZarFromCents(technician.hourly_cost_cents)}/hr` : "—"}
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Hourly cost (USD)</Label>
+              <Label>Hourly cost (R)</Label>
               <Input inputMode="decimal" placeholder="e.g. 35.00" value={hourlyCost} onChange={(e) => setHourlyCost(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Hourly bill rate (USD, optional)</Label>
+              <Label>Hourly bill rate (R, optional)</Label>
               <Input inputMode="decimal" placeholder="e.g. 95.00" value={hourlyBill} onChange={(e) => setHourlyBill(e.target.value)} />
             </div>
           </div>
@@ -91,4 +91,3 @@ export default function EditTechnicianRatesDialog({ technicianId }: { technician
     </Dialog>
   );
 }
-

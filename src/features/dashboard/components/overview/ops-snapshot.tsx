@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { SectionHeader, isThisMonth, isToday } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import type { Tables } from "@/integrations/supabase/types";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { MapPin, PackageSearch, Users } from "lucide-react";
 import * as React from "react";
@@ -219,7 +219,7 @@ function TechnicianStatusOverviewCard({
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <div className="text-sm font-semibold">{formatUsdFromCents(r.monthRevenue)}</div>
+                    <div className="text-sm font-semibold">{formatZarFromCents(r.monthRevenue)}</div>
                     <div className={cn("text-[10px]", r.fixRate < 80 ? "text-destructive" : "text-muted-foreground")}>
                       {r.fixRate}% fix rate (month)
                     </div>
@@ -249,4 +249,3 @@ function StatusDot({ status }: { status: TechStatus }) {
         : "bg-rose-500";
   return <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", cls)} aria-hidden="true" />;
 }
-

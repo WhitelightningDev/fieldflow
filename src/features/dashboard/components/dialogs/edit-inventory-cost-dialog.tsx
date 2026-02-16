@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import { formatUsdFromCents } from "@/lib/money";
+import { formatZarFromCents } from "@/lib/money";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import * as React from "react";
 
@@ -56,12 +56,12 @@ export default function EditInventoryCostDialog({ itemId }: { itemId: string }) 
         <div className="space-y-2">
           <div className="text-sm font-medium">{item.name}</div>
           <div className="text-xs text-muted-foreground">
-            Current: {typeof item.unit_cost_cents === "number" ? formatUsdFromCents(item.unit_cost_cents) : "—"} per {item.unit}
+            Current: {typeof item.unit_cost_cents === "number" ? formatZarFromCents(item.unit_cost_cents) : "—"} per {item.unit}
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Unit cost (USD)</Label>
+          <Label>Unit cost (R)</Label>
           <Input inputMode="decimal" placeholder="e.g. 2.50" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
         </div>
 
@@ -74,4 +74,3 @@ export default function EditInventoryCostDialog({ itemId }: { itemId: string }) 
     </Dialog>
   );
 }
-
