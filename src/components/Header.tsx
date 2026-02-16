@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import Logo from "@/assets/fieldflow-logo-removebg-preview.png";
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -12,8 +13,8 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 gradient-bg rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 group-hover:shadow-lg">
-              <span className="text-primary-foreground font-bold text-lg">F</span>
+            <div className="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 group-hover:shadow-lg">
+             <img src={Logo} className="text-primary-foreground font-bold text-lg" alt="" />
             </div>
             <span className="font-bold text-xl tracking-tight">
               Field<span className="gradient-text">Flow</span>

@@ -1,5 +1,6 @@
 import AssignTeamToSiteDialog from "@/features/dashboard/components/dialogs/assign-team-to-site-dialog";
 import CreateSiteDialog from "@/features/dashboard/components/dialogs/create-site-dialog";
+import ManageSiteDialog from "@/features/dashboard/components/dialogs/manage-site-dialog";
 import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
 import { computeSiteProfitability } from "@/features/dashboard/lib/profitability";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -116,6 +117,9 @@ export default function Sites() {
                 <TableRow key={site.id}>
                   <TableCell>
                     <div className="font-medium">{site.name}</div>
+                    {(site as any).scope_of_work ? (
+                      <div className="text-xs text-muted-foreground line-clamp-1">{(site as any).scope_of_work}</div>
+                    ) : null}
                     <div className="text-xs text-muted-foreground">
                       Updated {formatDistanceToNowStrict(new Date(site.updated_at), { addSuffix: true })}
                     </div>
@@ -138,6 +142,7 @@ export default function Sites() {
                     <ProfitabilityPill value={profitability} />
                   </TableCell>
                   <TableCell className="text-right space-x-2">
+                    <ManageSiteDialog siteId={site.id} />
                     <AssignTeamToSiteDialog siteId={site.id} />
                     {current ? (
                       <Button

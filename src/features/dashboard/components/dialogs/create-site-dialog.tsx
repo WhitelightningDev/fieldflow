@@ -14,7 +14,13 @@ import { z } from "zod";
 const schema = z.object({
   name: z.string().min(2, "Site name is required"),
   customerId: z.string().optional(),
+  code: z.string().optional(),
+  billingReference: z.string().optional(),
   address: z.string().optional(),
+  scopeOfWork: z.string().optional(),
+  contactName: z.string().optional(),
+  contactPhone: z.string().optional(),
+  contactEmail: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -31,7 +37,13 @@ export default function CreateSiteDialog() {
     defaultValues: {
       name: "",
       customerId: NONE,
+      code: "",
+      billingReference: "",
       address: "",
+      scopeOfWork: "",
+      contactName: "",
+      contactPhone: "",
+      contactEmail: "",
       notes: "",
     },
     mode: "onTouched",
@@ -41,13 +53,30 @@ export default function CreateSiteDialog() {
     const created = await actions.addSite({
       name: values.name,
       customer_id: values.customerId && values.customerId !== NONE ? values.customerId : null,
+      code: values.code ? values.code : null,
+      billing_reference: values.billingReference ? values.billingReference : null,
       address: values.address || null,
+      scope_of_work: values.scopeOfWork ? values.scopeOfWork : null,
+      contact_name: values.contactName ? values.contactName : null,
+      contact_phone: values.contactPhone ? values.contactPhone : null,
+      contact_email: values.contactEmail ? values.contactEmail : null,
       notes: values.notes || null,
-    } as any);
+    });
     if (!created) return;
     toast({ title: "Site created" });
     setOpen(false);
-    form.reset({ name: "", customerId: NONE, address: "", notes: "" });
+    form.reset({
+      name: "",
+      customerId: NONE,
+      code: "",
+      billingReference: "",
+      address: "",
+      scopeOfWork: "",
+      contactName: "",
+      contactPhone: "",
+      contactEmail: "",
+      notes: "",
+    });
   });
 
   return (
@@ -57,10 +86,12 @@ export default function CreateSiteDialog() {
           Create site
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create site</DialogTitle>
-          <DialogDescription>Sites let you track team assignments, materials, photos, and COC documentation.</DialogDescription>
+          <DialogDescription>
+            Capture enough detail to run the site: scope of work, invoicing reference, and who to contact.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -105,6 +136,35 @@ export default function CreateSiteDialog() {
               )}
             />
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site code (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. DB-01 / ROOF-A" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="billingReference"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Billing reference (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. PO #1234 / Quote #A-22" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="address"
@@ -118,6 +178,66 @@ export default function CreateSiteDialog() {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="scopeOfWork"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Scope of work (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="What is being done on this site? e.g. Solar install, DB board upgrade, panel allocation, compliance checklist..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="contactName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site contact</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Name" autoComplete="name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="contactPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+27 ..." autoComplete="tel" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="contactEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="email@site.com" autoComplete="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
