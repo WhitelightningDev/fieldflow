@@ -54,14 +54,9 @@ export default function CreateSiteDialog() {
       name: values.name,
       customer_id: values.customerId && values.customerId !== NONE ? values.customerId : null,
       code: values.code ? values.code : null,
-      billing_reference: values.billingReference ? values.billingReference : null,
       address: values.address || null,
-      scope_of_work: values.scopeOfWork ? values.scopeOfWork : null,
-      contact_name: values.contactName ? values.contactName : null,
-      contact_phone: values.contactPhone ? values.contactPhone : null,
-      contact_email: values.contactEmail ? values.contactEmail : null,
       notes: values.notes || null,
-    });
+    } as any);
     if (!created) return;
     toast({ title: "Site created" });
     setOpen(false);

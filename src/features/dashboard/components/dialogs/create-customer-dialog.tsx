@@ -51,17 +51,11 @@ export default function CreateCustomerDialog() {
   const submit = form.handleSubmit(async (values) => {
     const row = await actions.addCustomer({
       name: values.name,
-      code: values.code || null,
       phone: values.phone || null,
       email: values.email || null,
-      billing_phone: values.billingPhone || null,
-      billing_email: values.billingEmail || null,
-      billing_reference: values.billingReference || null,
-      vat_number: values.vatNumber || null,
-      payment_terms: values.paymentTerms || null,
       address: values.address || null,
       notes: values.notes || null,
-    });
+    } as any);
     if (!row) return;
     toast({ title: "Customer added" });
     setOpen(false);

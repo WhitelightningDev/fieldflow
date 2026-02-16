@@ -5,6 +5,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import TradeFilterSelect from "@/features/dashboard/components/trade-filter-select";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
+import NotificationBell from "@/components/notification-bell";
 import { LayoutGrid } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
@@ -30,6 +31,7 @@ export default function DashboardTopbar() {
             Dashboard
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <NotificationBell basePath="/dashboard" />
             {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
             {!authLoading && profile?.company_id ? (
               <div className="hidden sm:block text-sm text-muted-foreground">
