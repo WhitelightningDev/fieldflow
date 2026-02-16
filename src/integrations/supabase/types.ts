@@ -50,33 +50,54 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          billing_email: string | null
+          billing_phone: string | null
+          billing_reference: string | null
+          code: string | null
           company_id: string
           created_at: string
           email: string | null
           id: string
+          is_active: boolean
           name: string
           notes: string | null
+          payment_terms: string | null
           phone: string | null
+          vat_number: string | null
         }
         Insert: {
           address?: string | null
+          billing_email?: string | null
+          billing_phone?: string | null
+          billing_reference?: string | null
+          code?: string | null
           company_id: string
           created_at?: string
           email?: string | null
           id?: string
+          is_active?: boolean
           name: string
           notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
+          vat_number?: string | null
         }
         Update: {
           address?: string | null
+          billing_email?: string | null
+          billing_phone?: string | null
+          billing_reference?: string | null
+          code?: string | null
           company_id?: string
           created_at?: string
           email?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
+          vat_number?: string | null
         }
         Relationships: [
           {
@@ -493,38 +514,59 @@ export type Database = {
       sites: {
         Row: {
           address: string | null
+          billing_reference: string | null
           code: string | null
           company_id: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           customer_id: string | null
+          gps_lat: number | null
+          gps_lng: number | null
           id: string
           is_active: boolean
           name: string
           notes: string | null
+          scope_of_work: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          billing_reference?: string | null
           code?: string | null
           company_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_id?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
           id?: string
           is_active?: boolean
           name: string
           notes?: string | null
+          scope_of_work?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          billing_reference?: string | null
           code?: string | null
           company_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_id?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
+          scope_of_work?: string | null
           updated_at?: string
         }
         Relationships: [

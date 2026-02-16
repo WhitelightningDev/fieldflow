@@ -5,6 +5,7 @@ import CreateTechnicianDialog from "@/features/dashboard/components/dialogs/crea
 import DeleteTechnicianAlertDialog from "@/features/dashboard/components/dialogs/delete-technician-alert-dialog";
 import EditTechnicianDialog from "@/features/dashboard/components/dialogs/edit-technician-dialog";
 import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
+import SetTechnicianAccessDialog from "@/features/dashboard/components/dialogs/set-technician-access-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { formatZarFromCents } from "@/lib/money";
@@ -59,6 +60,7 @@ export default function Technicians() {
                   <div className="inline-flex items-center gap-2">
                     <EditTechnicianDialog technicianId={t.id} />
                     <EditTechnicianRatesDialog technicianId={t.id} />
+                    <SetTechnicianAccessDialog technicianId={t.id} />
                     <DeleteTechnicianAlertDialog technicianId={t.id} />
                   </div>
                 </TableCell>

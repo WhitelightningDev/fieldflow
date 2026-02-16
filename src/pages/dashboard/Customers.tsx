@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CreateCustomerDialog from "@/features/dashboard/components/dialogs/create-customer-dialog";
+import ManageCustomerDialog from "@/features/dashboard/components/dialogs/manage-customer-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 
@@ -18,12 +19,13 @@ export default function Customers() {
               <TableHead>Phone</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Address</TableHead>
+              <TableHead className="w-[140px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
                   No customers yet.
                 </TableCell>
               </TableRow>
@@ -34,6 +36,9 @@ export default function Customers() {
                 <TableCell className="text-sm text-muted-foreground">{c.phone || "—"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.address || "—"}</TableCell>
+                <TableCell className="text-right">
+                  <ManageCustomerDialog customerId={c.id} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -42,4 +47,3 @@ export default function Customers() {
     </div>
   );
 }
-

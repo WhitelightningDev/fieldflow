@@ -133,7 +133,7 @@ function CreateSolarProjectDialog({ onCreated }: { onCreated: () => void }) {
           Create solar project
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create solar project</DialogTitle>
           <DialogDescription>Track batteries, panel allocation, checklist compliance, and sign-offs.</DialogDescription>
@@ -436,7 +436,7 @@ function ManageSolarProjectDialog({ project, onChanged }: { project: SolarProjec
           Manage
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Solar project tracking</DialogTitle>
           <DialogDescription>
@@ -446,14 +446,15 @@ function ManageSolarProjectDialog({ project, onChanged }: { project: SolarProjec
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="batteries" className="w-full">
-          <TabsList>
+        <Tabs defaultValue="batteries" className="w-full flex-1 min-h-0 overflow-hidden flex flex-col">
+          <TabsList className="shrink-0 w-full justify-start overflow-x-auto">
             <TabsTrigger value="batteries">Batteries</TabsTrigger>
             <TabsTrigger value="panels">Panels</TabsTrigger>
             <TabsTrigger value="checklist">Checklist</TabsTrigger>
             <TabsTrigger value="signoff">Sign-off</TabsTrigger>
           </TabsList>
 
+          <div className="mt-4 flex-1 min-h-0 overflow-y-auto pr-1">
           <TabsContent value="batteries" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -839,9 +840,10 @@ function ManageSolarProjectDialog({ project, onChanged }: { project: SolarProjec
               </Table>
             </div>
           </TabsContent>
+          </div>
         </Tabs>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 pt-4">
           <Button variant="secondary" onClick={() => setOpen(false)}>
             Done
           </Button>

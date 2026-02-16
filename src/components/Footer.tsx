@@ -1,3 +1,5 @@
+import Logo from "@/assets/fieldflow-logo-removebg-preview.png";
+
 const Footer = () => {
   const links = {
     Product: ["Features", "Pricing", "Add-ons", "Mobile App", "Integrations"],
@@ -13,8 +15,8 @@ const Footer = () => {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <a href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 gradient-bg rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">F</span>
+              <div className="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center">
+                <img src={Logo} className="text-primary-foreground font-bold text-lg" alt="" />
               </div>
               <span className="font-bold text-xl">
                 Field<span className="gradient-text">Flow</span>

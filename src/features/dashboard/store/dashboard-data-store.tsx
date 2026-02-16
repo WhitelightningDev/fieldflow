@@ -60,6 +60,24 @@ type DashboardStore = {
 
 const DashboardDataContext = React.createContext<DashboardStore | null>(null);
 
+function mergeById<T extends { id: string }>(primary: T[], fallback: T[]) {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of primary) {
+    if (!item?.id) continue;
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  for (const item of fallback) {
+    if (!item?.id) continue;
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}
+
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
   const companyId = profile?.company_id;
@@ -167,18 +185,23 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       });
     }
 
-    setData({
-      company: companyRes.data ?? null,
-      customers: customersRes.data ?? [],
-      technicians: techRes.data ?? [],
-      jobCards: jobsRes.data ?? [],
-      inventoryItems: invRes.data ?? [],
-      sites: sitesRes.data ?? [],
-      teams: teamsRes.data ?? [],
-      teamMembers: teamMembersRes.data ?? [],
-      siteTeamAssignments: assignmentsRes.data ?? [],
-      jobTimeEntries: timeRes?.data ?? [],
-      siteMaterialUsage: materialRes?.data ?? [],
+    setData((prev) => {
+      const fetchedCustomers = (customersRes.data ?? []) as Customer[];
+      const prevCustomers = (prev.customers ?? []).filter((c) => (c as any).company_id === companyId) as Customer[];
+
+      return {
+        company: companyRes.data ?? null,
+        customers: mergeById(fetchedCustomers, prevCustomers),
+        technicians: techRes.data ?? [],
+        jobCards: jobsRes.data ?? [],
+        inventoryItems: invRes.data ?? [],
+        sites: sitesRes.data ?? [],
+        teams: teamsRes.data ?? [],
+        teamMembers: teamMembersRes.data ?? [],
+        siteTeamAssignments: assignmentsRes.data ?? [],
+        jobTimeEntries: timeRes?.data ?? [],
+        siteMaterialUsage: materialRes?.data ?? [],
+      };
     });
     setLoading(false);
   }, [companyId]);

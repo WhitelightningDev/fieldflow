@@ -3,6 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { isTradeId, TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -19,7 +20,8 @@ const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 const schema = z.object({
   name: z.string().min(2, "Technician name is required"),
   phone: z.string().optional(),
-  email: z.string().email("Email is required to send the invite"),
+  email: z.string().email("Email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   hourlyCost: z
     .string()
     .optional()
@@ -40,10 +42,21 @@ function moneyToCents(v?: string) {
   return Math.round(Number.parseFloat(s) * 100);
 }
 
+function generatePassword(length = 14) {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return out;
+}
+
 export default function CreateTechnicianDialog() {
   const { actions, data } = useDashboardData();
   const { profile } = useAuth();
   const [open, setOpen] = React.useState(false);
+  const [accessOpen, setAccessOpen] = React.useState(false);
+  const [accessDetails, setAccessDetails] = React.useState<{ email: string; password: string; loginLink: string } | null>(null);
 
   const lockedTradeId: TradeId | null =
     data.company?.industry && isTradeId(data.company.industry) ? data.company.industry : null;
@@ -54,6 +67,7 @@ export default function CreateTechnicianDialog() {
       name: "",
       phone: "",
       email: "",
+      password: "",
       hourlyCost: "",
       hourlyBillRate: "",
       active: true,
@@ -82,17 +96,16 @@ export default function CreateTechnicianDialog() {
 
     if (!tech) return;
 
-    // 2. Send invite email via edge function
-    if (values.email && profile?.company_id) {
+    // 2. Provision technician login access (no email verification required)
+    if (values.email && values.password && profile?.company_id) {
       try {
         const { data: fnData, error: fnError } = await supabase.functions.invoke("invite-technician", {
           body: {
             technicianId: tech.id,
-            email: values.email,
-            name: values.name,
             companyId: profile.company_id,
             industry: data.company?.industry,
-            redirectTo: `${getPublicSiteUrl()}/auth/callback`,
+            password: values.password,
+            redirectTo: `${getPublicSiteUrl()}/auth/callback?next=/tech`,
           },
         });
         if (fnError) {
@@ -118,36 +131,44 @@ export default function CreateTechnicianDialog() {
             details =
               "Supabase Edge Function is missing required secrets (usually `SUPABASE_SERVICE_ROLE_KEY`). Set the secret and redeploy the function.";
           }
-          toast({ title: "Technician added", description: `Invite email failed: ${details}. You can resend later.` });
+          toast({ title: "Technician added", description: `Login provisioning failed: ${details}. You can set access later.` });
         } else {
-          toast({ title: "Technician added & invited", description: `Invite email sent to ${values.email}` });
+          const loginLink = (fnData as any)?.loginLink as string | undefined;
+          if (loginLink) {
+            setAccessDetails({ email: values.email, password: values.password, loginLink });
+            setAccessOpen(true);
+          }
+          toast({ title: "Technician added", description: "Login access created. Copy the portal link and share it with the technician." });
         }
       } catch {
-        toast({ title: "Technician added", description: "Invite email could not be sent. You can resend later." });
+        toast({ title: "Technician added", description: "Login provisioning failed. You can set access later." });
       }
     } else {
       toast({ title: "Technician added" });
     }
 
     setOpen(false);
-    form.reset();
+    form.reset({ name: "", phone: "", email: "", password: "", hourlyCost: "", hourlyBillRate: "", active: true, trades: [lockedTradeId ?? TRADES[0].id] });
   });
 
   const selectedTrades = form.watch("trades");
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">Add technician</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add technician</DialogTitle>
-          <DialogDescription>Add a technician and send them an invite email to log in.</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm">Add technician</Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add technician</DialogTitle>
+            <DialogDescription>
+              Create the technician and set their initial password. You'll get a portal link to copy/share (no email verification).
+            </DialogDescription>
+          </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={submit} className="space-y-4">
+          <Form {...form}>
+            <form onSubmit={submit} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -181,7 +202,7 @@ export default function CreateTechnicianDialog() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (invite will be sent)</FormLabel>
+                    <FormLabel>Email (login)</FormLabel>
                     <FormControl>
                       <Input placeholder="tech@company.com" autoComplete="email" {...field} />
                     </FormControl>
@@ -190,6 +211,30 @@ export default function CreateTechnicianDialog() {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between gap-2">
+                    <FormLabel>Initial password</FormLabel>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => form.setValue("password", generatePassword(), { shouldDirty: true, shouldValidate: true })}
+                    >
+                      Generate
+                    </Button>
+                  </div>
+                  <FormControl>
+                    <Input type="text" placeholder="Set a password (min 8 chars)" autoComplete="new-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
@@ -254,12 +299,66 @@ export default function CreateTechnicianDialog() {
 
             <DialogFooter>
               <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Adding & inviting..." : "Add & invite technician"}
+                {form.formState.isSubmitting ? "Creating..." : "Create technician access"}
               </Button>
             </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Technician portal access</DialogTitle>
+            <DialogDescription>Copy and share this link with the technician. The link is one-time.</DialogDescription>
+          </DialogHeader>
+
+          {accessDetails ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Portal link</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={accessDetails.loginLink} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(accessDetails.loginLink);
+                      toast({ title: "Copied portal link" });
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Initial password</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={accessDetails.password} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(accessDetails.password);
+                      toast({ title: "Copied password" });
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="pt-2">
+            <Button variant="secondary" onClick={() => setAccessOpen(false)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
