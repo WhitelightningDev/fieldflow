@@ -4,6 +4,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import NotificationBell from "@/components/notification-bell";
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,7 +30,10 @@ export default function TechSidebar() {
   return (
     <aside className="flex flex-col h-full w-64 border-r border-border bg-card">
       <div className="p-4 border-b border-border">
-        <div className="text-lg font-bold">FieldFlow</div>
+        <div className="flex items-center justify-between">
+          <div className="text-lg font-bold">FieldFlow</div>
+          <NotificationBell basePath="/tech" />
+        </div>
         <div className="text-xs text-muted-foreground truncate">
           {profile?.full_name || user?.email}
         </div>

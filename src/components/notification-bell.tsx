@@ -1,0 +1,105 @@
+import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { useNotifications, type Notification } from "@/hooks/use-notifications";
+import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import * as React from "react";
+
+const typeIcon: Record<string, string> = {
+  job_assigned: "🔧",
+  job_status_changed: "📋",
+  info: "ℹ️",
+};
+
+function NotificationItem({
+  notification,
+  onRead,
+  onNavigate,
+}: {
+  notification: Notification;
+  onRead: (id: string) => void;
+  onNavigate?: (n: Notification) => void;
+}) {
+  return (
+    <button
+      className={`w-full text-left px-3 py-2.5 border-b border-border/50 last:border-0 transition-colors hover:bg-muted/50 ${
+        !notification.read ? "bg-primary/5" : ""
+      }`}
+      onClick={() => {
+        onRead(notification.id);
+        onNavigate?.(notification);
+      }}
+    >
+      <div className="flex items-start gap-2">
+        <span className="text-base mt-0.5">{typeIcon[notification.type] ?? "🔔"}</span>
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm leading-tight ${!notification.read ? "font-semibold" : "font-medium text-muted-foreground"}`}>
+            {notification.title}
+          </p>
+          {notification.body && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.body}</p>
+          )}
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+          </p>
+        </div>
+        {!notification.read && <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />}
+      </div>
+    </button>
+  );
+}
+
+export default function NotificationBell({ basePath = "/dashboard" }: { basePath?: string }) {
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
+
+  const handleNavigate = (n: Notification) => {
+    const jobCardId = n.metadata?.job_card_id;
+    if (jobCardId) {
+      if (basePath === "/tech") {
+        navigate(`/tech/job/${jobCardId}`);
+      } else {
+        navigate("/dashboard/jobs");
+      }
+    }
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-[10px] flex items-center justify-center bg-destructive text-destructive-foreground">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="end">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+          <h4 className="font-semibold text-sm">Notifications</h4>
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllAsRead}>
+              Mark all read
+            </Button>
+          )}
+        </div>
+        <ScrollArea className="max-h-80">
+          {notifications.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">No notifications yet</div>
+          ) : (
+            notifications.map((n) => (
+              <NotificationItem key={n.id} notification={n} onRead={markAsRead} onNavigate={handleNavigate} />
+            ))
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
