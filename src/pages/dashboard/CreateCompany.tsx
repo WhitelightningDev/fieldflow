@@ -44,68 +44,32 @@ export default function CreateCompany() {
   const submit = form.handleSubmit(async (values) => {
     if (!user) return;
 
-    // Guard: if the DB already has a company linked, don't try to create a second one (RLS will block it).
-    try {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("company_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (existingProfile?.company_id) {
-        toast({ title: "Company already exists", description: "This account is already linked to a company. Redirecting…" });
-        await refreshProfile();
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-    } catch {
-      // ignore
-    }
-
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .upsert(
-        {
-          user_id: user.id,
-          full_name: profile?.full_name ?? "",
-          email: user.email ?? null,
-        },
-        { onConflict: "user_id" },
-      );
-    if (profileError) {
-      toast({ title: "Error", description: profileError.message, variant: "destructive" });
+    const { data: companyId, error } = await supabase.rpc("create_company_for_current_user" as any, {
+      _name: values.companyName,
+      _industry: values.industry,
+      _team_size: values.teamSize,
+    });
+    if (error || !companyId) {
+      const msg = error?.message ?? "Could not create company";
+      const isRls = msg.toLowerCase().includes("row-level security") || msg.toLowerCase().includes("violates row level security");
+      toast({
+        title: "Error",
+        description: isRls ? "Database RLS is blocking company creation. Apply the latest Supabase migrations and try again." : msg,
+        variant: "destructive",
+      });
       return;
     }
 
-    const { data: company, error: companyError } = await supabase
-      .from("companies")
-      .insert({
-        name: values.companyName,
+    // Best-effort: store the canonical company info on the user so bootstrap can link later if needed.
+    await supabase.auth.updateUser({
+      data: {
+        company_id: companyId,
+        company_name: values.companyName,
         industry: values.industry,
         team_size: values.teamSize,
-      })
-      .select()
-      .single();
-    if (companyError || !company) {
-      toast({ title: "Error", description: companyError?.message ?? "Could not create company", variant: "destructive" });
-      return;
-    }
-
-    const { error: linkError } = await supabase
-      .from("profiles")
-      .update({ company_id: company.id })
-      .eq("user_id", user.id);
-    if (linkError) {
-      toast({ title: "Error", description: linkError.message, variant: "destructive" });
-      return;
-    }
-
-    const { error: roleError } = await supabase
-      .from("user_roles")
-      .insert({ user_id: user.id, role: "owner" });
-    if (roleError) {
-      toast({ title: "Error", description: roleError.message, variant: "destructive" });
-      return;
-    }
+        role: "owner",
+      },
+    }).catch(() => {});
 
     toast({ title: "Company created" });
     await refreshProfile();

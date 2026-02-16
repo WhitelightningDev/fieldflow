@@ -10,6 +10,7 @@ type AuthContextValue = {
   user: User | null;
   profile: { id: string; full_name: string; email: string | null; company_id: string | null } | null;
   loading: boolean;
+  profileLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null);
   const [profile, setProfile] = React.useState<AuthContextValue["profile"]>(null);
   const [loading, setLoading] = React.useState(true);
+  const [profileLoading, setProfileLoading] = React.useState(false);
 
   const bootstrapAttemptedRef = React.useRef(new Set<string>());
 
@@ -111,13 +113,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (newSession?.user) {
           // Dispatch after callback completes to avoid deadlock
+          setProfileLoading(true);
           setTimeout(() => {
             if (isMounted) {
-              fetchProfile(newSession.user.id).catch(console.error);
+              fetchProfile(newSession.user.id)
+                .catch(console.error)
+                .finally(() => {
+                  if (isMounted) setProfileLoading(false);
+                });
             }
           }, 0);
         } else {
           setProfile(null);
+          setProfileLoading(false);
         }
       }
     );
@@ -134,7 +142,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setSession(s);
         if (s?.user) {
+          setProfileLoading(true);
           await fetchProfile(s.user.id);
+          if (isMounted) setProfileLoading(false);
         }
       } catch (e) {
         console.error("getSession error", e);
@@ -142,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearSupabaseAuthStorage();
         setSession(null);
         setProfile(null);
+        setProfileLoading(false);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -169,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setProfile(null);
       setLoading(false);
+      setProfileLoading(false);
     }
   }, []);
 
@@ -180,8 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile]);
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ session, user: session?.user ?? null, profile, loading, signOut, refreshProfile }),
-    [session, profile, loading, signOut, refreshProfile]
+    () => ({ session, user: session?.user ?? null, profile, loading, profileLoading, signOut, refreshProfile }),
+    [session, profile, loading, profileLoading, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
