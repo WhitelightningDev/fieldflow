@@ -11,23 +11,11 @@ function useDrawerNav() {
   const [drawer, setDrawer] = React.useState(true);
 
   React.useEffect(() => {
-    const compute = () => {
-      const isTouch =
-        (navigator.maxTouchPoints ?? 0) > 0 || window.matchMedia("(pointer: coarse)").matches;
-      const isDesktopWide = window.matchMedia("(min-width: 1280px)").matches;
-
-      // Always use hamburger/drawer on touch devices (even if Safari requests desktop site).
-      // Only show the desktop sidebar on non-touch wide screens.
-      setDrawer(isTouch || !isDesktopWide);
-    };
-
-    compute();
-    window.addEventListener("resize", compute, { passive: true } as any);
-    window.addEventListener("orientationchange", compute);
-    return () => {
-      window.removeEventListener("resize", compute as any);
-      window.removeEventListener("orientationchange", compute as any);
-    };
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setDrawer(!mql.matches);
+    mql.addEventListener("change", onChange);
+    setDrawer(!mql.matches);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   return drawer;
