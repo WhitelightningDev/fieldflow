@@ -1,4 +1,4 @@
 project_id = "cchhfgdowqlspxujfbrb"
 
 [functions.invite-technician]
-verify_jwt = true
+verify_jwt = false
