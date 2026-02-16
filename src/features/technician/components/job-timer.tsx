@@ -80,7 +80,7 @@ export default function JobTimer({ jobId, technicianId, onEntryChange }: Props) 
   if (loading) return null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex items-center gap-2 font-mono text-lg">
         <Timer className="h-5 w-5 text-muted-foreground" />
         <span className={activeEntry ? "text-primary font-bold" : "text-muted-foreground"}>
@@ -88,12 +88,12 @@ export default function JobTimer({ jobId, technicianId, onEntryChange }: Props) 
         </span>
       </div>
       {activeEntry ? (
-        <Button size="sm" variant="destructive" onClick={stopTimer} className="gap-1.5">
+        <Button size="sm" variant="destructive" onClick={stopTimer} className="gap-1.5 w-full sm:w-auto">
           <Square className="h-3.5 w-3.5" />
           Stop
         </Button>
       ) : (
-        <Button size="sm" onClick={startTimer} className="gradient-bg hover:opacity-90 shadow-glow gap-1.5">
+        <Button size="sm" onClick={startTimer} className="gradient-bg hover:opacity-90 shadow-glow gap-1.5 w-full sm:w-auto">
           <Play className="h-3.5 w-3.5" />
           Start Timer
         </Button>

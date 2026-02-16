@@ -69,12 +69,12 @@ export default function JobPhotoUpload({ jobId, kind }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h4 className="text-sm font-medium capitalize">{kind} Photos</h4>
         <Button
           size="sm"
           variant="outline"
-          className="gap-1.5"
+          className="gap-1.5 w-full sm:w-auto"
           disabled={uploading}
           onClick={() => fileRef.current?.click()}
         >

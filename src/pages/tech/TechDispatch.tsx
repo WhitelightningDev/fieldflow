@@ -230,9 +230,9 @@ export default function TechDispatch() {
                                 </span>
                               )}
                               {job.sites?.name && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {job.sites.name}
+                                <span className="flex items-center gap-1 min-w-0">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{job.sites.name}</span>
                                 </span>
                               )}
                             </div>
@@ -343,8 +343,9 @@ function JobCard({
                     </a>
                   )}
                   {customer.address && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {customer.address}
+                    <span className="flex items-center gap-1 min-w-0">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{customer.address}</span>
                     </span>
                   )}
                 </div>
@@ -353,9 +354,12 @@ function JobCard({
               {/* Site & schedule */}
               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                 {site?.name && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {site.name}
-                    {site.address && ` · ${site.address}`}
+                  <span className="flex items-center gap-1 min-w-0">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {site.name}
+                      {site.address && ` · ${site.address}`}
+                    </span>
                   </span>
                 )}
                 {job.scheduled_at && (

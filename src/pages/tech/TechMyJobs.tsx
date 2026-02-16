@@ -82,8 +82,9 @@ export default function TechMyJobs() {
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                           {customer?.name && <span>Customer: {customer.name}</span>}
                           {site?.name && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" /> {site.name}
+                            <span className="flex items-center gap-1 min-w-0">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{site.name}</span>
                             </span>
                           )}
                           {job.scheduled_at && (

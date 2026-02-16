@@ -54,7 +54,7 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="p-0 w-64">
+          <SheetContent side="left" className="p-0 w-[85vw] max-w-72">
             <SheetTitle className="sr-only">Technician menu</SheetTitle>
             <TechSidebar onNavigate={() => setMobileOpen(false)} />
           </SheetContent>

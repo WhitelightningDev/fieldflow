@@ -74,7 +74,7 @@ export default function JobPartsUsed({ jobId, siteId, companyId }: Props) {
         <p className="text-xs text-muted-foreground">Assign a site to this job to track parts.</p>
       ) : (
         <>
-          <div className="flex items-end gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-2">
             <div className="flex-1">
               <Select value={selectedItem} onValueChange={setSelectedItem}>
                 <SelectTrigger className="h-9">
@@ -94,10 +94,10 @@ export default function JobPartsUsed({ jobId, siteId, companyId }: Props) {
               min="1"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
-              className="w-20 h-9"
+              className="w-full sm:w-20 h-9"
               placeholder="Qty"
             />
-            <Button size="sm" onClick={addPart} disabled={adding} className="gap-1.5">
+            <Button size="sm" onClick={addPart} disabled={adding} className="gap-1.5 w-full sm:w-auto">
               <Plus className="h-3.5 w-3.5" />
               Add
             </Button>
@@ -106,9 +106,9 @@ export default function JobPartsUsed({ jobId, siteId, companyId }: Props) {
             <div className="space-y-1.5">
               {usedParts.map((p) => (
                 <div key={p.id} className="flex items-center justify-between text-sm py-1.5 px-3 rounded-md bg-secondary/50">
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
                     <Package className="h-3.5 w-3.5 text-muted-foreground" />
-                    {p.inventory_items?.name ?? "Unknown"}
+                    <span className="truncate">{p.inventory_items?.name ?? "Unknown"}</span>
                   </span>
                   <span className="text-muted-foreground">
                     {p.quantity_used} {p.inventory_items?.unit ?? ""}

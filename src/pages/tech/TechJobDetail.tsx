@@ -133,19 +133,19 @@ export default function TechJobDetail() {
             <Link to="/tech/my-jobs"><ArrowLeft className="h-4 w-4" /> Back to jobs</Link>
           </Button>
           <h1 className="text-2xl font-bold">{job.title}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge className={statusColor[job.status] ?? ""}>{job.status}</Badge>
-            <Badge className={priorityColor[(job as any).priority ?? "normal"] ?? ""}>
-              {(job as any).priority ?? "normal"}
-            </Badge>
-          </div>
+        <div className="flex items-center gap-2 mt-1">
+          <Badge className={statusColor[job.status] ?? ""}>{job.status}</Badge>
+          <Badge className={priorityColor[(job as any).priority ?? "normal"] ?? ""}>
+            {(job as any).priority ?? "normal"}
+          </Badge>
         </div>
-        <div className="flex gap-2 sm:flex-col w-full sm:w-auto">
-          {(job.status === "new" || job.status === "scheduled") && (
-            <Button size="sm" onClick={() => updateStatus("in-progress")} className="w-full sm:w-auto gradient-bg hover:opacity-90 shadow-glow gap-1.5">
-              <Play className="h-3.5 w-3.5" /> Start Job
-            </Button>
-          )}
+      </div>
+      <div className="flex flex-col gap-2 w-full sm:w-auto">
+        {(job.status === "new" || job.status === "scheduled") && (
+          <Button size="sm" onClick={() => updateStatus("in-progress")} className="w-full sm:w-auto gradient-bg hover:opacity-90 shadow-glow gap-1.5">
+            <Play className="h-3.5 w-3.5" /> Start Job
+          </Button>
+        )}
           {job.status === "in-progress" && (
             <Button size="sm" variant="outline" onClick={() => updateStatus("completed")} className="w-full sm:w-auto gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5" /> Complete
