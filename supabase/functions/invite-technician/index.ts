@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const token = authHeader.replace(/^Bearer\s+/i, "");
 
     const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
     const serviceRoleKey = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
@@ -69,13 +70,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Caller client (to verify identity)
+    // Caller client (to verify identity via explicit token validation)
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser();
+    const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser(token);
     if (callerError || !caller) {
+      console.log("Auth validation failed:", callerError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
