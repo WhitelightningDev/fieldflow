@@ -66,7 +66,7 @@
     --shadow-glow-accent: 0 0 20px hsl(262 83% 58% / 0.3);
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
+    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%), hsl(262, 66%, 77%));
     --gradient-subtle: linear-gradient(180deg, hsl(210 20% 98%), hsl(210 40% 96%));
     --gradient-radial: radial-gradient(ellipse at top, hsl(199 89% 48% / 0.1), transparent 50%);
   }

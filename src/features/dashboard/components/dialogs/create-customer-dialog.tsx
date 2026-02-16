@@ -12,8 +12,14 @@ import { z } from "zod";
 
 const schema = z.object({
   name: z.string().min(2, "Customer name is required"),
+  code: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("Enter a valid email").optional().or(z.literal("")),
+  billingPhone: z.string().optional(),
+  billingEmail: z.string().email("Enter a valid email").optional().or(z.literal("")),
+  billingReference: z.string().optional(),
+  vatNumber: z.string().optional(),
+  paymentTerms: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -26,18 +32,37 @@ export default function CreateCustomerDialog() {
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", phone: "", email: "", address: "", notes: "" },
+    defaultValues: {
+      name: "",
+      code: "",
+      phone: "",
+      email: "",
+      billingPhone: "",
+      billingEmail: "",
+      billingReference: "",
+      vatNumber: "",
+      paymentTerms: "",
+      address: "",
+      notes: "",
+    },
     mode: "onTouched",
   });
 
   const submit = form.handleSubmit(async (values) => {
-    await actions.addCustomer({
+    const row = await actions.addCustomer({
       name: values.name,
+      code: values.code || null,
       phone: values.phone || null,
       email: values.email || null,
+      billing_phone: values.billingPhone || null,
+      billing_email: values.billingEmail || null,
+      billing_reference: values.billingReference || null,
+      vat_number: values.vatNumber || null,
+      payment_terms: values.paymentTerms || null,
       address: values.address || null,
       notes: values.notes || null,
     });
+    if (!row) return;
     toast({ title: "Customer added" });
     setOpen(false);
     form.reset();
@@ -46,12 +71,16 @@ export default function CreateCustomerDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">Add customer</Button>
+        <Button size="sm" className="gradient-bg hover:opacity-90 shadow-glow">
+          Add customer
+        </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add customer</DialogTitle>
-          <DialogDescription>Create a new customer record for job cards and invoicing.</DialogDescription>
+          <DialogDescription>
+            Capture enough detail to invoice cleanly (VAT, payment terms, and billing contact).
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -64,6 +93,20 @@ export default function CreateCustomerDialog() {
                   <FormLabel>Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. Acme Properties" autoComplete="organization" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer code (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. ACME-001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -89,9 +132,84 @@ export default function CreateCustomerDialog() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email (primary)</FormLabel>
                     <FormControl>
                       <Input placeholder="billing@company.com" autoComplete="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="rounded-xl border bg-card/70 backdrop-blur-sm p-4 space-y-4">
+              <div className="text-sm font-medium">Billing details</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="billingPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Billing phone (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+27 ..." autoComplete="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="billingEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Billing email (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="accounts@company.com" autoComplete="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="vatNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>VAT number (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 4123456789" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentTerms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment terms (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. EFT 30 days" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="billingReference"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Billing reference (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. PO #1234 / Quote #A-22" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -104,7 +222,7 @@ export default function CreateCustomerDialog() {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Billing address (optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="Street, city" autoComplete="street-address" {...field} />
                   </FormControl>

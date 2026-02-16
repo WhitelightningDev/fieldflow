@@ -17,13 +17,14 @@ async function getRedirectPath(userId: string): Promise<string> {
     .eq("user_id", userId);
 
   const isTech = roles?.some((r) => r.role === "technician");
-  if (isTech) return "/tech";
-
-  // Mark technician invite as accepted if applicable
-  await supabase
-    .from("technicians")
-    .update({ invite_status: "accepted" } as any)
-    .eq("user_id", userId);
+  if (isTech) {
+    // Mark technician access as accepted (best-effort)
+    await supabase
+      .from("technicians")
+      .update({ invite_status: "accepted" } as any)
+      .eq("user_id", userId);
+    return "/tech";
+  }
 
   return "/dashboard";
 }
@@ -38,6 +39,7 @@ export default function AuthCallback() {
     (async () => {
       try {
         const url = new URL(window.location.href);
+        const next = url.searchParams.get("next");
         const code = url.searchParams.get("code");
         const tokenHash = url.searchParams.get("token_hash");
         const type = url.searchParams.get("type");
@@ -80,6 +82,10 @@ export default function AuthCallback() {
           ).catch(() => {});
 
           const redirectPath = await getRedirectPath(data.session.user.id);
+          if (next && redirectPath === "/tech" && next.startsWith("/tech")) {
+            navigate(next, { replace: true });
+            return;
+          }
           navigate(redirectPath, { replace: true });
         } else {
           navigate("/login", { replace: true });
