@@ -1,10 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 
 type InviteTechnicianPayload = {
-  technicianId: string;
   companyId: string;
   industry?: string | null;
   password?: string | null;
+  technicianId?: string | null;
+  email?: string | null;
+  name?: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -34,6 +36,12 @@ function getOptionalStringAny(obj: Record<string, unknown>, keys: string[]) {
     if (typeof value === "string") return value;
   }
   return undefined;
+}
+
+function getOptionalNonEmptyStringAny(obj: Record<string, unknown>, keys: string[]) {
+  const v = getOptionalStringAny(obj, keys);
+  const s = (v ?? "").trim();
+  return s ? s : undefined;
 }
 
 function joinUrl(base: string, path: string) {
@@ -105,18 +113,29 @@ Deno.serve(async (req) => {
 
     const bodyObj = unwrapPayload(rawBody);
     const body: InviteTechnicianPayload = {
-      technicianId: getStringAny(bodyObj, ["technicianId", "technician_id"]),
       companyId: getStringAny(bodyObj, ["companyId", "company_id"]),
       industry: getOptionalStringAny(bodyObj, ["industry"]),
       password: getOptionalStringAny(bodyObj, ["password"]),
+      technicianId: getOptionalNonEmptyStringAny(bodyObj, ["technicianId", "technician_id"]),
+      email: getOptionalNonEmptyStringAny(bodyObj, ["email"]),
+      name: getOptionalNonEmptyStringAny(bodyObj, ["name", "full_name"]),
     };
 
     const { technicianId, companyId, industry, password } = body;
-    if (!technicianId || !companyId || !password) {
+    const providedEmail = (body.email ?? "").trim();
+    const providedName = (body.name ?? "").trim();
+
+    const isTechnicianIdMode = Boolean(technicianId);
+    const isEmailMode = !isTechnicianIdMode && Boolean(providedEmail) && Boolean(providedName);
+
+    if (!companyId || !password || (!isTechnicianIdMode && !isEmailMode)) {
       const missing: string[] = [];
-      if (!technicianId) missing.push("technicianId");
       if (!companyId) missing.push("companyId");
       if (!password) missing.push("password");
+      if (!isTechnicianIdMode) {
+        if (!providedEmail) missing.push("email");
+        if (!providedName) missing.push("name");
+      }
       return new Response(JSON.stringify({ error: "Missing required fields", missing, receivedKeys: Object.keys(bodyObj) }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -154,23 +173,42 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify technician exists and belongs to this company
-    const { data: techRow } = await adminClient
-      .from("technicians")
-      .select("id, company_id, email, name, user_id")
-      .eq("id", technicianId)
-      .maybeSingle();
-    if (!techRow || techRow.company_id !== companyId) {
-      return new Response(JSON.stringify({ error: "Technician not found for this company" }), {
-        status: 404,
+    let technicianRowId: string | null = null;
+    let email = "";
+    let name = "";
+    let existingUserId: string | null = null;
+
+    if (isTechnicianIdMode) {
+      // Verify technician exists and belongs to this company
+      const { data: techRow } = await adminClient
+        .from("technicians")
+        .select("id, company_id, email, name, user_id")
+        .eq("id", technicianId as string)
+        .maybeSingle();
+      if (!techRow || techRow.company_id !== companyId) {
+        return new Response(JSON.stringify({ error: "Technician not found for this company" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      technicianRowId = techRow.id;
+      email = (techRow.email ?? "").trim();
+      name = (techRow.name ?? "").trim();
+      existingUserId = (techRow.user_id as string | null | undefined) ?? null;
+    } else {
+      email = providedEmail;
+      name = providedName;
+    }
+
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Email is required to create technician login access" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const email = (techRow.email ?? "").trim();
-    const name = (techRow.name ?? "").trim();
-    if (!email) {
-      return new Response(JSON.stringify({ error: "Technician must have an email to create login access" }), {
+    if (!name) {
+      return new Response(JSON.stringify({ error: "Name is required to create technician login access" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -187,7 +225,7 @@ Deno.serve(async (req) => {
       role: "technician",
     };
 
-    let userId: string | null = techRow.user_id ?? null;
+    let userId: string | null = existingUserId ?? null;
     if (userId) {
       const { data: updated, error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
         email,
@@ -231,10 +269,12 @@ Deno.serve(async (req) => {
     }
     const loginLink = linkData.properties?.action_link ?? null;
 
-    await adminClient
-      .from("technicians")
-      .update({ user_id: userId, invite_status: "invited", invited_at: new Date().toISOString() })
-      .eq("id", technicianId);
+    if (technicianRowId) {
+      await adminClient
+        .from("technicians")
+        .update({ user_id: userId, invite_status: "invited", invited_at: new Date().toISOString() })
+        .eq("id", technicianRowId);
+    }
 
     await adminClient
       .from("profiles")
@@ -262,4 +302,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-

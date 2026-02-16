@@ -83,8 +83,63 @@ export default function CreateTechnicianDialog() {
   }, [form, lockedTradeId, open]);
 
   const submit = form.handleSubmit(async (values) => {
-    // 1. Create technician record
+    if (!profile?.company_id) {
+      toast({ title: "Not ready", description: "No company found on your profile. Please re-login.", variant: "destructive" });
+      return;
+    }
+
+    // 1) Provision technician login access first so we can store `technicians.user_id` at creation time
+    let provisionedUserId: string | null = null;
+    let provisionedLoginLink: string | null = null;
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("invite-technician", {
+        body: {
+          companyId: profile.company_id,
+          industry: data.company?.industry,
+          password: values.password,
+          email: values.email,
+          name: values.name,
+          redirectTo: `${getPublicSiteUrl()}/auth/callback?next=/tech`,
+        },
+      });
+      if (fnError) {
+        let details = fnError.message;
+        const ctx: any = (fnError as any).context;
+        const res: Response | undefined = ctx?.response;
+        if (res) {
+          try {
+            const text = await res.text();
+            const parsed = text ? JSON.parse(text) : null;
+            details = parsed?.error ?? text ?? details;
+          } catch {
+            // ignore
+          }
+          if (res.status === 404) details = 'Edge function "invite-technician" is not deployed.';
+          if (res.status === 401) details = "Not authorized to create technician access. Please re-login and try again.";
+        }
+        if (details.toLowerCase().includes("supabasekey is required")) {
+          details =
+            "Supabase Edge Function is missing required secrets (usually `SUPABASE_SERVICE_ROLE_KEY`). Set the secret and redeploy the function.";
+        }
+        toast({ title: "Technician access failed", description: details, variant: "destructive" });
+        return;
+      }
+
+      provisionedUserId = ((fnData as any)?.userId as string | undefined) ?? null;
+      provisionedLoginLink = ((fnData as any)?.loginLink as string | undefined) ?? null;
+      if (!provisionedUserId) {
+        toast({ title: "Technician access failed", description: "Missing `userId` from edge function response.", variant: "destructive" });
+        return;
+      }
+    } catch {
+      toast({ title: "Technician access failed", description: "Could not provision login access.", variant: "destructive" });
+      return;
+    }
+
+    // 2) Create technician record with `user_id` set
     const tech = await actions.addTechnician({
+      user_id: provisionedUserId,
+      invite_status: "invited",
       name: values.name,
       phone: values.phone || null,
       email: values.email || null,
@@ -96,56 +151,11 @@ export default function CreateTechnicianDialog() {
 
     if (!tech) return;
 
-    // 2. Provision technician login access (no email verification required)
-    if (values.email && values.password && profile?.company_id) {
-      try {
-        const { data: fnData, error: fnError } = await supabase.functions.invoke("invite-technician", {
-          body: {
-            technicianId: tech.id,
-            companyId: profile.company_id,
-            industry: data.company?.industry,
-            password: values.password,
-            redirectTo: `${getPublicSiteUrl()}/auth/callback?next=/tech`,
-          },
-        });
-        if (fnError) {
-          let details = fnError.message;
-          const ctx: any = (fnError as any).context;
-          const res: Response | undefined = ctx?.response;
-          if (res) {
-            try {
-              const text = await res.text();
-              const parsed = text ? JSON.parse(text) : null;
-              details = parsed?.error ?? text ?? details;
-            } catch {
-              // ignore
-            }
-            if (res.status === 404) {
-              details = 'Edge function "invite-technician" is not deployed.';
-            }
-            if (res.status === 401) {
-              details = "Not authorized to send invites. Please re-login and try again.";
-            }
-          }
-          if (details.toLowerCase().includes("supabasekey is required")) {
-            details =
-              "Supabase Edge Function is missing required secrets (usually `SUPABASE_SERVICE_ROLE_KEY`). Set the secret and redeploy the function.";
-          }
-          toast({ title: "Technician added", description: `Login provisioning failed: ${details}. You can set access later.` });
-        } else {
-          const loginLink = (fnData as any)?.loginLink as string | undefined;
-          if (loginLink) {
-            setAccessDetails({ email: values.email, password: values.password, loginLink });
-            setAccessOpen(true);
-          }
-          toast({ title: "Technician added", description: "Login access created. Copy the portal link and share it with the technician." });
-        }
-      } catch {
-        toast({ title: "Technician added", description: "Login provisioning failed. You can set access later." });
-      }
-    } else {
-      toast({ title: "Technician added" });
+    if (provisionedLoginLink) {
+      setAccessDetails({ email: values.email, password: values.password, loginLink: provisionedLoginLink });
+      setAccessOpen(true);
     }
+    toast({ title: "Technician added", description: "Login access created. Copy the portal link and share it with the technician." });
 
     setOpen(false);
     form.reset({ name: "", phone: "", email: "", password: "", hourlyCost: "", hourlyBillRate: "", active: true, trades: [lockedTradeId ?? TRADES[0].id] });
