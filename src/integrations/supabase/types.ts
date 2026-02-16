@@ -1017,6 +1017,83 @@ export type Database = {
           },
         ]
       }
+      technician_locations: {
+        Row: {
+          accuracy: number | null
+          company_id: string
+          created_at: string
+          heading: number | null
+          job_card_id: string | null
+          lat: number
+          lng: number
+          recorded_at: string
+          site_id: string | null
+          speed: number | null
+          technician_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          company_id: string
+          created_at?: string
+          heading?: number | null
+          job_card_id?: string | null
+          lat: number
+          lng: number
+          recorded_at?: string
+          site_id?: string | null
+          speed?: number | null
+          technician_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          company_id?: string
+          created_at?: string
+          heading?: number | null
+          job_card_id?: string | null
+          lat?: number
+          lng?: number
+          recorded_at?: string
+          site_id?: string | null
+          speed?: number | null
+          technician_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_locations_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_locations_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_locations_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: true
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string

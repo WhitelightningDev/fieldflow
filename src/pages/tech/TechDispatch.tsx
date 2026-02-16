@@ -53,6 +53,14 @@ export default function TechDispatch() {
   const { user, profile } = useAuth();
   const [jobs, setJobs] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [technicianId, setTechnicianId] = React.useState<string | null>(null);
+  const jobsRef = React.useRef<any[]>([]);
+  const lastLocationSentAtRef = React.useRef<number>(0);
+  const lastLocationPayloadRef = React.useRef<string>("");
+
+  React.useEffect(() => {
+    jobsRef.current = jobs;
+  }, [jobs]);
 
   React.useEffect(() => {
     if (!user) return;
@@ -63,6 +71,7 @@ export default function TechDispatch() {
       .single()
       .then(({ data: tech }) => {
         if (!tech) { setLoading(false); return; }
+        setTechnicianId(tech.id);
         supabase
           .from("job_cards")
           .select("*, customers(name, phone, address), sites(name, address)")
@@ -74,6 +83,75 @@ export default function TechDispatch() {
           });
       });
   }, [user]);
+
+  // Live GPS tracking (best-effort). Runs only on touch devices while the dispatch view is open.
+  React.useEffect(() => {
+    if (!user?.id || !profile?.company_id || !technicianId) return;
+
+    const isTouch =
+      (navigator.maxTouchPoints ?? 0) > 0 || window.matchMedia("(pointer: coarse)").matches;
+    if (!isTouch) return;
+    if (!("geolocation" in navigator)) return;
+
+    let cancelled = false;
+    let watchId: number | null = null;
+
+    const sendLocation = async (pos: GeolocationPosition) => {
+      if (cancelled) return;
+      const now = Date.now();
+      if (now - lastLocationSentAtRef.current < 15_000) return;
+
+      const activeJob =
+        jobsRef.current.find((j: any) => j.status === "in-progress") ??
+        jobsRef.current.find((j: any) => j.status === "scheduled") ??
+        null;
+
+      const payload = {
+        technician_id: technicianId,
+        company_id: profile.company_id,
+        user_id: user.id,
+        job_card_id: activeJob?.id ?? null,
+        site_id: activeJob?.site_id ?? null,
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null,
+        heading: typeof pos.coords.heading === "number" ? pos.coords.heading : null,
+        speed: typeof pos.coords.speed === "number" ? pos.coords.speed : null,
+        recorded_at: new Date(pos.timestamp).toISOString(),
+      };
+
+      if (!payload.technician_id) return;
+
+      const payloadKey = JSON.stringify({
+        t: payload.technician_id,
+        j: payload.job_card_id,
+        s: payload.site_id,
+        la: Math.round(payload.lat * 1e5),
+        ln: Math.round(payload.lng * 1e5),
+      });
+      if (payloadKey === lastLocationPayloadRef.current) return;
+
+      lastLocationSentAtRef.current = now;
+      lastLocationPayloadRef.current = payloadKey;
+
+      await supabase
+        .from("technician_locations")
+        .upsert(payload as any, { onConflict: "technician_id" });
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => { void sendLocation(pos); },
+      () => {
+        // Permission denied / unavailable — ignore silently (tracking is best-effort).
+      },
+      { enableHighAccuracy: false, maximumAge: 30_000, timeout: 15_000 },
+    );
+
+    return () => {
+      cancelled = true;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [profile?.company_id, technicianId, user?.id]);
 
   const updateStatus = async (jobId: string, status: string) => {
     const { error } = await supabase

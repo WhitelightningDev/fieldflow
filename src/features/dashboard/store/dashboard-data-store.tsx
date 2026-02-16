@@ -13,6 +13,7 @@ type Team = Tables<"teams">;
 type TeamMember = Tables<"team_members">;
 type SiteTeamAssignment = Tables<"site_team_assignments">;
 type Company = Tables<"companies">;
+type TechnicianLocation = Tables<"technician_locations">;
 type JobTimeEntry = any;
 type SiteMaterialUsage = any;
 
@@ -26,6 +27,7 @@ export type DashboardData = {
   teams: Team[];
   teamMembers: TeamMember[];
   siteTeamAssignments: SiteTeamAssignment[];
+  technicianLocations: TechnicianLocation[];
   jobTimeEntries: JobTimeEntry[];
   siteMaterialUsage: SiteMaterialUsage[];
 };
@@ -97,6 +99,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     teams: [],
     teamMembers: [],
     siteTeamAssignments: [],
+    technicianLocations: [],
     jobTimeEntries: [],
     siteMaterialUsage: [],
   });
@@ -118,11 +121,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     let teamsRes: any;
     let teamMembersRes: any;
     let assignmentsRes: any;
+    let locationsRes: any;
     let timeRes: any;
     let materialRes: any;
 
     try {
-      [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes] = await Promise.all([
+      [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes, locationsRes] = await Promise.all([
         supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
         supabase.from("customers").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("technicians").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
@@ -132,6 +136,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         supabase.from("teams").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("team_members").select("*").order("created_at", { ascending: false }),
         supabase.from("site_team_assignments").select("*").order("created_at", { ascending: false }),
+        supabase.from("technician_locations").select("*").eq("company_id", companyId).order("updated_at", { ascending: false }),
       ]);
 
       const jobIds = (jobsRes.data ?? []).map((j: any) => j.id).filter(Boolean);
@@ -164,6 +169,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       { name: "teams", res: teamsRes },
       { name: "team_members", res: teamMembersRes },
       { name: "site_team_assignments", res: assignmentsRes },
+      { name: "technician_locations", res: locationsRes },
       { name: "job_time_entries", res: timeRes },
       { name: "site_material_usage", res: materialRes },
     ] as const;
@@ -204,6 +210,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         teams: teamsRes.data ?? [],
         teamMembers: teamMembersRes.data ?? [],
         siteTeamAssignments: assignmentsRes.data ?? [],
+        technicianLocations: locationsRes.data ?? [],
         jobTimeEntries: timeRes?.data ?? [],
         siteMaterialUsage: materialRes?.data ?? [],
       };
@@ -214,6 +221,64 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   React.useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  React.useEffect(() => {
+    if (!companyId) return;
+
+    const upsertByKey = <T,>(items: T[], row: T, key: keyof T) => {
+      const k = String((row as any)?.[key] ?? "");
+      if (!k) return items;
+      const idx = items.findIndex((x: any) => String(x?.[key] ?? "") === k);
+      if (idx === -1) return [row, ...items];
+      const next = items.slice();
+      next[idx] = row;
+      return next;
+    };
+
+    const channel = supabase
+      .channel(`dashboard-live:${companyId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_cards", filter: `company_id=eq.${companyId}` },
+        (payload: any) => {
+          const type = payload?.eventType as string;
+          if (type === "DELETE") {
+            const id = payload?.old?.id as string | undefined;
+            if (!id) return;
+            setData((prev) => ({ ...prev, jobCards: prev.jobCards.filter((j) => j.id !== id) }));
+            return;
+          }
+          const row = payload?.new as JobCard | undefined;
+          if (!row?.id) return;
+          setData((prev) => ({ ...prev, jobCards: upsertByKey(prev.jobCards, row, "id") }));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "technician_locations", filter: `company_id=eq.${companyId}` },
+        (payload: any) => {
+          const type = payload?.eventType as string;
+          if (type === "DELETE") {
+            const technicianId = payload?.old?.technician_id as string | undefined;
+            if (!technicianId) return;
+            setData((prev) => ({
+              ...prev,
+              technicianLocations: prev.technicianLocations.filter((l: any) => (l as any).technician_id !== technicianId),
+            }));
+            return;
+          }
+          const row = payload?.new as TechnicianLocation | undefined;
+          const technicianId = (row as any)?.technician_id as string | undefined;
+          if (!technicianId) return;
+          setData((prev) => ({ ...prev, technicianLocations: upsertByKey(prev.technicianLocations, row, "technician_id") }));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [companyId]);
 
   const actions = React.useMemo<DashboardActions>(() => ({
     addCustomer: async (c) => {
