@@ -56,6 +56,9 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
   const [revenue, setRevenue] = React.useState("");
   const [savingRevenue, setSavingRevenue] = React.useState(false);
 
+  const [assignedTechnicianId, setAssignedTechnicianId] = React.useState<string>(NONE);
+  const [savingAssignment, setSavingAssignment] = React.useState(false);
+
   const [timeForm, setTimeForm] = React.useState({
     technicianId: NONE,
     startedAt: "",
@@ -121,6 +124,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
     if (job) {
       const r = (job as any).revenue_cents;
       setRevenue(typeof r === "number" ? (r / 100).toFixed(2) : "");
+      setAssignedTechnicianId(job.technician_id ?? NONE);
       setTimeForm((prev) => ({
         ...prev,
         technicianId: job.technician_id ?? NONE,
@@ -168,6 +172,13 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
     setSavingRevenue(true);
     await actions.setJobRevenue(job.id, cents);
     setSavingRevenue(false);
+  };
+
+  const saveAssignment = async () => {
+    setSavingAssignment(true);
+    await actions.setJobCardTechnician(job.id, assignedTechnicianId && assignedTechnicianId !== NONE ? assignedTechnicianId : null);
+    setSavingAssignment(false);
+    toast({ title: "Job updated", description: "Technician assignment saved." });
   };
 
   const logTime = async () => {
@@ -394,6 +405,31 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
             </div>
             <div className="text-xs text-muted-foreground sm:pt-6">
               {job.site_id ? "Materials + COC docs attach to this site." : "Set a site to enable materials + COC docs."}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+            <div className="space-y-1">
+              <Label>Assigned technician</Label>
+              <Select value={assignedTechnicianId} onValueChange={setAssignedTechnicianId}>
+                <SelectTrigger className="sm:w-[420px]">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Unassigned</SelectItem>
+                  {data.technicians.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" onClick={saveAssignment} disabled={savingAssignment || loading}>
+              {savingAssignment ? "Saving..." : "Save"}
+            </Button>
+            <div className="text-xs text-muted-foreground sm:pb-1">
+              This sets the job’s assigned technician (separate from time entries).
             </div>
           </div>
 
