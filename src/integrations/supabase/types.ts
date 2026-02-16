@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      coc_certificates: {
+        Row: {
+          certificate_no: string
+          certificate_type: string
+          company_id: string
+          created_at: string
+          data: Json
+          id: string
+          issued_at: string | null
+          job_card_id: string | null
+          site_id: string | null
+          test_report: Json
+          updated_at: string
+        }
+        Insert: {
+          certificate_no: string
+          certificate_type: string
+          company_id: string
+          created_at?: string
+          data?: Json
+          id?: string
+          issued_at?: string | null
+          job_card_id?: string | null
+          site_id?: string | null
+          test_report?: Json
+          updated_at?: string
+        }
+        Update: {
+          certificate_no?: string
+          certificate_type?: string
+          company_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          issued_at?: string | null
+          job_card_id?: string | null
+          site_id?: string | null
+          test_report?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coc_certificates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coc_certificates_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coc_certificates_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
