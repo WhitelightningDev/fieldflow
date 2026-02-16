@@ -316,6 +316,50 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          company_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
