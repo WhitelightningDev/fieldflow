@@ -1022,6 +1022,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_create_company: { Args: { _user_id: string }; Returns: boolean }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_technician_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
