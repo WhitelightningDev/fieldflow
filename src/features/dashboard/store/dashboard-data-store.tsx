@@ -38,6 +38,7 @@ type DashboardActions = {
   addJobCard: (j: Omit<TablesInsert<"job_cards">, "company_id">) => Promise<JobCard | null>;
   setJobCardStatus: (id: string, status: string) => Promise<void>;
   setJobCardSite: (id: string, siteId: string | null) => Promise<void>;
+  setJobCardTechnician: (id: string, technicianId: string | null) => Promise<void>;
   setJobRevenue: (id: string, revenueCents: number | null) => Promise<void>;
   addInventoryItem: (i: Omit<TablesInsert<"inventory_items">, "company_id">) => Promise<InventoryItem | null>;
   adjustInventory: (itemId: string, delta: number) => Promise<void>;
@@ -273,6 +274,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setData((prev) => ({
         ...prev,
         jobCards: prev.jobCards.map((j) => (j.id === id ? { ...j, site_id: siteId, updated_at: new Date().toISOString() } : j)),
+      }));
+    },
+    setJobCardTechnician: async (id, technicianId) => {
+      const { error } = await supabase
+        .from("job_cards")
+        .update({ technician_id: technicianId })
+        .eq("id", id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      setData((prev) => ({
+        ...prev,
+        jobCards: prev.jobCards.map((j: any) => (j.id === id ? { ...j, technician_id: technicianId, updated_at: new Date().toISOString() } : j)),
       }));
     },
     setJobRevenue: async (id, revenueCents) => {
