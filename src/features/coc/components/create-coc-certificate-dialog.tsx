@@ -53,6 +53,27 @@ export default function CreateCocCertificateDialog({
       const cocData = createDefaultCocCertificateData();
       const testReport = createDefaultCocTestReportData();
 
+      const selectedSite = values.siteId && values.siteId !== NONE
+        ? (sites ?? []).find((s) => s.id === values.siteId) ?? null
+        : null;
+
+      if (selectedSite) {
+        const addr = selectedSite.address ?? "";
+        const name = selectedSite.name ?? "";
+        if (addr) {
+          cocData.installation.physical_address = addr;
+          testReport.location.physical_address = addr;
+        }
+        if (name) {
+          cocData.installation.building_name = name;
+          testReport.location.building_name = name;
+        }
+      }
+
+      if (values.issuedAt) {
+        testReport.date_of_issue = values.issuedAt;
+      }
+
       const payload: TablesInsert<"coc_certificates"> = {
         company_id: companyId,
         site_id: values.siteId && values.siteId !== NONE ? values.siteId : null,
@@ -101,7 +122,7 @@ export default function CreateCocCertificateDialog({
               name="certificateNo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Certificate No.</FormLabel>
+                  <FormLabel>Unique certificate number</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. ECB 123456" {...field} />
                   </FormControl>

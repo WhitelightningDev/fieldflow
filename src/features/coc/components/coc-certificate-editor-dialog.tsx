@@ -108,11 +108,23 @@ function normalizeTestReport(raw: unknown): CocTestReportData {
 function missingForPrint(values: FormValues, includeTestReport: boolean): string[] {
   const missing: string[] = [];
   if (!values.certificate_no?.trim()) missing.push("Certificate No.");
+  if (!values.issued_at?.trim()) missing.push("Date of issue");
   if (!values.data.installation.physical_address?.trim()) missing.push("Installation physical address");
+  if (!values.data.installation.suburb_township?.trim()) missing.push("Installation suburb / township");
+  if (!values.data.installation.district_town_city?.trim()) missing.push("Installation district / town / city");
   if (!values.data.registered_person.full_name?.trim()) missing.push("Registered person full name");
   if (!values.data.registered_person.id_number?.trim()) missing.push("Registered person ID No.");
-  if (!values.data.registered_person.registration_number?.trim()) missing.push("Registered person registration number");
+  if (!values.data.registered_person.registration_number?.trim()) missing.push("Registered person DoL registration number");
+  if (!values.data.registered_person.registration_type) missing.push("Registered person registration category");
   if (!values.data.registered_person.signature_data_url) missing.push("Registered person signature");
+  if (!values.data.registered_person.signed_at?.trim()) missing.push("Registered person signed at / date");
+
+  if (!values.data.electrical_contractor.contact.name?.trim()) missing.push("Electrical contractor business / trading name");
+  if (!values.data.electrical_contractor.full_name?.trim()) missing.push("Electrical contractor signatory full name");
+  if (!values.data.electrical_contractor.registration_number?.trim()) missing.push("Electrical contractor registration number");
+  if (!values.data.electrical_contractor.signature_data_url) missing.push("Electrical contractor signature");
+  if (!values.data.electrical_contractor.signed_at?.trim()) missing.push("Electrical contractor signed at / date");
+
   if (values.certificate_type === "supplementary") {
     if (!values.data.supplementary.supplement_no?.trim()) missing.push("Supplement No.");
     if (!values.data.supplementary.initial_certificate_no?.trim()) missing.push("Initial certificate No.");
@@ -273,7 +285,7 @@ export default function CocCertificateEditorDialog({
                         name="certificate_no"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Certificate No.</FormLabel>
+                            <FormLabel>Unique certificate number</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -501,13 +513,16 @@ export default function CocCertificateEditorDialog({
 
                   <div className="rounded-xl border bg-card/70 backdrop-blur-sm p-5 space-y-4">
                     <div className="font-semibold">Declaration by registered person</div>
+                    <div className="text-sm text-muted-foreground">
+                      Declaration of compliance: a registered person confirms the installation was inspected/tested and meets the Electrical Installation Regulations.
+                    </div>
 
                     <FormField
                       control={form.control}
                       name="data.basis"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Regulation basis</FormLabel>
+                          <FormLabel>Installation type</FormLabel>
                           <Select value={field.value} onValueChange={field.onChange}>
                             <FormControl>
                               <SelectTrigger>
@@ -515,9 +530,9 @@ export default function CocCertificateEditorDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="9(2)(a)">9(2)(a) – new electrical installation</SelectItem>
-                              <SelectItem value="9(2)(b)">9(2)(b) – existing electrical installation</SelectItem>
-                              <SelectItem value="9(2)(c)">9(2)(c) – new part to existing installation</SelectItem>
+                              <SelectItem value="9(2)(a)">New installation</SelectItem>
+                              <SelectItem value="9(2)(b)">Existing installation</SelectItem>
+                              <SelectItem value="9(2)(c)">Addition / alteration to existing</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -554,7 +569,7 @@ export default function CocCertificateEditorDialog({
                         name="data.registered_person.registration_number"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Registration number</FormLabel>
+                            <FormLabel>DoL registration number</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -578,7 +593,7 @@ export default function CocCertificateEditorDialog({
                         name="data.registered_person.registration_type"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Type of registration</FormLabel>
+                            <FormLabel>Registration category</FormLabel>
                             <Select value={field.value} onValueChange={field.onChange}>
                               <FormControl>
                                 <SelectTrigger>
@@ -688,6 +703,9 @@ export default function CocCertificateEditorDialog({
 
                   <div className="rounded-xl border bg-card/70 backdrop-blur-sm p-5 space-y-4">
                     <div className="font-semibold">Declaration by electrical contractor</div>
+                    <div className="text-sm text-muted-foreground">
+                      Contractor declaration: the electrical contractor confirms the work was carried out in accordance with the Occupational Health and Safety Act and applicable regulations.
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -718,7 +736,7 @@ export default function CocCertificateEditorDialog({
                         name="data.electrical_contractor.registration_number"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Registration number</FormLabel>
+                            <FormLabel>Contractor registration number</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>

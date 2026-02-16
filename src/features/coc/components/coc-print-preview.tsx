@@ -70,7 +70,7 @@ export default function CocPrintPreview({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Certificate No." value={certificateNo} />
+            <Field label="Unique certificate number" value={certificateNo} />
             <Field label="Date of Issue" value={issuedAt} />
             <div className="space-y-2">
               <div className="text-[11px] uppercase tracking-wide text-black/80">Certificate Type</div>
@@ -110,15 +110,15 @@ export default function CocPrintPreview({
             </div>
 
             <div className="space-y-2">
-              <Tick checked={basisA} label="Reg 9(2)(a) (new electrical installation)" />
-              <Tick checked={basisB} label="Reg 9(2)(b) (existing electrical installation)" />
-              <Tick checked={basisC} label="Reg 9(2)(c) (new part to existing electrical installation)" />
+              <Tick checked={basisA} label="New installation" />
+              <Tick checked={basisB} label="Existing installation" />
+              <Tick checked={basisC} label="Addition / alteration to existing" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Full name" value={data.registered_person.full_name} />
               <Field label="ID No." value={data.registered_person.id_number} />
-              <Field label="Registered person registration number" value={data.registered_person.registration_number} />
+              <Field label="Registered person DoL registration number" value={data.registered_person.registration_number} />
               <Field label="Date of registration" value={data.registered_person.registration_date} />
             </div>
 
@@ -156,7 +156,7 @@ export default function CocPrintPreview({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Full name" value={data.electrical_contractor.full_name} />
               <Field label="ID No." value={data.electrical_contractor.id_number} />
-              <Field label="Electrical contractor registration number" value={data.electrical_contractor.registration_number} />
+              <Field label="Contractor registration number" value={data.electrical_contractor.registration_number} />
               <Field label="Date of registration" value={data.electrical_contractor.registration_date} />
             </div>
 
@@ -166,7 +166,7 @@ export default function CocPrintPreview({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Name" value={data.electrical_contractor.contact.name} />
+              <Field label="Business / trading name" value={data.electrical_contractor.contact.name} />
               <Field label="Tel" value={data.electrical_contractor.contact.tel} />
               <Field label="Fax" value={data.electrical_contractor.contact.fax} />
               <Field label="Cell" value={data.electrical_contractor.contact.cell} />
@@ -296,4 +296,3 @@ export default function CocPrintPreview({
     </div>
   );
 }
-
