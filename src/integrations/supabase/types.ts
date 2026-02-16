@@ -1023,6 +1023,10 @@ export type Database = {
     }
     Functions: {
       can_create_company: { Args: { _user_id: string }; Returns: boolean }
+      create_company_for_current_user: {
+        Args: { _industry: string; _name: string; _team_size?: string }
+        Returns: string
+      }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_technician_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
