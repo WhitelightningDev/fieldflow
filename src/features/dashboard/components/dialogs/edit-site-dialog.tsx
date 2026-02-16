@@ -11,6 +11,8 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+const NONE = "__none__";
+
 const schema = z.object({
   name: z.string().min(2, "Site name is required"),
   customerId: z.string().optional(),
@@ -20,16 +22,15 @@ const schema = z.object({
   scopeOfWork: z.string().optional(),
   contactName: z.string().optional(),
   contactPhone: z.string().optional(),
-  contactEmail: z.string().optional(),
+  contactEmail: z.string().email("Enter a valid email").optional().or(z.literal("")),
   notes: z.string().optional(),
 });
 
 type Values = z.infer<typeof schema>;
 
-const NONE = "__none__";
-
-export default function CreateSiteDialog() {
+export default function EditSiteDialog({ siteId }: { siteId: string }) {
   const { data, actions } = useDashboardData();
+  const site = data.sites.find((s) => s.id === siteId) as any;
   const [open, setOpen] = React.useState(false);
 
   const form = useForm<Values>({
@@ -49,11 +50,29 @@ export default function CreateSiteDialog() {
     mode: "onTouched",
   });
 
+  React.useEffect(() => {
+    if (!open || !site) return;
+    form.reset({
+      name: site.name ?? "",
+      customerId: site.customer_id ?? NONE,
+      code: site.code ?? "",
+      billingReference: site.billing_reference ?? "",
+      address: site.address ?? "",
+      scopeOfWork: site.scope_of_work ?? "",
+      contactName: site.contact_name ?? "",
+      contactPhone: site.contact_phone ?? "",
+      contactEmail: site.contact_email ?? "",
+      notes: site.notes ?? "",
+    });
+  }, [form, open, site]);
+
+  if (!site) return null;
+
   const submit = form.handleSubmit(async (values) => {
-    const created = await actions.addSite({
+    const updated = await actions.updateSite(siteId, {
       name: values.name,
       customer_id: values.customerId && values.customerId !== NONE ? values.customerId : null,
-      code: values.code ? values.code : null,
+      code: values.code || null,
       billing_reference: values.billingReference || null,
       address: values.address || null,
       scope_of_work: values.scopeOfWork || null,
@@ -62,36 +81,20 @@ export default function CreateSiteDialog() {
       contact_email: values.contactEmail || null,
       notes: values.notes || null,
     } as any);
-    if (!created) return;
-    toast({ title: "Site created" });
+    if (!updated) return;
+    toast({ title: "Site updated" });
     setOpen(false);
-    form.reset({
-      name: "",
-      customerId: NONE,
-      code: "",
-      billingReference: "",
-      address: "",
-      scopeOfWork: "",
-      contactName: "",
-      contactPhone: "",
-      contactEmail: "",
-      notes: "",
-    });
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="secondary">
-          Create site
-        </Button>
+        <Button size="sm" variant="outline">Edit</Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create site</DialogTitle>
-          <DialogDescription>
-            Capture enough detail to run the site: scope of work, invoicing reference, and who to contact.
-          </DialogDescription>
+          <DialogTitle>Edit site</DialogTitle>
+          <DialogDescription>Update site details, scope of work, and the billing/contact information.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -122,7 +125,7 @@ export default function CreateSiteDialog() {
                         <SelectValue placeholder="No customer" />
                       </SelectTrigger>
                     </FormControl>
-                  <SelectContent>
+                    <SelectContent>
                       <SelectItem value={NONE}>No customer</SelectItem>
                       {data.customers.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
@@ -172,7 +175,7 @@ export default function CreateSiteDialog() {
                 <FormItem>
                   <FormLabel>Address (optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Street, City" {...field} />
+                    <Input placeholder="Street, city" autoComplete="street-address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -186,11 +189,7 @@ export default function CreateSiteDialog() {
                 <FormItem>
                   <FormLabel>Scope of work (optional)</FormLabel>
                   <FormControl>
-                    <Textarea
-                      rows={4}
-                      placeholder="What is being done on this site? e.g. Solar install, DB board upgrade, panel allocation, compliance checklist..."
-                      {...field}
-                    />
+                    <Textarea rows={4} placeholder="What is being done on this site?" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -231,7 +230,7 @@ export default function CreateSiteDialog() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="email@site.com" autoComplete="email" {...field} />
+                      <Input placeholder="contact@customer.com" autoComplete="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -244,9 +243,9 @@ export default function CreateSiteDialog() {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes (optional)</FormLabel>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea rows={4} {...field} />
+                    <Textarea placeholder="Access details, constraints, etc." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -254,8 +253,8 @@ export default function CreateSiteDialog() {
             />
 
             <DialogFooter>
-              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow">
-                Create site
+              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? "Saving..." : "Save changes"}
               </Button>
             </DialogFooter>
           </form>
@@ -264,3 +263,4 @@ export default function CreateSiteDialog() {
     </Dialog>
   );
 }
+

@@ -32,6 +32,8 @@ export type DashboardData = {
 
 type DashboardActions = {
   addCustomer: (c: Omit<TablesInsert<"customers">, "company_id">) => Promise<Customer | null>;
+  updateCustomer: (customerId: string, c: Partial<Omit<TablesInsert<"customers">, "company_id">>) => Promise<Customer | null>;
+  deleteCustomer: (customerId: string) => Promise<void>;
   addTechnician: (t: Omit<TablesInsert<"technicians">, "company_id">) => Promise<Technician | null>;
   updateTechnician: (technicianId: string, t: Partial<Omit<TablesInsert<"technicians">, "company_id">>) => Promise<Technician | null>;
   deleteTechnician: (technicianId: string) => Promise<void>;
@@ -44,6 +46,8 @@ type DashboardActions = {
   adjustInventory: (itemId: string, delta: number) => Promise<void>;
   setInventoryUnitCost: (itemId: string, unitCostCents: number | null) => Promise<void>;
   addSite: (s: Omit<TablesInsert<"sites">, "company_id">) => Promise<Site | null>;
+  updateSite: (siteId: string, s: Partial<Omit<TablesInsert<"sites">, "company_id">>) => Promise<Site | null>;
+  deleteSite: (siteId: string) => Promise<void>;
   addTeam: (t: Omit<TablesInsert<"teams">, "company_id">) => Promise<Team | null>;
   setTechnicianRates: (technicianId: string, args: { hourlyCostCents: number | null; hourlyBillRateCents: number | null }) => Promise<void>;
   addTeamMember: (teamId: string, technicianId: string) => Promise<TeamMember | null>;
@@ -223,6 +227,37 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setData((prev) => ({ ...prev, customers: [row, ...prev.customers] }));
       return row;
     },
+    updateCustomer: async (customerId, c) => {
+      const { data: row, error } = await supabase
+        .from("customers")
+        .update(c as any)
+        .eq("id", customerId)
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({
+        ...prev,
+        customers: prev.customers.map((x) => (x.id === customerId ? row : x)),
+      }));
+      return row;
+    },
+    deleteCustomer: async (customerId) => {
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", customerId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+      setData((prev) => ({
+        ...prev,
+        customers: prev.customers.filter((c) => c.id !== customerId),
+        sites: prev.sites.map((s: any) => ((s as any).customer_id === customerId ? { ...s, customer_id: null } : s)),
+        jobCards: prev.jobCards.map((j: any) => ((j as any).customer_id === customerId ? { ...j, customer_id: null } : j)),
+      }));
+      toast({ title: "Customer deleted" });
+    },
     addTechnician: async (t) => {
       if (!companyId) return null;
       const { data: row, error } = await supabase
@@ -367,6 +402,38 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, sites: [row, ...prev.sites] }));
       return row;
+    },
+    updateSite: async (siteId, s) => {
+      const { data: row, error } = await supabase
+        .from("sites")
+        .update(s as any)
+        .eq("id", siteId)
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({
+        ...prev,
+        sites: prev.sites.map((x) => (x.id === siteId ? row : x)),
+      }));
+      return row;
+    },
+    deleteSite: async (siteId) => {
+      const { error } = await supabase
+        .from("sites")
+        .delete()
+        .eq("id", siteId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+      setData((prev) => ({
+        ...prev,
+        sites: prev.sites.filter((s) => s.id !== siteId),
+        siteTeamAssignments: prev.siteTeamAssignments.filter((a) => a.site_id !== siteId),
+        siteMaterialUsage: (prev.siteMaterialUsage as any[]).filter((u) => u.site_id !== siteId),
+        jobCards: prev.jobCards.map((j: any) => ((j as any).site_id === siteId ? { ...j, site_id: null } : j)),
+      }));
+      toast({ title: "Site deleted" });
     },
     addTeam: async (t) => {
       if (!companyId) return null;

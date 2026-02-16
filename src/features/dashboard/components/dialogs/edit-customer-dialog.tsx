@@ -26,8 +26,9 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function CreateCustomerDialog() {
-  const { actions } = useDashboardData();
+export default function EditCustomerDialog({ customerId }: { customerId: string }) {
+  const { data, actions } = useDashboardData();
+  const customer = data.customers.find((c) => c.id === customerId) as any;
   const [open, setOpen] = React.useState(false);
 
   const form = useForm<Values>({
@@ -48,8 +49,27 @@ export default function CreateCustomerDialog() {
     mode: "onTouched",
   });
 
+  React.useEffect(() => {
+    if (!open || !customer) return;
+    form.reset({
+      name: customer.name ?? "",
+      code: customer.code ?? "",
+      phone: customer.phone ?? "",
+      email: customer.email ?? "",
+      billingPhone: customer.billing_phone ?? "",
+      billingEmail: customer.billing_email ?? "",
+      billingReference: customer.billing_reference ?? "",
+      vatNumber: customer.vat_number ?? "",
+      paymentTerms: customer.payment_terms ?? "",
+      address: customer.address ?? "",
+      notes: customer.notes ?? "",
+    });
+  }, [customer, form, open]);
+
+  if (!customer) return null;
+
   const submit = form.handleSubmit(async (values) => {
-    const row = await actions.addCustomer({
+    const updated = await actions.updateCustomer(customerId, {
       name: values.name,
       code: values.code || null,
       phone: values.phone || null,
@@ -62,25 +82,20 @@ export default function CreateCustomerDialog() {
       address: values.address || null,
       notes: values.notes || null,
     } as any);
-    if (!row) return;
-    toast({ title: "Customer added" });
+    if (!updated) return;
+    toast({ title: "Customer updated" });
     setOpen(false);
-    form.reset();
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-bg hover:opacity-90 shadow-glow">
-          Add customer
-        </Button>
+        <Button size="sm" variant="outline">Edit</Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add customer</DialogTitle>
-          <DialogDescription>
-            Capture enough detail to invoice cleanly (VAT, payment terms, and billing contact).
-          </DialogDescription>
+          <DialogTitle>Edit customer</DialogTitle>
+          <DialogDescription>Update billing details and contact information.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -247,7 +262,7 @@ export default function CreateCustomerDialog() {
 
             <DialogFooter>
               <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
-                Add customer
+                {form.formState.isSubmitting ? "Saving..." : "Save changes"}
               </Button>
             </DialogFooter>
           </form>
@@ -256,3 +271,4 @@ export default function CreateCustomerDialog() {
     </Dialog>
   );
 }
+

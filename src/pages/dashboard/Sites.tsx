@@ -1,5 +1,7 @@
 import AssignTeamToSiteDialog from "@/features/dashboard/components/dialogs/assign-team-to-site-dialog";
 import CreateSiteDialog from "@/features/dashboard/components/dialogs/create-site-dialog";
+import DeleteSiteAlertDialog from "@/features/dashboard/components/dialogs/delete-site-alert-dialog";
+import EditSiteDialog from "@/features/dashboard/components/dialogs/edit-site-dialog";
 import ManageSiteDialog from "@/features/dashboard/components/dialogs/manage-site-dialog";
 import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
 import { computeSiteProfitability } from "@/features/dashboard/lib/profitability";
@@ -143,7 +145,9 @@ export default function Sites() {
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <ManageSiteDialog siteId={site.id} />
+                    <EditSiteDialog siteId={site.id} />
                     <AssignTeamToSiteDialog siteId={site.id} />
+                    <DeleteSiteAlertDialog siteId={site.id} />
                     {current ? (
                       <Button
                         size="sm"

@@ -1,5 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CreateCustomerDialog from "@/features/dashboard/components/dialogs/create-customer-dialog";
+import DeleteCustomerAlertDialog from "@/features/dashboard/components/dialogs/delete-customer-alert-dialog";
+import EditCustomerDialog from "@/features/dashboard/components/dialogs/edit-customer-dialog";
 import ManageCustomerDialog from "@/features/dashboard/components/dialogs/manage-customer-dialog";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -37,7 +39,11 @@ export default function Customers() {
                 <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.address || "—"}</TableCell>
                 <TableCell className="text-right">
-                  <ManageCustomerDialog customerId={c.id} />
+                  <div className="inline-flex items-center gap-2">
+                    <ManageCustomerDialog customerId={c.id} />
+                    <EditCustomerDialog customerId={c.id} />
+                    <DeleteCustomerAlertDialog customerId={c.id} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
