@@ -44,6 +44,23 @@ export default function CreateCompany() {
   const submit = form.handleSubmit(async (values) => {
     if (!user) return;
 
+    // Guard: if the DB already has a company linked, don't try to create a second one (RLS will block it).
+    try {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (existingProfile?.company_id) {
+        toast({ title: "Company already exists", description: "This account is already linked to a company. Redirecting…" });
+        await refreshProfile();
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
     const { error: profileError } = await supabase
       .from("profiles")
       .upsert(
