@@ -187,7 +187,9 @@ export default function TechDispatch() {
         .upsert(payload as any, { onConflict: "technician_id" });
       if (error && !gpsWriteErrorShownRef.current) {
         gpsWriteErrorShownRef.current = true;
-        const hint = String(error.message ?? "").toLowerCase().includes("on conflict")
+        const msg = String(error.message ?? "");
+        const lower = msg.toLowerCase();
+        const hint = lower.includes("on conflict") || lower.includes("no unique") || lower.includes("exclusion constraint")
           ? " Fix: apply latest Supabase migrations (unique index on technician_locations.technician_id)."
           : "";
         toast({
@@ -195,6 +197,30 @@ export default function TechDispatch() {
           description: `${error.message}${hint}`,
           variant: "destructive",
         });
+      }
+
+      // Robust fallback: if the DB is missing a UNIQUE constraint for `onConflict=technician_id`,
+      // do an update-or-insert to keep tracking working until migrations are applied.
+      if (error) {
+        const msg = String(error.message ?? "");
+        const lower = msg.toLowerCase();
+        const isOnConflictConstraintIssue =
+          lower.includes("no unique") ||
+          lower.includes("exclusion constraint") ||
+          lower.includes("on conflict");
+        if (!isOnConflictConstraintIssue) return;
+
+        const { data: updatedRows, error: updateErr } = await supabase
+          .from("technician_locations")
+          .update(payload as any)
+          .eq("technician_id", payload.technician_id)
+          .select("technician_id")
+          .limit(1);
+
+        if (updateErr) return;
+        if ((updatedRows?.length ?? 0) > 0) return;
+
+        await supabase.from("technician_locations").insert(payload as any);
       }
     };
 
