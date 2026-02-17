@@ -57,6 +57,8 @@ export default function TechDispatch() {
   const jobsRef = React.useRef<any[]>([]);
   const lastLocationSentAtRef = React.useRef<number>(0);
   const lastLocationPayloadRef = React.useRef<string>("");
+  const geoErrorShownRef = React.useRef(false);
+  const gpsWriteErrorShownRef = React.useRef(false);
 
   React.useEffect(() => {
     jobsRef.current = jobs;
@@ -95,11 +97,27 @@ export default function TechDispatch() {
 
     let cancelled = false;
     let watchId: number | null = null;
+    const MIN_SEND_MS = 15_000;
+    const HEARTBEAT_MS = 60_000;
+
+    const onGeoError = (err?: GeolocationPositionError) => {
+      if (geoErrorShownRef.current) return;
+      geoErrorShownRef.current = true;
+      const msg =
+        err?.code === 1
+          ? "Location permission is blocked. Enable Location for this site/app to share live GPS."
+          : err?.code === 2
+            ? "Location unavailable. Check GPS settings and try again."
+            : err?.code === 3
+              ? "Location request timed out. Try again in an area with better signal."
+              : "Could not access location. Enable Location Services to share live GPS.";
+      toast({ title: "Live GPS off", description: msg, variant: "destructive" });
+    };
 
     const sendLocation = async (pos: GeolocationPosition) => {
       if (cancelled) return;
       const now = Date.now();
-      if (now - lastLocationSentAtRef.current < 15_000) return;
+      if (now - lastLocationSentAtRef.current < MIN_SEND_MS) return;
 
       const activeJob =
         jobsRef.current.find((j: any) => j.status === "in-progress") ??
@@ -129,21 +147,34 @@ export default function TechDispatch() {
         la: Math.round(payload.lat * 1e5),
         ln: Math.round(payload.lng * 1e5),
       });
-      if (payloadKey === lastLocationPayloadRef.current) return;
+
+      if (payloadKey === lastLocationPayloadRef.current && now - lastLocationSentAtRef.current < HEARTBEAT_MS) return;
 
       lastLocationSentAtRef.current = now;
       lastLocationPayloadRef.current = payloadKey;
 
-      await supabase
+      const { error } = await supabase
         .from("technician_locations")
         .upsert(payload as any, { onConflict: "technician_id" });
+      if (error && !gpsWriteErrorShownRef.current) {
+        gpsWriteErrorShownRef.current = true;
+        toast({
+          title: "Live GPS not saving",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     };
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { void sendLocation(pos); },
+      (err) => { onGeoError(err); },
+      { enableHighAccuracy: false, maximumAge: 30_000, timeout: 15_000 },
+    );
 
     watchId = navigator.geolocation.watchPosition(
       (pos) => { void sendLocation(pos); },
-      () => {
-        // Permission denied / unavailable — ignore silently (tracking is best-effort).
-      },
+      (err) => { onGeoError(err); },
       { enableHighAccuracy: false, maximumAge: 30_000, timeout: 15_000 },
     );
 

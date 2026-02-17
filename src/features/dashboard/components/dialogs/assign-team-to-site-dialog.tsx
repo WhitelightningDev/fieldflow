@@ -14,6 +14,7 @@ import { z } from "zod";
 
 const schema = z.object({
   teamId: z.string().min(1, "Select a team"),
+  company_id: z.string().optional(),
   startsAt: z.string().optional(),
   endsAt: z.string().optional(),
   notes: z.string().optional(),
@@ -29,6 +30,7 @@ export default function AssignTeamToSiteDialog({ siteId }: { siteId: string }) {
     resolver: zodResolver(schema),
     defaultValues: {
       teamId: data.teams[0]?.id ?? "",
+      company_id: "",
       startsAt: "",
       endsAt: "",
       notes: "",
@@ -47,6 +49,7 @@ export default function AssignTeamToSiteDialog({ siteId }: { siteId: string }) {
     const created = await actions.assignTeamToSite({
       siteId,
       teamId: values.teamId,
+      company_id: values.company_id ? values.company_id : undefined,
       startsAt: values.startsAt ? fromDatetimeLocal(values.startsAt) : undefined,
       endsAt: values.endsAt ? fromDatetimeLocal(values.endsAt) ?? null : null,
       notes: values.notes ? values.notes : null,

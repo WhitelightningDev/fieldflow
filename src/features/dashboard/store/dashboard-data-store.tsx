@@ -54,7 +54,7 @@ type DashboardActions = {
   setTechnicianRates: (technicianId: string, args: { hourlyCostCents: number | null; hourlyBillRateCents: number | null }) => Promise<void>;
   addTeamMember: (teamId: string, technicianId: string) => Promise<TeamMember | null>;
   removeTeamMember: (teamMemberId: string) => Promise<void>;
-  assignTeamToSite: (a: { siteId: string; teamId: string; startsAt?: string; endsAt?: string | null; notes?: string | null }) => Promise<SiteTeamAssignment | null>;
+  assignTeamToSite: (a: { siteId: string; teamId: string; company_id?: string; startsAt?: string; endsAt?: string | null; notes?: string | null }) => Promise<SiteTeamAssignment | null>;
   endSiteAssignment: (assignmentId: string, endsAt: string) => Promise<void>;
   refreshData: () => Promise<void>;
 };
@@ -545,11 +545,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== teamMemberId) }));
     },
-    assignTeamToSite: async ({ siteId, teamId, startsAt, endsAt, notes }) => {
+    assignTeamToSite: async ({ siteId, company_id, teamId, startsAt, endsAt, notes }) => {
       const { data: row, error } = await (supabase as any)
         .from("site_team_assignments")
         .insert({
           site_id: siteId,
+          company_id: company_id ?? companyId,
           team_id: teamId,
           starts_at: startsAt ?? undefined,
           ends_at: endsAt ?? null,
