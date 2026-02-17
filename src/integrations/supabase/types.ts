@@ -16,67 +16,57 @@ export type Database = {
     Tables: {
       coc_certificates: {
         Row: {
-          certificate_no: string
-          certificate_type: string
-          company_id: string
-          created_at: string
-          data: Json
+          certificate_no: string | null
+          certificate_number: string
+          certificate_type: string | null
+          company_id: string | null
+          created_at: string | null
+          customer_id: string
+          data: string | null
+          expiry_date: string | null
           id: string
           issued_at: string | null
-          job_card_id: string | null
+          issued_date: string
           site_id: string | null
-          test_report: Json
-          updated_at: string
+          status: string | null
+          test_report: string | null
+          updated_at: string | null
         }
         Insert: {
-          certificate_no: string
-          certificate_type: string
-          company_id: string
-          created_at?: string
-          data?: Json
+          certificate_no?: string | null
+          certificate_number: string
+          certificate_type?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          data?: string | null
+          expiry_date?: string | null
           id?: string
           issued_at?: string | null
-          job_card_id?: string | null
+          issued_date: string
           site_id?: string | null
-          test_report?: Json
-          updated_at?: string
+          status?: string | null
+          test_report?: string | null
+          updated_at?: string | null
         }
         Update: {
-          certificate_no?: string
-          certificate_type?: string
-          company_id?: string
-          created_at?: string
-          data?: Json
+          certificate_no?: string | null
+          certificate_number?: string
+          certificate_type?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          data?: string | null
+          expiry_date?: string | null
           id?: string
           issued_at?: string | null
-          job_card_id?: string | null
+          issued_date?: string
           site_id?: string | null
-          test_report?: Json
-          updated_at?: string
+          status?: string | null
+          test_report?: string | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "coc_certificates_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coc_certificates_job_card_id_fkey"
-            columns: ["job_card_id"]
-            isOneToOne: false
-            referencedRelation: "job_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coc_certificates_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       companies: {
         Row: {
@@ -587,7 +577,9 @@ export type Database = {
           created_at: string
           ends_at: string | null
           id: string
+          notes: string | null
           site_id: string
+          starts_at: string | null
           status: string
           team_id: string
           updated_at: string
@@ -598,7 +590,9 @@ export type Database = {
           created_at?: string
           ends_at?: string | null
           id?: string
+          notes?: string | null
           site_id: string
+          starts_at?: string | null
           status?: string
           team_id: string
           updated_at?: string
@@ -609,7 +603,9 @@ export type Database = {
           created_at?: string
           ends_at?: string | null
           id?: string
+          notes?: string | null
           site_id?: string
+          starts_at?: string | null
           status?: string
           team_id?: string
           updated_at?: string
@@ -1028,6 +1024,50 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_locations: {
+        Row: {
+          accuracy: number | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string | null
+          technician_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          accuracy?: number | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at?: string | null
+          technician_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          accuracy?: number | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string | null
+          technician_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_technician"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technicians: {
         Row: {
           active: boolean
@@ -1077,83 +1117,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      technician_locations: {
-        Row: {
-          accuracy: number | null
-          company_id: string
-          created_at: string
-          heading: number | null
-          job_card_id: string | null
-          lat: number
-          lng: number
-          recorded_at: string
-          site_id: string | null
-          speed: number | null
-          technician_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accuracy?: number | null
-          company_id: string
-          created_at?: string
-          heading?: number | null
-          job_card_id?: string | null
-          lat: number
-          lng: number
-          recorded_at?: string
-          site_id?: string | null
-          speed?: number | null
-          technician_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accuracy?: number | null
-          company_id?: string
-          created_at?: string
-          heading?: number | null
-          job_card_id?: string | null
-          lat?: number
-          lng?: number
-          recorded_at?: string
-          site_id?: string | null
-          speed?: number | null
-          technician_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "technician_locations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "technician_locations_job_card_id_fkey"
-            columns: ["job_card_id"]
-            isOneToOne: false
-            referencedRelation: "job_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "technician_locations_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "technician_locations_technician_id_fkey"
-            columns: ["technician_id"]
-            isOneToOne: true
-            referencedRelation: "technicians"
             referencedColumns: ["id"]
           },
         ]

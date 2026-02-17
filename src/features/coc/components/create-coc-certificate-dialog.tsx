@@ -76,6 +76,9 @@ export default function CreateCocCertificateDialog({
 
       const payload: TablesInsert<"coc_certificates"> = {
         company_id: companyId,
+        customer_id: values.siteId && values.siteId !== NONE ? values.siteId : companyId,
+        certificate_number: values.certificateNo.trim(),
+        issued_date: values.issuedAt ? values.issuedAt : new Date().toISOString().slice(0, 10),
         site_id: values.siteId && values.siteId !== NONE ? values.siteId : null,
         certificate_no: values.certificateNo.trim(),
         certificate_type: certificateType,

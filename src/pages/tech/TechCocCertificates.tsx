@@ -17,8 +17,7 @@ export default function TechCocCertificates() {
       .select("*")
       .eq("company_id", companyId)
       .order("name", { ascending: true })
-      .then(({ data }) => setSites(data ?? []))
-      .finally(() => setSitesLoading(false));
+      .then(({ data }) => { setSites(data ?? []); setSitesLoading(false); });
   }, [companyId]);
 
   if (loading) {
