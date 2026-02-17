@@ -106,12 +106,12 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const [loading, setLoading] = React.useState(true);
   const fetchErrorShownRef = React.useRef(new Set<string>());
 
-  const fetchAll = React.useCallback(async () => {
+  const fetchAll = React.useCallback(async (opts?: { silent?: boolean }) => {
     if (!companyId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     let companyRes: any;
     let customersRes: any;
     let techRes: any;
@@ -215,7 +215,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         siteMaterialUsage: materialRes?.data ?? [],
       };
     });
-    setLoading(false);
+    if (!opts?.silent) setLoading(false);
   }, [companyId]);
 
   React.useEffect(() => {
@@ -273,7 +273,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
           setData((prev) => ({ ...prev, technicianLocations: upsertByKey(prev.technicianLocations, row, "technician_id") }));
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void fetchAll({ silent: true });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

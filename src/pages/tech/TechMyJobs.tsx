@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Briefcase, CheckCircle2, ChevronRight, Clock, MapPin, Phone } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { useRealtimeRefetch } from "@/hooks/use-realtime-refetch";
 
 const statusColor: Record<string, string> = {
   new: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -18,30 +19,57 @@ const statusColor: Record<string, string> = {
 };
 
 export default function TechMyJobs() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [jobs, setJobs] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    if (!user) return;
-    supabase
+  const refreshJobs = React.useCallback(async () => {
+    if (!user?.id) return;
+
+    const { data: tech, error: techErr } = await supabase
       .from("technicians")
       .select("id")
       .eq("user_id", user.id)
-      .single()
-      .then(({ data: tech }) => {
-        if (!tech) { setLoading(false); return; }
-        supabase
-          .from("job_cards")
-          .select("*, customers(name, phone), sites(name, address)")
-          .eq("technician_id", tech.id)
-          .order("updated_at", { ascending: false })
-          .then(({ data }) => {
-            setJobs(data ?? []);
-            setLoading(false);
-          });
-      });
-  }, [user]);
+      .maybeSingle();
+
+    if (techErr) {
+      toast({ title: "Could not load technician", description: techErr.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    if (!tech?.id) {
+      setJobs([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("job_cards")
+      .select("*, customers(name, phone), sites(name, address)")
+      .eq("technician_id", tech.id)
+      .order("updated_at", { ascending: false });
+    if (error) {
+      toast({ title: "Could not load jobs", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    setJobs(data ?? []);
+    setLoading(false);
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    setLoading(true);
+    void refreshJobs();
+  }, [refreshJobs]);
+
+  useRealtimeRefetch({
+    enabled: Boolean(profile?.company_id),
+    channelName: `tech-myjobs:job_cards:${profile?.company_id ?? "none"}`,
+    table: "job_cards",
+    filter: profile?.company_id ? `company_id=eq.${profile.company_id}` : undefined,
+    debounceMs: 1200,
+    onRefetch: refreshJobs,
+  });
 
   return (
     <div className="space-y-6">

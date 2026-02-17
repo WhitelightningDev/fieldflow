@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { useRealtimeRefetch } from "@/hooks/use-realtime-refetch";
 
 function isToday(dateStr: string | null) {
   if (!dateStr) return false;
@@ -64,27 +65,55 @@ export default function TechDispatch() {
     jobsRef.current = jobs;
   }, [jobs]);
 
-  React.useEffect(() => {
-    if (!user) return;
-    supabase
+  const refreshJobs = React.useCallback(async () => {
+    if (!user?.id) return;
+
+    const { data: tech, error: techErr } = await supabase
       .from("technicians")
       .select("id")
       .eq("user_id", user.id)
-      .single()
-      .then(({ data: tech }) => {
-        if (!tech) { setLoading(false); return; }
-        setTechnicianId(tech.id);
-        supabase
-          .from("job_cards")
-          .select("*, customers(name, phone, address), sites(name, address)")
-          .eq("technician_id", tech.id)
-          .order("scheduled_at", { ascending: true })
-          .then(({ data }) => {
-            setJobs(data ?? []);
-            setLoading(false);
-          });
-      });
-  }, [user]);
+      .maybeSingle();
+
+    if (techErr) {
+      toast({ title: "Could not load technician", description: techErr.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    if (!tech?.id) {
+      setTechnicianId(null);
+      setJobs([]);
+      setLoading(false);
+      return;
+    }
+
+    setTechnicianId(tech.id);
+    const { data, error } = await supabase
+      .from("job_cards")
+      .select("*, customers(name, phone, address), sites(name, address)")
+      .eq("technician_id", tech.id)
+      .order("scheduled_at", { ascending: true });
+    if (error) {
+      toast({ title: "Could not load jobs", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    setJobs(data ?? []);
+    setLoading(false);
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    setLoading(true);
+    void refreshJobs();
+  }, [refreshJobs]);
+
+  useRealtimeRefetch({
+    enabled: Boolean(profile?.company_id),
+    channelName: `tech-dispatch:job_cards:${profile?.company_id ?? "none"}`,
+    table: "job_cards",
+    filter: profile?.company_id ? `company_id=eq.${profile.company_id}` : undefined,
+    debounceMs: 800,
+    onRefetch: refreshJobs,
+  });
 
   // Live GPS tracking (best-effort). Runs only on touch devices while the dispatch view is open.
   React.useEffect(() => {

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
+import { useRealtimeRefetch } from "@/hooks/use-realtime-refetch";
 
 const statusColor: Record<string, string> = {
   new: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -146,6 +147,15 @@ export default function TechJobDetail() {
     fetchTimeEntries();
     fetchPhotoCounts();
   }, [fetchJob, fetchTimeEntries, fetchPhotoCounts]);
+
+  useRealtimeRefetch({
+    enabled: Boolean(jobId),
+    channelName: `tech-job:${jobId ?? "none"}`,
+    table: "job_cards",
+    filter: jobId ? `id=eq.${jobId}` : undefined,
+    debounceMs: 600,
+    onRefetch: fetchJob,
+  });
 
   React.useEffect(() => {
     if (job?.site_id) fetchUsedParts();
