@@ -25,6 +25,7 @@ import {
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { useRealtimeRefetch } from "@/hooks/use-realtime-refetch";
+import { formatDistanceToNowStrict } from "date-fns";
 
 function isToday(dateStr: string | null) {
   if (!dateStr) return false;
@@ -55,6 +56,10 @@ export default function TechDispatch() {
   const [jobs, setJobs] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [technicianId, setTechnicianId] = React.useState<string | null>(null);
+  const [geoPermission, setGeoPermission] = React.useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
+  const [gpsStartRequested, setGpsStartRequested] = React.useState(false);
+  const [gpsRequesting, setGpsRequesting] = React.useState(false);
+  const [lastSentAtMs, setLastSentAtMs] = React.useState<number | null>(null);
   const jobsRef = React.useRef<any[]>([]);
   const lastLocationSentAtRef = React.useRef<number>(0);
   const lastLocationPayloadRef = React.useRef<string>("");
@@ -115,19 +120,189 @@ export default function TechDispatch() {
     onRefetch: refreshJobs,
   });
 
+  const isTouch = React.useMemo(() => {
+    return (navigator.maxTouchPoints ?? 0) > 0 || window.matchMedia("(pointer: coarse)").matches;
+  }, []);
+
+  const hasGeo = React.useMemo(() => "geolocation" in navigator, []);
+
+  React.useEffect(() => {
+    if (!hasGeo) return;
+    let cancelled = false;
+    let status: PermissionStatus | null = null;
+
+    (async () => {
+      try {
+        const permissions = (navigator as any).permissions;
+        if (!permissions?.query) {
+          setGeoPermission("unknown");
+          return;
+        }
+        status = await permissions.query({ name: "geolocation" });
+        if (cancelled) return;
+        setGeoPermission(status.state ?? "unknown");
+        status.onchange = () => {
+          if (cancelled) return;
+          setGeoPermission(status?.state ?? "unknown");
+        };
+      } catch {
+        setGeoPermission("unknown");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (status) status.onchange = null;
+    };
+  }, [hasGeo]);
+
+  const sendLocation = React.useCallback(async (pos: GeolocationPosition) => {
+    if (!user?.id || !profile?.company_id || !technicianId) return;
+
+    const now = Date.now();
+    const MIN_SEND_MS = 15_000;
+    const HEARTBEAT_MS = 60_000;
+    if (now - lastLocationSentAtRef.current < MIN_SEND_MS) return;
+
+    const activeJob =
+      jobsRef.current.find((j: any) => j.status === "in-progress") ??
+      jobsRef.current.find((j: any) => j.status === "scheduled") ??
+      null;
+
+    const basePayload = {
+      technician_id: technicianId,
+      company_id: profile.company_id,
+      user_id: user.id,
+      job_card_id: activeJob?.id ?? null,
+      site_id: activeJob?.site_id ?? null,
+      accuracy: typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null,
+      heading: typeof pos.coords.heading === "number" ? pos.coords.heading : null,
+      speed: typeof pos.coords.speed === "number" ? pos.coords.speed : null,
+      recorded_at: new Date(pos.timestamp).toISOString(),
+    };
+
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    if (typeof lat !== "number" || typeof lng !== "number") return;
+    if (!basePayload.technician_id) return;
+
+    const payloadKey = JSON.stringify({
+      t: basePayload.technician_id,
+      j: basePayload.job_card_id,
+      s: basePayload.site_id,
+      la: Math.round(lat * 1e5),
+      ln: Math.round(lng * 1e5),
+    });
+
+    if (payloadKey === lastLocationPayloadRef.current && now - lastLocationSentAtRef.current < HEARTBEAT_MS) return;
+
+    lastLocationSentAtRef.current = now;
+    lastLocationPayloadRef.current = payloadKey;
+    setLastSentAtMs(now);
+
+    // DB schema has existed with either `lat/lng` or `latitude/longitude` fields.
+    // Try the preferred `lat/lng` first, then fall back to `latitude/longitude` if needed.
+    const payloadLatLng = { ...basePayload, lat, lng };
+    const payloadLatitudeLongitude = { ...basePayload, latitude: lat, longitude: lng };
+    let rowToWrite: any = payloadLatLng;
+
+    const writeUpsert = async (row: any) => {
+      return await supabase.from("technician_locations").upsert(row as any, { onConflict: "technician_id" });
+    };
+
+    let { error } = await writeUpsert(payloadLatLng);
+    if (error) {
+      const msg = String(error.message ?? "").toLowerCase();
+      const isMissingLatLng = msg.includes("column") && msg.includes("does not exist") && (msg.includes("lat") || msg.includes("lng"));
+      if (isMissingLatLng) {
+        rowToWrite = payloadLatitudeLongitude;
+        ({ error } = await writeUpsert(rowToWrite));
+      }
+    }
+
+    if (error && !gpsWriteErrorShownRef.current) {
+      gpsWriteErrorShownRef.current = true;
+      const msg = String(error.message ?? "");
+      const lower = msg.toLowerCase();
+      const hint = lower.includes("on conflict") || lower.includes("no unique") || lower.includes("exclusion constraint")
+        ? " Fix: apply latest Supabase migrations (unique index on technician_locations.technician_id)."
+        : "";
+      toast({
+        title: "Live GPS not saving",
+        description: `${error.message}${hint}`,
+        variant: "destructive",
+      });
+    }
+
+    // Robust fallback: if the DB is missing a UNIQUE constraint for `onConflict=technician_id`,
+    // do an update-or-insert to keep tracking working until migrations are applied.
+    if (error) {
+      const msg = String(error.message ?? "");
+      const lower = msg.toLowerCase();
+      const isOnConflictConstraintIssue =
+        lower.includes("no unique") ||
+        lower.includes("exclusion constraint") ||
+        lower.includes("on conflict");
+      if (!isOnConflictConstraintIssue) return;
+
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from("technician_locations")
+        .update(rowToWrite as any)
+        .eq("technician_id", basePayload.technician_id)
+        .select("technician_id")
+        .limit(1);
+
+      if (updateErr) return;
+      if ((updatedRows?.length ?? 0) > 0) return;
+
+      await supabase.from("technician_locations").insert(rowToWrite as any);
+    }
+  }, [profile?.company_id, technicianId, user?.id]);
+
+  const requestGps = React.useCallback(async () => {
+    if (!hasGeo) {
+      toast({ title: "GPS not supported", description: "This device/browser doesn't support location sharing.", variant: "destructive" });
+      return;
+    }
+    setGpsStartRequested(true);
+    setGpsRequesting(true);
+    geoErrorShownRef.current = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGpsRequesting(false);
+        setGeoPermission("granted");
+        void sendLocation(pos);
+        toast({ title: "Live GPS enabled", description: "Your location will be shared with your admin while this dispatch screen is open." });
+      },
+      (err) => {
+        setGpsRequesting(false);
+        if (err?.code === 1) setGeoPermission("denied");
+        const msg =
+          err?.code === 1
+            ? "Location permission is blocked. Enable Location for this site/app in your browser/device settings."
+            : err?.code === 2
+              ? "Location unavailable. Check GPS settings and try again."
+              : err?.code === 3
+                ? "Location request timed out. Try again in an area with better signal."
+                : "Could not access location. Enable Location Services to share live GPS.";
+        toast({ title: "Live GPS off", description: msg, variant: "destructive" });
+      },
+      { enableHighAccuracy: false, maximumAge: 30_000, timeout: 15_000 },
+    );
+  }, [hasGeo, sendLocation]);
+
   // Live GPS tracking (best-effort). Runs only on touch devices while the dispatch view is open.
   React.useEffect(() => {
     if (!user?.id || !profile?.company_id || !technicianId) return;
 
-    const isTouch =
-      (navigator.maxTouchPoints ?? 0) > 0 || window.matchMedia("(pointer: coarse)").matches;
     if (!isTouch) return;
-    if (!("geolocation" in navigator)) return;
+    if (!hasGeo) return;
+    const shouldStart = gpsStartRequested || geoPermission === "granted";
+    if (!shouldStart) return;
 
     let cancelled = false;
     let watchId: number | null = null;
-    const MIN_SEND_MS = 15_000;
-    const HEARTBEAT_MS = 60_000;
 
     const onGeoError = (err?: GeolocationPositionError) => {
       if (geoErrorShownRef.current) return;
@@ -141,107 +316,6 @@ export default function TechDispatch() {
               ? "Location request timed out. Try again in an area with better signal."
               : "Could not access location. Enable Location Services to share live GPS.";
       toast({ title: "Live GPS off", description: msg, variant: "destructive" });
-    };
-
-    const sendLocation = async (pos: GeolocationPosition) => {
-      if (cancelled) return;
-      const now = Date.now();
-      if (now - lastLocationSentAtRef.current < MIN_SEND_MS) return;
-
-      const activeJob =
-        jobsRef.current.find((j: any) => j.status === "in-progress") ??
-        jobsRef.current.find((j: any) => j.status === "scheduled") ??
-        null;
-
-      const basePayload = {
-        technician_id: technicianId,
-        company_id: profile.company_id,
-        user_id: user.id,
-        job_card_id: activeJob?.id ?? null,
-        site_id: activeJob?.site_id ?? null,
-        accuracy: typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null,
-        heading: typeof pos.coords.heading === "number" ? pos.coords.heading : null,
-        speed: typeof pos.coords.speed === "number" ? pos.coords.speed : null,
-        recorded_at: new Date(pos.timestamp).toISOString(),
-      };
-
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      if (typeof lat !== "number" || typeof lng !== "number") {
-        return;
-      }
-
-      if (!basePayload.technician_id) return;
-
-      const payloadKey = JSON.stringify({
-        t: basePayload.technician_id,
-        j: basePayload.job_card_id,
-        s: basePayload.site_id,
-        la: Math.round(lat * 1e5),
-        ln: Math.round(lng * 1e5),
-      });
-
-      if (payloadKey === lastLocationPayloadRef.current && now - lastLocationSentAtRef.current < HEARTBEAT_MS) return;
-
-      lastLocationSentAtRef.current = now;
-      lastLocationPayloadRef.current = payloadKey;
-
-      // DB schema has existed with either `lat/lng` or `latitude/longitude` fields.
-      // Try the preferred `lat/lng` first, then fall back to `latitude/longitude` if needed.
-      const payloadLatLng = { ...basePayload, lat, lng };
-      const payloadLatitudeLongitude = { ...basePayload, latitude: lat, longitude: lng };
-      let rowToWrite: any = payloadLatLng;
-
-      const writeUpsert = async (row: any) => {
-        return await supabase.from("technician_locations").upsert(row as any, { onConflict: "technician_id" });
-      };
-
-      let { error } = await writeUpsert(payloadLatLng);
-      if (error) {
-        const msg = String(error.message ?? "").toLowerCase();
-        const isMissingLatLng = msg.includes("column") && msg.includes("does not exist") && (msg.includes("lat") || msg.includes("lng"));
-        if (isMissingLatLng) {
-          rowToWrite = payloadLatitudeLongitude;
-          ({ error } = await writeUpsert(rowToWrite));
-        }
-      }
-      if (error && !gpsWriteErrorShownRef.current) {
-        gpsWriteErrorShownRef.current = true;
-        const msg = String(error.message ?? "");
-        const lower = msg.toLowerCase();
-        const hint = lower.includes("on conflict") || lower.includes("no unique") || lower.includes("exclusion constraint")
-          ? " Fix: apply latest Supabase migrations (unique index on technician_locations.technician_id)."
-          : "";
-        toast({
-          title: "Live GPS not saving",
-          description: `${error.message}${hint}`,
-          variant: "destructive",
-        });
-      }
-
-      // Robust fallback: if the DB is missing a UNIQUE constraint for `onConflict=technician_id`,
-      // do an update-or-insert to keep tracking working until migrations are applied.
-      if (error) {
-        const msg = String(error.message ?? "");
-        const lower = msg.toLowerCase();
-        const isOnConflictConstraintIssue =
-          lower.includes("no unique") ||
-          lower.includes("exclusion constraint") ||
-          lower.includes("on conflict");
-        if (!isOnConflictConstraintIssue) return;
-
-        const { data: updatedRows, error: updateErr } = await supabase
-          .from("technician_locations")
-          .update(rowToWrite as any)
-          .eq("technician_id", basePayload.technician_id)
-          .select("technician_id")
-          .limit(1);
-
-        if (updateErr) return;
-        if ((updatedRows?.length ?? 0) > 0) return;
-
-        await supabase.from("technician_locations").insert(rowToWrite as any);
-      }
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -260,7 +334,7 @@ export default function TechDispatch() {
       cancelled = true;
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
     };
-  }, [profile?.company_id, technicianId, user?.id]);
+  }, [geoPermission, gpsStartRequested, hasGeo, isTouch, profile?.company_id, sendLocation, technicianId, user?.id]);
 
   const updateStatus = async (jobId: string, status: string) => {
     const { error } = await supabase
@@ -296,6 +370,45 @@ export default function TechDispatch() {
         </h1>
         <p className="text-muted-foreground text-sm">Your dispatch board for today.</p>
       </div>
+
+      {!loading && isTouch && hasGeo && geoPermission !== "granted" ? (
+        <Card className="bg-card/70 backdrop-blur-sm border-amber-200/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Navigation className="h-4 w-4" />
+              Enable live GPS
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-sm text-muted-foreground">
+              Your admin can only see your distance to the site and “Arrived” when Location is allowed.
+            </div>
+            {geoPermission === "denied" ? (
+              <div className="text-xs text-muted-foreground">
+                Location is blocked. Enable it in your browser/device settings, then tap Retry.
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={requestGps} disabled={gpsRequesting}>
+                {gpsRequesting ? "Requesting..." : geoPermission === "denied" ? "Retry" : "Enable GPS"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => toast({ title: "Tip", description: "Keep this dispatch screen open while traveling so GPS can update.", })}
+              >
+                Why?
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {!loading && isTouch && hasGeo && geoPermission === "granted" ? (
+        <div className="text-xs text-muted-foreground">
+          Live GPS is on{lastSentAtMs ? ` · last sent ${formatDistanceToNowStrict(new Date(lastSentAtMs))} ago` : ""}.
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
