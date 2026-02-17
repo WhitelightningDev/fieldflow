@@ -556,7 +556,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
           site_id: siteId,
           company_id: company_id ?? companyId,
           team_id: teamId,
-          starts_at: startsAt ?? undefined,
+          starts_at: startsAt ?? new Date().toISOString(),
           ends_at: endsAt ?? null,
           notes: notes ?? null,
         })

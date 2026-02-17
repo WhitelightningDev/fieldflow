@@ -19,11 +19,11 @@ function getCurrentAssignment(assignments: SiteTeamAssignment[]) {
   const now = Date.now();
   const active = assignments
     .filter((a) => {
-      const start = new Date((a as any).starts_at ?? a.assigned_at).getTime();
+      const start = new Date((a as any).starts_at ?? (a as any).assigned_at ?? a.created_at).getTime();
       const end = (a as any).ends_at ? new Date((a as any).ends_at).getTime() : Infinity;
       return start <= now && end >= now;
     })
-    .sort((a, b) => new Date((b as any).starts_at ?? b.assigned_at).getTime() - new Date((a as any).starts_at ?? a.assigned_at).getTime());
+    .sort((a, b) => new Date((b as any).starts_at ?? (b as any).assigned_at ?? b.created_at).getTime() - new Date((a as any).starts_at ?? (a as any).assigned_at ?? a.created_at).getTime());
   return active[0];
 }
 
