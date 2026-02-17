@@ -1,4 +1,5 @@
-import Logo from "@/assets/fieldflow-logo-removebg-preview.png";
+import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const links = {
@@ -14,14 +15,10 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <a href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center">
-                <img src={Logo} className="text-primary-foreground font-bold text-lg" alt="" />
-              </div>
-              <span className="font-bold text-xl">
-                Field<span className="gradient-text">Flow</span>
-              </span>
-            </a>
+            <Link to="/" className="flex items-center gap-2 mb-4">
+              <BrandIcon size={40} />
+              <BrandWordmark className="text-xl" />
+            </Link>
             <p className="text-sm text-muted-foreground">
               Field service management for modern teams.
             </p>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/notification-bell";
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 
 export default function TechSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { profile, signOut, user } = useAuth();
@@ -31,7 +32,10 @@ export default function TechSidebar({ onNavigate }: { onNavigate?: () => void })
     <aside className="flex flex-col h-full w-64 border-r border-border bg-card">
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
-          <div className="text-lg font-bold">FieldFlow</div>
+          <div className="flex items-center gap-2 min-w-0">
+            <BrandIcon size={28} />
+            <BrandWordmark className="text-lg" />
+          </div>
           <NotificationBell basePath="/tech" />
         </div>
         <div className="text-xs text-muted-foreground truncate">

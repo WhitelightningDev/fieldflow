@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 
 type Props = {
   title: string;
@@ -19,12 +20,8 @@ export default function AuthLayout({ title, subtitle, children, side, topRight, 
       <div className="container mx-auto px-4 relative">
         <div className="flex items-center justify-between py-6">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 gradient-bg rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 group-hover:shadow-lg">
-              <span className="text-primary-foreground font-bold text-lg">F</span>
-            </div>
-            <span className="font-bold text-xl tracking-tight">
-              Field<span className="gradient-text">Flow</span>
-            </span>
+            <BrandIcon size={36} className="transition-all duration-300 group-hover:shadow-lg" />
+            <BrandWordmark className="text-xl" />
           </Link>
           {topRight}
         </div>
@@ -48,4 +45,3 @@ export default function AuthLayout({ title, subtitle, children, side, topRight, 
     </div>
   );
 }
-

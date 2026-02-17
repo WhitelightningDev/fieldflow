@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { LogOut } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 
 export default function DashboardSidebar() {
   const location = useLocation();
@@ -50,12 +51,8 @@ export default function DashboardSidebar() {
     <Sidebar collapsible="icon" variant="inset" className="border-sidebar-border">
       <SidebarHeader className="px-2">
         <Link to="/" className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-accent">
-          <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center shadow-glow">
-            <span className="text-primary-foreground font-bold text-base">F</span>
-          </div>
-          <div className="font-semibold leading-tight">
-            Field<span className="gradient-text">Flow</span>
-          </div>
+          <BrandIcon size={32} />
+          <BrandWordmark className="text-base font-semibold leading-tight" />
         </Link>
       </SidebarHeader>
 

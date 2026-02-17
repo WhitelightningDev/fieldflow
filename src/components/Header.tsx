@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Logo from "@/assets/fieldflow-logo-removebg-preview.png";
+import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -13,12 +13,8 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center shadow-glow transition-all duration-300 group-hover:shadow-lg">
-             <img src={Logo} className="text-primary-foreground font-bold text-lg" alt="" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">
-              Field<span className="gradient-text">Flow</span>
-            </span>
+            <BrandIcon size={40} className="transition-all duration-300 group-hover:shadow-lg" />
+            <BrandWordmark className="text-xl" />
           </Link>
 
           {/* Desktop Navigation */}
