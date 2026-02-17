@@ -27,6 +27,8 @@ import { Link } from "react-router-dom";
 import { useRealtimeRefetch } from "@/hooks/use-realtime-refetch";
 import { formatDistanceToNowStrict } from "date-fns";
 
+const GPS_ENABLE_KEY = "fieldflow_gps_sharing_enabled";
+
 function isToday(dateStr: string | null) {
   if (!dateStr) return false;
   const d = new Date(dateStr);
@@ -57,9 +59,16 @@ export default function TechDispatch() {
   const [loading, setLoading] = React.useState(true);
   const [technicianId, setTechnicianId] = React.useState<string | null>(null);
   const [geoPermission, setGeoPermission] = React.useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
-  const [gpsStartRequested, setGpsStartRequested] = React.useState(false);
+  const [gpsStartRequested, setGpsStartRequested] = React.useState(() => {
+    try {
+      return window.localStorage.getItem(GPS_ENABLE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [gpsRequesting, setGpsRequesting] = React.useState(false);
   const [lastSentAtMs, setLastSentAtMs] = React.useState<number | null>(null);
+  const [resumeTick, setResumeTick] = React.useState(0);
   const jobsRef = React.useRef<any[]>([]);
   const lastLocationSentAtRef = React.useRef<number>(0);
   const lastLocationPayloadRef = React.useRef<string>("");
@@ -125,6 +134,40 @@ export default function TechDispatch() {
   }, []);
 
   const hasGeo = React.useMemo(() => "geolocation" in navigator, []);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(GPS_ENABLE_KEY, gpsStartRequested ? "1" : "0");
+    } catch {
+      // ignore
+    }
+    if (gpsStartRequested) {
+      try {
+        void (navigator as any).storage?.persist?.();
+      } catch {
+        // ignore
+      }
+    }
+  }, [gpsStartRequested]);
+
+  React.useEffect(() => {
+    const onResume = () => {
+      try {
+        if (document.visibilityState !== "visible") return;
+      } catch {
+        // ignore
+      }
+      setResumeTick((x) => x + 1);
+    };
+    document.addEventListener("visibilitychange", onResume);
+    window.addEventListener("focus", onResume);
+    window.addEventListener("pageshow", onResume as any);
+    return () => {
+      document.removeEventListener("visibilitychange", onResume);
+      window.removeEventListener("focus", onResume);
+      window.removeEventListener("pageshow", onResume as any);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!hasGeo) return;
@@ -271,6 +314,11 @@ export default function TechDispatch() {
     setGpsStartRequested(true);
     setGpsRequesting(true);
     geoErrorShownRef.current = false;
+    try {
+      void (navigator as any).storage?.persist?.();
+    } catch {
+      // ignore
+    }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -335,10 +383,9 @@ export default function TechDispatch() {
     );
 
     return () => {
-      cancelled = true;
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
     };
-  }, [geoPermission, gpsStartRequested, hasGeo, isTouch, profile?.company_id, sendLocation, technicianId, user?.id]);
+  }, [geoPermission, gpsStartRequested, hasGeo, isTouch, profile?.company_id, resumeTick, sendLocation, technicianId, user?.id]);
 
   const updateStatus = async (jobId: string, status: string) => {
     const { error } = await supabase
@@ -386,6 +433,9 @@ export default function TechDispatch() {
           <CardContent className="space-y-2">
             <div className="text-sm text-muted-foreground">
               Your admin can only see your distance to the site and “Arrived” when Location is allowed.
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Note: iPhone/iPad PWAs pause location updates when the screen locks or the app is closed. Keep the dispatch screen open while traveling.
             </div>
             {geoPermission === "denied" ? (
               <div className="text-xs text-muted-foreground">

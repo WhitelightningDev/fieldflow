@@ -26,6 +26,14 @@ export default function Login() {
       });
   }, [loading, session, user, navigate]);
 
+  if (loading || session) {
+    return (
+      <div className="flex items-center justify-center min-h-[100dvh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <AuthLayout
       title="Welcome back."

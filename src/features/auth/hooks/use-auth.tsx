@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = React.useState<AuthContextValue["profile"]>(null);
   const [loading, setLoading] = React.useState(true);
   const [profileLoading, setProfileLoading] = React.useState(false);
+  const [resumeChecking, setResumeChecking] = React.useState(false);
 
   const bootstrapAttemptedRef = React.useRef(new Set<string>());
 
@@ -166,6 +167,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchProfile]);
 
+  // iOS PWAs can suspend the page; on resume, re-check the session to avoid a brief "logged out" flash.
+  React.useEffect(() => {
+    let cancelled = false;
+    const onResume = () => {
+      try {
+        if (document.visibilityState !== "visible") return;
+      } catch {
+        // ignore
+      }
+      if (loading) return;
+      if (session) return;
+
+      setResumeChecking(true);
+      void withTimeout(supabase.auth.getSession(), 4000, "Resume session check timed out.")
+        .then(({ data }) => {
+          if (cancelled) return;
+          if (data?.session) {
+            setSession(data.session);
+            if (data.session.user) {
+              setProfileLoading(true);
+              void fetchProfile(data.session.user.id)
+                .catch(() => {
+                  // ignore
+                })
+                .finally(() => {
+                  if (!cancelled) setProfileLoading(false);
+                });
+            }
+          }
+        })
+        .catch(() => {
+          // ignore
+        })
+        .finally(() => {
+          if (!cancelled) setResumeChecking(false);
+        });
+    };
+
+    document.addEventListener("visibilitychange", onResume);
+    window.addEventListener("focus", onResume);
+    window.addEventListener("pageshow", onResume as any);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onResume);
+      window.removeEventListener("focus", onResume);
+      window.removeEventListener("pageshow", onResume as any);
+    };
+  }, [fetchProfile, loading, session]);
+
   const signOut = React.useCallback(async () => {
     try {
       try {
@@ -192,8 +242,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile]);
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ session, user: session?.user ?? null, profile, loading, profileLoading, signOut, refreshProfile }),
-    [session, profile, loading, profileLoading, signOut, refreshProfile]
+    () => ({ session, user: session?.user ?? null, profile, loading: loading || resumeChecking, profileLoading, signOut, refreshProfile }),
+    [session, profile, loading, profileLoading, resumeChecking, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -208,14 +258,28 @@ export function useAuth() {
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
+  const [pending, setPending] = React.useState(false);
 
   React.useEffect(() => {
-    if (!loading && !session) {
-      navigate("/login", { replace: true });
+    if (loading) {
+      setPending(false);
+      return;
     }
+    if (session) {
+      setPending(false);
+      return;
+    }
+
+    // Avoid a brief redirect flicker on iOS PWA resume while the session is being restored.
+    setPending(true);
+    const id = window.setTimeout(() => {
+      setPending(false);
+      navigate("/login", { replace: true });
+    }, 1200);
+    return () => window.clearTimeout(id);
   }, [loading, session, navigate]);
 
-  if (loading) {
+  if (loading || pending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

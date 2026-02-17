@@ -35,6 +35,13 @@ export function setSystemNotificationsEnabled(enabled: boolean) {
   } catch {
     // ignore
   }
+  if (enabled) {
+    try {
+      void (navigator as any).storage?.persist?.();
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export async function requestSystemNotificationPermission() {
@@ -82,4 +89,3 @@ export function explainDeniedNotifications() {
     variant: "destructive",
   });
 }
-
