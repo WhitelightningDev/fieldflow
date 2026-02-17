@@ -216,6 +216,148 @@ export type Database = {
           },
         ]
       }
+      invoice_payments: {
+        Row: {
+          amount_cents: number
+          company_id: string
+          created_at: string
+          id: string
+          invoice_id: string
+          paid_at: string
+          payment_method: string
+          proof_storage_path: string | null
+          reference: string | null
+        }
+        Insert: {
+          amount_cents?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          paid_at?: string
+          payment_method?: string
+          proof_storage_path?: string | null
+          reference?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          paid_at?: string
+          payment_method?: string
+          proof_storage_path?: string | null
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount_paid_cents: number
+          company_id: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          invoice_number: string
+          job_card_id: string
+          labour_minutes: number
+          labour_rate_cents: number
+          labour_total_cents: number
+          line_items: Json
+          notes: string | null
+          parts_total_cents: number
+          sent_at: string | null
+          status: string
+          subtotal_cents: number
+          total_cents: number
+          updated_at: string
+          vat_cents: number
+          vat_percent: number
+        }
+        Insert: {
+          amount_paid_cents?: number
+          company_id: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          invoice_number: string
+          job_card_id: string
+          labour_minutes?: number
+          labour_rate_cents?: number
+          labour_total_cents?: number
+          line_items?: Json
+          notes?: string | null
+          parts_total_cents?: number
+          sent_at?: string | null
+          status?: string
+          subtotal_cents?: number
+          total_cents?: number
+          updated_at?: string
+          vat_cents?: number
+          vat_percent?: number
+        }
+        Update: {
+          amount_paid_cents?: number
+          company_id?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          invoice_number?: string
+          job_card_id?: string
+          labour_minutes?: number
+          labour_rate_cents?: number
+          labour_total_cents?: number
+          line_items?: Json
+          notes?: string | null
+          parts_total_cents?: number
+          sent_at?: string | null
+          status?: string
+          subtotal_cents?: number
+          total_cents?: number
+          updated_at?: string
+          vat_cents?: number
+          vat_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_cards: {
         Row: {
           checklist: Json
@@ -1147,6 +1289,10 @@ export type Database = {
       can_create_company: { Args: { _user_id: string }; Returns: boolean }
       create_company_for_current_user: {
         Args: { _industry: string; _name: string; _team_size?: string }
+        Returns: string
+      }
+      generate_invoice_number: {
+        Args: { _company_id: string }
         Returns: string
       }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
