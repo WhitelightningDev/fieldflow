@@ -44,6 +44,7 @@ export default function TechMessages() {
   const [loading, setLoading] = React.useState(true);
   const [draft, setDraft] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  const sendingRef = React.useRef(false);
 
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const companyId = profile?.company_id ?? null;
@@ -149,7 +150,9 @@ export default function TechMessages() {
     if (!user?.id || !companyId || !thread?.id) return;
     const body = draft.trim();
     if (!body) return;
+    if (sendingRef.current) return;
 
+    sendingRef.current = true;
     setSending(true);
     try {
       const optimistic: ChatMessage = {
@@ -177,11 +180,14 @@ export default function TechMessages() {
 
       setMessages((prev) => {
         const withoutOptimistic = prev.filter((m) => m.id !== optimistic.id);
-        return [...withoutOptimistic, inserted as ChatMessage];
+        const nextInserted = inserted as ChatMessage;
+        if (withoutOptimistic.some((m) => m.id === nextInserted.id)) return withoutOptimistic;
+        return [...withoutOptimistic, nextInserted];
       });
       await markRead(thread.id);
     } finally {
       setSending(false);
+      sendingRef.current = false;
     }
   }, [companyId, draft, markRead, scrollToBottom, thread?.id, user?.id]);
 

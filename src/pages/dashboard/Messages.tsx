@@ -64,6 +64,7 @@ export default function Messages() {
   const [draft, setDraft] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const [openingTechId, setOpeningTechId] = React.useState<string | null>(null);
+  const sendingRef = React.useRef(false);
 
   const [readsByThreadId, setReadsByThreadId] = React.useState(() => new Map<string, string>());
   const [lastMsgByThreadId, setLastMsgByThreadId] = React.useState(() => new Map<string, ChatMessage>());
@@ -226,7 +227,9 @@ export default function Messages() {
     if (!user?.id || !companyId || !selectedThreadId) return;
     const body = draft.trim();
     if (!body) return;
+    if (sendingRef.current) return;
 
+    sendingRef.current = true;
     setSending(true);
     try {
       const optimistic: ChatMessage = {
@@ -254,7 +257,9 @@ export default function Messages() {
 
       setMessages((prev) => {
         const withoutOptimistic = prev.filter((m) => m.id !== optimistic.id);
-        return [...withoutOptimistic, inserted as ChatMessage];
+        const nextInserted = inserted as ChatMessage;
+        if (withoutOptimistic.some((m) => m.id === nextInserted.id)) return withoutOptimistic;
+        return [...withoutOptimistic, nextInserted];
       });
 
       setLastMsgByThreadId((prev) => {
@@ -266,6 +271,7 @@ export default function Messages() {
       await markRead(selectedThreadId);
     } finally {
       setSending(false);
+      sendingRef.current = false;
     }
   }, [companyId, draft, markRead, scrollToBottom, selectedThreadId, user?.id]);
 
