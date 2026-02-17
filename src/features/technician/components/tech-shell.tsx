@@ -33,6 +33,7 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
     if (p.startsWith("/tech/my-jobs")) return "My jobs";
     if (p.startsWith("/tech/job/")) return "Job";
     if (p.startsWith("/tech/inventory")) return "Inventory";
+    if (p.startsWith("/tech/settings")) return "Settings";
     if (p.startsWith("/tech/solar")) return "Solar tasks";
     if (p.startsWith("/tech/coc")) return "COC certs";
     if (p.startsWith("/tech/service-calls")) return "Service calls";

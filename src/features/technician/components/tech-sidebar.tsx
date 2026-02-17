@@ -2,7 +2,7 @@ import { getTechIndustryNav } from "@/features/technician/constants/tech-industr
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/notification-bell";
 import * as React from "react";
@@ -69,7 +69,20 @@ export default function TechSidebar({ onNavigate }: { onNavigate?: () => void })
         })}
       </nav>
 
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-border space-y-1">
+        <NavLink
+          to="/tech/settings"
+          className={cn(
+            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            location.pathname.startsWith("/tech/settings")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
+          )}
+          onClick={() => onNavigate?.()}
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          Settings
+        </NavLink>
         <Button
           variant="ghost"
           size="sm"

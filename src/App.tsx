@@ -36,6 +36,7 @@ import TechJobDetail from "./pages/tech/TechJobDetail";
 import TechInventory from "./pages/tech/TechInventory";
 import TechCocCertificates from "./pages/tech/TechCocCertificates";
 import TechPlaceholder from "./pages/tech/TechPlaceholder";
+import TechSettings from "./pages/tech/TechSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="my-jobs" element={<TechMyJobs />} />
               <Route path="job/:jobId" element={<TechJobDetail />} />
               <Route path="inventory" element={<TechInventory />} />
+              <Route path="settings" element={<TechSettings />} />
               <Route path="solar" element={<TechPlaceholder title="Solar Tasks" />} />
               <Route path="coc" element={<TechCocCertificates />} />
               <Route path="service-calls" element={<TechPlaceholder title="Service Calls" />} />
