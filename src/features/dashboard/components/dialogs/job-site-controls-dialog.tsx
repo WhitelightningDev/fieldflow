@@ -342,7 +342,7 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
           Site controls
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Site-level controls</DialogTitle>
           <DialogDescription>

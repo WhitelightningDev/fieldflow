@@ -29,6 +29,7 @@ import ServiceLogs from "./pages/dashboard/ServiceLogs";
 import ComplianceRecords from "./pages/dashboard/ComplianceRecords";
 import WarrantyTracker from "./pages/dashboard/WarrantyTracker";
 import RepairHistory from "./pages/dashboard/RepairHistory";
+import Messages from "./pages/dashboard/Messages";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
@@ -37,6 +38,7 @@ import TechInventory from "./pages/tech/TechInventory";
 import TechCocCertificates from "./pages/tech/TechCocCertificates";
 import TechPlaceholder from "./pages/tech/TechPlaceholder";
 import TechSettings from "./pages/tech/TechSettings";
+import TechMessages from "./pages/tech/TechMessages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +76,7 @@ const App = () => (
               <Route path="compliance" element={<ComplianceRecords />} />
               <Route path="warranty-tracker" element={<WarrantyTracker />} />
               <Route path="repair-history" element={<RepairHistory />} />
+              <Route path="messages" element={<Messages />} />
             </Route>
             {/* Technician dashboard */}
             <Route path="/tech" element={<TechDashboard />}>
@@ -81,6 +84,7 @@ const App = () => (
               <Route path="my-jobs" element={<TechMyJobs />} />
               <Route path="job/:jobId" element={<TechJobDetail />} />
               <Route path="inventory" element={<TechInventory />} />
+              <Route path="messages" element={<TechMessages />} />
               <Route path="settings" element={<TechSettings />} />
               <Route path="solar" element={<TechPlaceholder title="Solar Tasks" />} />
               <Route path="coc" element={<TechCocCertificates />} />

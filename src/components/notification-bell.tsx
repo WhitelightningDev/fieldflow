@@ -84,6 +84,26 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
       } else {
         navigate("/dashboard/jobs");
       }
+      setOpen(false);
+      return;
+    }
+
+    const chatThreadId = n.metadata?.chat_thread_id;
+    if (chatThreadId) {
+      if (basePath === "/tech") {
+        navigate(`/tech/messages?thread=${chatThreadId}`);
+      } else {
+        navigate(`/dashboard/messages?thread=${chatThreadId}`);
+      }
+      setOpen(false);
+      return;
+    }
+
+    if (n.type === "chat_message") {
+      if (basePath === "/tech") navigate("/tech/messages");
+      else navigate("/dashboard/messages");
+      setOpen(false);
+      return;
     }
     setOpen(false);
   };

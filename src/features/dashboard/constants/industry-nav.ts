@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   FileText,
   LayoutDashboard,
+  MessageSquare,
   Refrigerator,
   ShieldCheck,
   Sun,
@@ -36,6 +37,7 @@ const SHARED_NAV: NavItem[] = [
   { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
   { to: "/dashboard/teams", label: "Teams", icon: Users2 },
   { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
+  { to: "/dashboard/messages", label: "Messages", icon: MessageSquare },
 ];
 
 /** Industry-specific nav items inserted after "Job cards" */

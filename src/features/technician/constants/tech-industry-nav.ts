@@ -8,6 +8,7 @@ import {
   FileText,
   LayoutDashboard,
   MapPin,
+  MessageSquare,
   Navigation,
   Refrigerator,
   ScrollText,
@@ -29,6 +30,7 @@ const SHARED_TECH_NAV: TechNavItem[] = [
   { to: "/tech", label: "Dispatch", icon: Navigation },
   { to: "/tech/my-jobs", label: "My jobs", icon: Briefcase },
   { to: "/tech/inventory", label: "Inventory", icon: Boxes },
+  { to: "/tech/messages", label: "Messages", icon: MessageSquare },
 ];
 
 /** Industry-specific tech nav items */
