@@ -78,6 +78,8 @@ export default function RefrigerationDashboard({ data, allJobs }: Props) {
         jobs={allJobs}
         sites={data.sites}
         technicianLocations={data.technicianLocations}
+        jobTimeEntries={data.jobTimeEntries}
+        siteMaterialUsage={data.siteMaterialUsage}
       />
 
       {/* LOSING MONEY */}

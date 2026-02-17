@@ -71,6 +71,8 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
         jobs={allJobs}
         sites={data.sites}
         technicianLocations={data.technicianLocations}
+        jobTimeEntries={data.jobTimeEntries}
+        siteMaterialUsage={data.siteMaterialUsage}
       />
 
       {/* LOSING MONEY */}
