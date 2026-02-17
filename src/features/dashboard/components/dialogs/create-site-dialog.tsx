@@ -17,11 +17,34 @@ const schema = z.object({
   code: z.string().optional(),
   billingReference: z.string().optional(),
   address: z.string().optional(),
+  gpsLat: z.string().optional(),
+  gpsLng: z.string().optional(),
   scopeOfWork: z.string().optional(),
   contactName: z.string().optional(),
   contactPhone: z.string().optional(),
   contactEmail: z.string().optional(),
   notes: z.string().optional(),
+}).superRefine((v, ctx) => {
+  const latStr = String(v.gpsLat ?? "").trim();
+  const lngStr = String(v.gpsLng ?? "").trim();
+  const hasLat = latStr.length > 0;
+  const hasLng = lngStr.length > 0;
+
+  if (!hasLat && !hasLng) return;
+  if (hasLat !== hasLng) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["gpsLat"], message: "Enter both GPS latitude and longitude (or leave both blank)." });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["gpsLng"], message: "Enter both GPS latitude and longitude (or leave both blank)." });
+    return;
+  }
+
+  const lat = Number.parseFloat(latStr);
+  const lng = Number.parseFloat(lngStr);
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["gpsLat"], message: "Latitude must be a number between -90 and 90." });
+  }
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["gpsLng"], message: "Longitude must be a number between -180 and 180." });
+  }
 });
 
 type Values = z.infer<typeof schema>;
@@ -40,6 +63,8 @@ export default function CreateSiteDialog() {
       code: "",
       billingReference: "",
       address: "",
+      gpsLat: "",
+      gpsLng: "",
       scopeOfWork: "",
       contactName: "",
       contactPhone: "",
@@ -50,12 +75,19 @@ export default function CreateSiteDialog() {
   });
 
   const submit = form.handleSubmit(async (values) => {
+    const gpsLat = String(values.gpsLat ?? "").trim();
+    const gpsLng = String(values.gpsLng ?? "").trim();
+    const gpsLatNum = gpsLat ? Number.parseFloat(gpsLat) : null;
+    const gpsLngNum = gpsLng ? Number.parseFloat(gpsLng) : null;
+
     const created = await actions.addSite({
       name: values.name,
       customer_id: values.customerId && values.customerId !== NONE ? values.customerId : null,
       code: values.code ? values.code : null,
       billing_reference: values.billingReference || null,
       address: values.address || null,
+      gps_lat: typeof gpsLatNum === "number" && Number.isFinite(gpsLatNum) ? gpsLatNum : null,
+      gps_lng: typeof gpsLngNum === "number" && Number.isFinite(gpsLngNum) ? gpsLngNum : null,
       scope_of_work: values.scopeOfWork || null,
       contact_name: values.contactName || null,
       contact_phone: values.contactPhone || null,
@@ -71,6 +103,8 @@ export default function CreateSiteDialog() {
       code: "",
       billingReference: "",
       address: "",
+      gpsLat: "",
+      gpsLng: "",
       scopeOfWork: "",
       contactName: "",
       contactPhone: "",
@@ -178,6 +212,38 @@ export default function CreateSiteDialog() {
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="gpsLat"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GPS latitude (optional)</FormLabel>
+                    <FormControl>
+                      <Input type="number" inputMode="decimal" step="any" placeholder="-26.2041" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="gpsLng"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GPS longitude (optional)</FormLabel>
+                    <FormControl>
+                      <Input type="number" inputMode="decimal" step="any" placeholder="28.0473" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground -mt-2">
+              If provided, admin can see technician distance + arrival detection for this site.
+            </div>
 
             <FormField
               control={form.control}

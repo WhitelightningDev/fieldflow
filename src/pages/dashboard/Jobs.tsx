@@ -11,6 +11,7 @@ import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Database } from "@/integrations/supabase/types";
+import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { format } from "date-fns";
 import * as React from "react";
 
@@ -27,6 +28,15 @@ export default function Jobs() {
 
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
   const inventoryById = React.useMemo(() => new Map(data.inventoryItems.map((i) => [i.id, i])), [data.inventoryItems]);
+  const locByTechId = React.useMemo(() => {
+    const m = new Map<string, any>();
+    for (const l of (data.technicianLocations as any[]) ?? []) {
+      const tid = l?.technician_id;
+      if (!tid) continue;
+      m.set(String(tid), l);
+    }
+    return m;
+  }, [data.technicianLocations]);
   const timeByJobId = React.useMemo(() => {
     const m = new Map<string, any[]>();
     for (const e of data.jobTimeEntries) {
@@ -85,6 +95,14 @@ export default function Jobs() {
               const customer = selectors.customersById.get(job.customer_id ?? "");
               const site = job.site_id ? selectors.sitesById.get(job.site_id) : undefined;
               const technician = job.technician_id ? selectors.techniciansById.get(job.technician_id) : undefined;
+              const loc = job.technician_id ? locByTechId.get(job.technician_id) ?? null : null;
+              const distM = (() => {
+                const techCoords = getLatLngFromAny(loc);
+                const siteCoords = getLatLngFromAny(site);
+                if (!techCoords || !siteCoords) return null;
+                return distanceMeters(techCoords, siteCoords);
+              })();
+              const arrived = distM != null ? isArrived({ distanceM: distM, accuracyM: (loc as any)?.accuracy }) : false;
               const profitability = computeJobProfitability({
                 job,
                 timeEntries: timeByJobId.get(job.id) ?? [],
@@ -105,7 +123,24 @@ export default function Jobs() {
                     {TRADES.find((t) => t.id === job.trade_id)?.shortName ?? job.trade_id}
                   </TableCell>
                   <TableCell>{customer?.name ?? "—"}</TableCell>
-                  <TableCell>{site?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>
+                    <div className="min-w-0">
+                      <div className="truncate">{site?.name ?? <span className="text-muted-foreground">—</span>}</div>
+                      {site && job.technician_id ? (
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {distM != null ? (
+                            arrived ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">Arrived</span>
+                            ) : (
+                              <span>{formatDistance(distM)} away</span>
+                            )
+                          ) : (
+                            <span>Distance unavailable</span>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell>{technician?.name ?? "Unassigned"}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {job.scheduled_at ? format(new Date(job.scheduled_at), "PPp") : "—"}

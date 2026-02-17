@@ -204,6 +204,9 @@ export default function ManageSiteDialog({ siteId }: { siteId: string }) {
   const scope = (site as any).scope_of_work as string | null | undefined;
   const billingReference = (site as any).billing_reference as string | null | undefined;
   const code = (site as any).code as string | null | undefined;
+  const gpsLat = (site as any).gps_lat as number | null | undefined;
+  const gpsLng = (site as any).gps_lng as number | null | undefined;
+  const hasGps = typeof gpsLat === "number" && Number.isFinite(gpsLat) && typeof gpsLng === "number" && Number.isFinite(gpsLng);
 
   const photosByJobId = React.useMemo(() => {
     const m = new Map<string, { before: number; after: number }>();
@@ -271,6 +274,24 @@ export default function ManageSiteDialog({ siteId }: { siteId: string }) {
                 <MapPin className="h-3.5 w-3.5" /> {(site as any).address ?? "No address"}
               </span>
             </div>
+            {hasGps ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>GPS {gpsLat.toFixed(5)}, {gpsLng.toFixed(5)}</span>
+                <span className="text-muted-foreground">•</span>
+                <a
+                  className="underline underline-offset-2 hover:text-foreground"
+                  href={`https://www.google.com/maps?q=${gpsLat},${gpsLng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open map
+                </a>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">
+                No GPS coordinates saved for this site yet (add them in Edit site to enable distance/arrival tracking).
+              </div>
+            )}
             {scope ? <div className="text-xs text-muted-foreground line-clamp-2">{scope}</div> : null}
           </DialogDescription>
         </DialogHeader>

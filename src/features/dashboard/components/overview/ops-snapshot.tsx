@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { SectionHeader, isThisMonth, isToday } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import type { Tables } from "@/integrations/supabase/types";
+import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { formatZarFromCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { MapPin, PackageSearch, Users } from "lucide-react";
@@ -40,7 +41,7 @@ export function OpsSnapshot({
         <LowStockOverviewCard items={inventoryItems} />
         <div className="space-y-4">
           <TechnicianStatusOverviewCard technicians={technicians} jobs={jobs} sites={sites} />
-          <TechnicianLiveLocationsOverviewCard technicians={technicians} technicianLocations={technicianLocations} />
+          <TechnicianLiveLocationsOverviewCard technicians={technicians} technicianLocations={technicianLocations} jobs={jobs} sites={sites} />
         </div>
       </div>
     </div>
@@ -260,15 +261,21 @@ function StatusDot({ status }: { status: TechStatus }) {
 function TechnicianLiveLocationsOverviewCard({
   technicians,
   technicianLocations,
+  jobs,
+  sites,
 }: {
   technicians: Technician[];
   technicianLocations: TechnicianLocation[];
+  jobs: JobCard[];
+  sites: Site[];
 }) {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(id);
   }, []);
+
+  const siteById = React.useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites]);
 
   const locationsByTechId = React.useMemo(() => {
     const m = new Map<string, TechnicianLocation>();
@@ -286,12 +293,30 @@ function TechnicianLiveLocationsOverviewCard({
       const last = (loc?.updated_at ?? (loc as any)?.recorded_at) as string | null | undefined;
       const lastMs = last ? new Date(last).getTime() : null;
       const isLive = lastMs != null && now - lastMs < 2 * 60 * 1000;
+
+       const locJobId = (loc as any)?.job_card_id as string | null | undefined;
+       const locJob = locJobId ? (jobs as any[]).find((j) => j.id === locJobId) ?? null : null;
+       const techJobs = jobs.filter((j: any) => j.technician_id === t.id);
+       const inProgress = techJobs.find((j: any) => j.status === "in-progress") ?? null;
+       const scheduled = techJobs.find((j: any) => j.status === "scheduled") ?? null;
+       const currentJob = locJob ?? inProgress ?? scheduled;
+       const site = currentJob?.site_id ? siteById.get(currentJob.site_id) ?? null : null;
+
+       const techCoords = getLatLngFromAny(loc);
+       const siteCoords = getLatLngFromAny(site);
+       const distM = techCoords && siteCoords ? distanceMeters(techCoords, siteCoords) : null;
+       const arrived = distM != null ? isArrived({ distanceM: distM, accuracyM: (loc as any)?.accuracy }) : false;
+
       return {
         id: t.id,
         name: t.name,
         loc,
         last,
         isLive,
+        site,
+        distM,
+        arrived,
+        techCoords,
       };
     }).sort((a, b) => {
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
@@ -299,7 +324,7 @@ function TechnicianLiveLocationsOverviewCard({
       const bMs = b.last ? new Date(b.last).getTime() : 0;
       return bMs - aMs;
     });
-  }, [locationsByTechId, now, technicians]);
+  }, [jobs, locationsByTechId, now, siteById, technicians]);
 
   const liveCount = rows.filter((r) => r.isLive).length;
 
@@ -325,9 +350,9 @@ function TechnicianLiveLocationsOverviewCard({
         ) : (
           <div className="space-y-3">
             {rows.slice(0, 6).map((r, idx) => {
-              const lat = (r.loc as any)?.lat as number | null | undefined;
-              const lng = (r.loc as any)?.lng as number | null | undefined;
-              const hasCoords = typeof lat === "number" && typeof lng === "number";
+              const hasCoords = Boolean(r.techCoords);
+              const lat = r.techCoords?.lat ?? null;
+              const lng = r.techCoords?.lng ?? null;
               return (
                 <div key={r.id}>
                   <div className="flex items-start justify-between gap-4">
@@ -347,6 +372,19 @@ function TechnicianLiveLocationsOverviewCard({
                         {r.last ? `Updated ${formatDistanceToNowStrict(new Date(r.last))} ago` : "No GPS updates yet"}
                         {hasCoords ? ` · ${lat.toFixed(5)}, ${lng.toFixed(5)}` : ""}
                       </div>
+                      {r.site ? (
+                        <div className="mt-1 text-xs text-muted-foreground truncate">
+                          {r.distM != null ? (
+                            r.arrived ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">Arrived</span>
+                            ) : (
+                              <span>{formatDistance(r.distM)} to {r.site.name}</span>
+                            )
+                          ) : (
+                            <span>Site: {r.site.name} (GPS not set)</span>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="shrink-0">
                       {hasCoords ? (

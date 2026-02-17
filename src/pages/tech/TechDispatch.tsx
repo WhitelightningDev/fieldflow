@@ -153,32 +153,32 @@ export default function TechDispatch() {
         jobsRef.current.find((j: any) => j.status === "scheduled") ??
         null;
 
-      const payload = {
+      const basePayload = {
         technician_id: technicianId,
         company_id: profile.company_id,
         user_id: user.id,
         job_card_id: activeJob?.id ?? null,
         site_id: activeJob?.site_id ?? null,
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
         accuracy: typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null,
         heading: typeof pos.coords.heading === "number" ? pos.coords.heading : null,
         speed: typeof pos.coords.speed === "number" ? pos.coords.speed : null,
         recorded_at: new Date(pos.timestamp).toISOString(),
       };
 
-      if (typeof payload.latitude !== "number" || typeof payload.longitude !== "number") {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      if (typeof lat !== "number" || typeof lng !== "number") {
         return;
       }
 
-      if (!payload.technician_id) return;
+      if (!basePayload.technician_id) return;
 
       const payloadKey = JSON.stringify({
-        t: payload.technician_id,
-        j: payload.job_card_id,
-        s: payload.site_id,
-        la: Math.round(payload.latitude * 1e5),
-        ln: Math.round(payload.longitude * 1e5),
+        t: basePayload.technician_id,
+        j: basePayload.job_card_id,
+        s: basePayload.site_id,
+        la: Math.round(lat * 1e5),
+        ln: Math.round(lng * 1e5),
       });
 
       if (payloadKey === lastLocationPayloadRef.current && now - lastLocationSentAtRef.current < HEARTBEAT_MS) return;
@@ -186,9 +186,25 @@ export default function TechDispatch() {
       lastLocationSentAtRef.current = now;
       lastLocationPayloadRef.current = payloadKey;
 
-      const { error } = await supabase
-        .from("technician_locations")
-        .upsert(payload as any, { onConflict: "technician_id" });
+      // DB schema has existed with either `lat/lng` or `latitude/longitude` fields.
+      // Try the preferred `lat/lng` first, then fall back to `latitude/longitude` if needed.
+      const payloadLatLng = { ...basePayload, lat, lng };
+      const payloadLatitudeLongitude = { ...basePayload, latitude: lat, longitude: lng };
+      let rowToWrite: any = payloadLatLng;
+
+      const writeUpsert = async (row: any) => {
+        return await supabase.from("technician_locations").upsert(row as any, { onConflict: "technician_id" });
+      };
+
+      let { error } = await writeUpsert(payloadLatLng);
+      if (error) {
+        const msg = String(error.message ?? "").toLowerCase();
+        const isMissingLatLng = msg.includes("column") && msg.includes("does not exist") && (msg.includes("lat") || msg.includes("lng"));
+        if (isMissingLatLng) {
+          rowToWrite = payloadLatitudeLongitude;
+          ({ error } = await writeUpsert(rowToWrite));
+        }
+      }
       if (error && !gpsWriteErrorShownRef.current) {
         gpsWriteErrorShownRef.current = true;
         const msg = String(error.message ?? "");
@@ -216,15 +232,15 @@ export default function TechDispatch() {
 
         const { data: updatedRows, error: updateErr } = await supabase
           .from("technician_locations")
-          .update(payload as any)
-          .eq("technician_id", payload.technician_id)
+          .update(rowToWrite as any)
+          .eq("technician_id", basePayload.technician_id)
           .select("technician_id")
           .limit(1);
 
         if (updateErr) return;
         if ((updatedRows?.length ?? 0) > 0) return;
 
-        await supabase.from("technician_locations").insert(payload as any);
+        await supabase.from("technician_locations").insert(rowToWrite as any);
       }
     };
 
