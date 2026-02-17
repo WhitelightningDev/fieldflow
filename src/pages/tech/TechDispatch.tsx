@@ -187,9 +187,12 @@ export default function TechDispatch() {
         .upsert(payload as any, { onConflict: "technician_id" });
       if (error && !gpsWriteErrorShownRef.current) {
         gpsWriteErrorShownRef.current = true;
+        const hint = String(error.message ?? "").toLowerCase().includes("on conflict")
+          ? " Fix: apply latest Supabase migrations (unique index on technician_locations.technician_id)."
+          : "";
         toast({
           title: "Live GPS not saving",
-          description: error.message,
+          description: `${error.message}${hint}`,
           variant: "destructive",
         });
       }
