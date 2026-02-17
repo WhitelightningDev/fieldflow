@@ -86,7 +86,18 @@ export function useNotifications() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }, [user]);
 
+  const markChatAsRead = React.useCallback(async () => {
+    if (!user) return;
+    await supabase
+      .from("notifications")
+      .update({ read: true } as any)
+      .eq("user_id", user.id)
+      .eq("type", "chat_message")
+      .eq("read", false);
+    setNotifications((prev) => prev.map((n) => (n.type === "chat_message" ? { ...n, read: true } : n)));
+  }, [user]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  return { notifications, loading, unreadCount, markAsRead, markAllAsRead, refetch: fetchNotifications };
+  return { notifications, loading, unreadCount, markAsRead, markAllAsRead, markChatAsRead, refetch: fetchNotifications };
 }

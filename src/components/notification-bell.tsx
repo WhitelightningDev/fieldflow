@@ -15,12 +15,13 @@ import {
   showSystemNotification,
 } from "@/lib/system-notifications";
 import { formatDistanceToNow } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import * as React from "react";
 
 const typeIcon: Record<string, string> = {
   job_assigned: "🔧",
   job_status_changed: "📋",
+  chat_message: "💬",
   info: "ℹ️",
 };
 
@@ -63,12 +64,39 @@ function NotificationItem({
 }
 
 export default function NotificationBell({ basePath = "/dashboard" }: { basePath?: string }) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, markChatAsRead } = useNotifications();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = React.useState(false);
   const [permission, setPermission] = React.useState<NotificationPermission | "unsupported">(() => getSystemNotificationPermission());
   const [enabled, setEnabled] = React.useState<boolean>(() => (typeof window === "undefined" ? false : getSystemNotificationsEnabled()));
   const [requesting, setRequesting] = React.useState(false);
+
+  const isMessagesPage = React.useMemo(() => {
+    const p = location.pathname;
+    if (basePath === "/tech") return p.startsWith("/tech/messages");
+    return p.startsWith("/dashboard/messages");
+  }, [basePath, location.pathname]);
+
+  const displayUnreadCount = React.useMemo(() => {
+    if (!isMessagesPage) return unreadCount;
+    return notifications.filter((n) => !n.read && n.type !== "chat_message").length;
+  }, [isMessagesPage, notifications, unreadCount]);
+
+  const clearingChatRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isMessagesPage) return;
+    if (clearingChatRef.current) return;
+    if (!notifications.some((n) => !n.read && n.type === "chat_message")) return;
+    clearingChatRef.current = true;
+    Promise.resolve(markChatAsRead())
+      .catch(() => {
+        // ignore
+      })
+      .finally(() => {
+        clearingChatRef.current = false;
+      });
+  }, [isMessagesPage, markChatAsRead, notifications]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -113,9 +141,9 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {displayUnreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-[10px] flex items-center justify-center bg-destructive text-destructive-foreground">
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {displayUnreadCount > 9 ? "9+" : displayUnreadCount}
             </Badge>
           )}
         </Button>
@@ -123,7 +151,7 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border">
           <h4 className="font-semibold text-sm">Notifications</h4>
-          {unreadCount > 0 && (
+          {displayUnreadCount > 0 && (
             <Button variant="ghost" size="sm" className="text-xs h-7" onClick={markAllAsRead}>
               Mark all read
             </Button>

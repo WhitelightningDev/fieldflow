@@ -29,9 +29,57 @@ type ChatMessage = {
   created_at: string;
 };
 
+type ChatMessageUI = ChatMessage & {
+  _status?: "sending" | "failed";
+};
+
+function createClientUuid() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = (globalThis as any)?.crypto as Crypto | undefined;
+    if (c?.randomUUID) return c.randomUUID();
+  } catch {
+    // ignore
+  }
+  let d = Date.now();
+  let d2 = (typeof performance !== "undefined" && performance.now) ? performance.now() * 1000 : 0;
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+    let r = Math.random() * 16;
+    if (d > 0) {
+      r = (d + r) % 16;
+      d = Math.floor(d / 16);
+    } else {
+      r = (d2 + r) % 16;
+      d2 = Math.floor(d2 / 16);
+    }
+    const v = ch === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 function safeDateMs(v: string | null | undefined) {
   const ms = v ? new Date(v).getTime() : NaN;
   return Number.isFinite(ms) ? ms : 0;
+}
+
+function mergeMessagesById(prev: ChatMessageUI[], incoming: ChatMessage[]) {
+  if (!incoming || incoming.length === 0) return prev;
+  const next = prev.slice();
+  const idxById = new Map<string, number>();
+  for (let i = 0; i < next.length; i++) idxById.set(next[i].id, i);
+  for (const row of incoming) {
+    const idx = idxById.get(row.id);
+    if (idx === undefined) {
+      idxById.set(row.id, next.length);
+      next.push(row);
+    } else {
+      const existing = next[idx];
+      const status = existing?._status ?? null;
+      next[idx] = status ? ({ ...row, _status: status } as ChatMessageUI) : (row as ChatMessageUI);
+    }
+  }
+  next.sort((a, b) => safeDateMs(a.created_at) - safeDateMs(b.created_at));
+  return next;
 }
 
 export default function TechMessages() {
@@ -40,19 +88,28 @@ export default function TechMessages() {
 
   const [technicianId, setTechnicianId] = React.useState<string | null>(null);
   const [thread, setThread] = React.useState<ChatThread | null>(null);
-  const [messages, setMessages] = React.useState<ChatMessage[]>([]);
+  const [messages, setMessages] = React.useState<ChatMessageUI[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [draft, setDraft] = React.useState("");
   const [sending, setSending] = React.useState(false);
   const sendingRef = React.useRef(false);
+  const loadSeqRef = React.useRef(0);
 
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const lastServerCreatedAtRef = React.useRef<string>("");
   const companyId = profile?.company_id ?? null;
 
   const scrollToBottom = React.useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
+  }, []);
+
+  const shouldStickToBottom = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return remaining < 120;
   }, []);
 
   const markRead = React.useCallback(async (threadId: string) => {
@@ -108,13 +165,14 @@ export default function TechMessages() {
 	    return created as ChatThread;
 	  }, [companyId, searchParams]);
 
-  const load = React.useCallback(async () => {
-    if (!user?.id || !companyId) return;
-    setLoading(true);
+ 	  const load = React.useCallback(async () => {
+ 	    if (!user?.id || !companyId) return;
+      const seq = ++loadSeqRef.current;
+ 	    setLoading(true);
 
-	    const { data: tech, error: techErr } = await supabase
-	      .from("technicians")
-	      .select("id")
+		    const { data: tech, error: techErr } = await supabase
+		      .from("technicians")
+		      .select("id")
 	      .eq("user_id", user.id)
 	      .maybeSingle();
 	    if (techErr || !tech?.id) {
@@ -133,88 +191,179 @@ export default function TechMessages() {
     }
     setThread(t);
 
-    const { data: rows, error } = await supabase
-      .from("chat_messages")
-      .select("id,thread_id,company_id,sender_user_id,body,created_at")
-      .eq("thread_id", t.id)
-      .order("created_at", { ascending: true })
-      .limit(200);
-    if (!error) setMessages((rows ?? []) as ChatMessage[]);
-
-    setLoading(false);
-    setTimeout(scrollToBottom, 0);
-    void markRead(t.id);
-  }, [companyId, ensureThread, markRead, scrollToBottom, user?.id]);
-
-  const send = React.useCallback(async () => {
-    if (!user?.id || !companyId || !thread?.id) return;
-    const body = draft.trim();
-    if (!body) return;
-    if (sendingRef.current) return;
-
-    sendingRef.current = true;
-    setSending(true);
-    try {
-      const optimistic: ChatMessage = {
-        id: `optimistic:${Date.now()}`,
-        thread_id: thread.id,
-        company_id: companyId,
-        sender_user_id: user.id,
-        body,
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, optimistic]);
-      setDraft("");
-      setTimeout(scrollToBottom, 0);
-
-      const { data: inserted, error } = await supabase
-        .from("chat_messages")
-        .insert({ thread_id: thread.id, company_id: companyId, sender_user_id: user.id, body } as any)
-        .select("id,thread_id,company_id,sender_user_id,body,created_at")
-        .single();
-
-      if (error || !inserted) {
-        setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-        return;
+	    const { data: rows, error } = await supabase
+	      .from("chat_messages")
+	      .select("id,thread_id,company_id,sender_user_id,body,created_at")
+	      .eq("thread_id", t.id)
+	      .order("created_at", { ascending: true })
+	      .limit(200);
+	    if (!error) {
+        if (seq !== loadSeqRef.current) return;
+        const nextRows = (rows ?? []) as ChatMessageUI[];
+        setMessages(nextRows);
+        const last = nextRows.length > 0 ? nextRows[nextRows.length - 1].created_at : "";
+        lastServerCreatedAtRef.current = last;
       }
 
-      setMessages((prev) => {
-        const withoutOptimistic = prev.filter((m) => m.id !== optimistic.id);
-        const nextInserted = inserted as ChatMessage;
-        if (withoutOptimistic.some((m) => m.id === nextInserted.id)) return withoutOptimistic;
-        return [...withoutOptimistic, nextInserted];
-      });
-      await markRead(thread.id);
-    } finally {
-      setSending(false);
-      sendingRef.current = false;
-    }
-  }, [companyId, draft, markRead, scrollToBottom, thread?.id, user?.id]);
+	    setLoading(false);
+	    setTimeout(scrollToBottom, 0);
+	    void markRead(t.id);
+	  }, [companyId, ensureThread, markRead, scrollToBottom, user?.id]);
 
-  React.useEffect(() => {
-    void load();
-  }, [load]);
+    const refreshNewMessages = React.useCallback(async (threadId: string) => {
+      const lastServerCreatedAt = lastServerCreatedAtRef.current || null;
+      let q = supabase
+        .from("chat_messages")
+        .select("id,thread_id,company_id,sender_user_id,body,created_at")
+        .eq("thread_id", threadId)
+        .order("created_at", { ascending: true })
+        .limit(50);
+      if (lastServerCreatedAt) q = q.gt("created_at", lastServerCreatedAt);
 
-  React.useEffect(() => {
-    if (!companyId || !thread?.id) return;
-    const channel = supabase
-      .channel(`chat-thread:${thread.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `thread_id=eq.${thread.id}` },
-        (payload: any) => {
-          const row = payload?.new as ChatMessage | undefined;
-          if (!row?.id) return;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === row.id)) return prev;
-            return [...prev, row].sort((a, b) => safeDateMs(a.created_at) - safeDateMs(b.created_at));
-          });
-          setTimeout(scrollToBottom, 0);
+      const { data: rows, error } = await q;
+      if (error || !rows || rows.length === 0) return;
+      const last = (rows as any[])[(rows as any[]).length - 1]?.created_at as string | undefined;
+      if (last) lastServerCreatedAtRef.current = last;
+
+      const stick = shouldStickToBottom();
+      setMessages((prev) => mergeMessagesById(prev, rows as ChatMessage[]));
+      if (stick) setTimeout(scrollToBottom, 0);
+      try {
+        if (document.visibilityState === "visible") void markRead(threadId);
+      } catch {
+        // ignore
+      }
+    }, [markRead, scrollToBottom, shouldStickToBottom]);
+
+	  const sendBody = React.useCallback(async (body: string) => {
+	    if (!user?.id || !companyId || !thread?.id) return;
+	    if (!body) return;
+	    if (sendingRef.current) return;
+
+      const messageId = createClientUuid();
+	    sendingRef.current = true;
+	    setSending(true);
+	    try {
+	      const optimistic: ChatMessageUI = {
+	        id: messageId,
+	        thread_id: thread.id,
+	        company_id: companyId,
+	        sender_user_id: user.id,
+	        body,
+	        created_at: new Date().toISOString(),
+          _status: "sending",
+	      };
+	      setMessages((prev) => [...prev, optimistic]);
+	      setTimeout(scrollToBottom, 0);
+
+	      const { data: inserted, error } = await supabase
+	        .from("chat_messages")
+	        .insert({ id: messageId, thread_id: thread.id, company_id: companyId, sender_user_id: user.id, body } as any)
+	        .select("id,thread_id,company_id,sender_user_id,body,created_at")
+	        .single();
+
+	      if (error || !inserted) {
+	        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, _status: "failed" } : m)));
+          toast({ title: "Message not sent", description: error?.message ?? "Please try again.", variant: "destructive" });
+	        return;
+	      }
+
+	      setMessages((prev) => {
+	        const nextInserted = inserted as ChatMessage;
+	        const idx = prev.findIndex((m) => m.id === nextInserted.id);
+	        if (idx === -1) return [...prev, nextInserted];
+	        const next = prev.slice();
+	        next[idx] = nextInserted;
+	        return next;
+	      });
+	      await markRead(thread.id);
+	    } finally {
+	      setSending(false);
+	      sendingRef.current = false;
+	    }
+	  }, [companyId, markRead, scrollToBottom, thread?.id, user?.id]);
+
+    const send = React.useCallback(async () => {
+      const body = draft.trim();
+      if (!body) return;
+      setDraft("");
+      await sendBody(body);
+    }, [draft, sendBody]);
+
+    const resendFailed = React.useCallback((m: ChatMessageUI) => {
+      if (m._status !== "failed") return;
+      setMessages((prev) => prev.filter((x) => x.id !== m.id));
+      void sendBody(m.body);
+    }, [sendBody]);
+
+    React.useEffect(() => {
+      void load();
+    }, [load]);
+
+    // Fallback polling: some iOS/PWA sessions miss realtime events. Poll while visible.
+    React.useEffect(() => {
+      if (!thread?.id) return;
+      let intervalId: number | null = null;
+      const start = () => {
+        if (intervalId != null) return;
+        intervalId = window.setInterval(() => {
           try {
-            if (document.visibilityState === "visible") void markRead(thread.id);
+            if (document.visibilityState !== "visible") return;
           } catch {
             // ignore
           }
+          void refreshNewMessages(thread.id);
+        }, 2000);
+      };
+      const stop = () => {
+        if (intervalId == null) return;
+        window.clearInterval(intervalId);
+        intervalId = null;
+      };
+
+      start();
+      const onVis = () => {
+        try {
+          if (document.visibilityState === "visible") {
+            start();
+            void refreshNewMessages(thread.id);
+          } else {
+            stop();
+          }
+        } catch {
+          // ignore
+        }
+      };
+      document.addEventListener("visibilitychange", onVis);
+      return () => {
+        stop();
+        document.removeEventListener("visibilitychange", onVis);
+      };
+    }, [refreshNewMessages, thread?.id]);
+
+    React.useEffect(() => {
+      if (!companyId || !thread?.id) return;
+      const channel = supabase
+        .channel(`chat-thread:${thread.id}`)
+	      .on(
+	        "postgres_changes",
+	        { event: "INSERT", schema: "public", table: "chat_messages", filter: `thread_id=eq.${thread.id}` },
+	        (payload: any) => {
+	          const row = payload?.new as ChatMessage | undefined;
+	          if (!row?.id) return;
+            const currentLast = lastServerCreatedAtRef.current || "";
+            if (!currentLast || safeDateMs(row.created_at) > safeDateMs(currentLast)) {
+              lastServerCreatedAtRef.current = row.created_at;
+            }
+	          setMessages((prev) => {
+              return mergeMessagesById(prev, [row]);
+	          });
+            if (shouldStickToBottom()) setTimeout(scrollToBottom, 0);
+	          try {
+	            if (document.visibilityState === "visible") void markRead(thread.id);
+	          } catch {
+	            // ignore
+	          }
         },
       )
       .subscribe();
@@ -254,6 +403,8 @@ export default function TechMessages() {
                   <div className="py-4 space-y-3">
                     {messages.map((m) => {
                       const mine = m.sender_user_id === user?.id;
+                      const status = m._status ?? null;
+                      const canResend = status === "failed";
                       return (
                         <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
                           <div
@@ -261,10 +412,26 @@ export default function TechMessages() {
                               "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed border",
                               mine ? "bg-primary text-primary-foreground border-primary/30" : "bg-background/60",
                             )}
+                            onClick={() => {
+                              if (canResend) resendFailed(m);
+                            }}
+                            onKeyDown={(e) => {
+                              if (!canResend) return;
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                resendFailed(m);
+                              }
+                            }}
+                            role={canResend ? "button" : undefined}
+                            tabIndex={canResend ? 0 : undefined}
                           >
                             <div className="whitespace-pre-wrap break-words">{m.body}</div>
                             <div className={cn("mt-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                              {formatDistanceToNowStrict(new Date(m.created_at), { addSuffix: true })}
+                              {status === "sending"
+                                ? "Sending…"
+                                : status === "failed"
+                                  ? "Failed to send (tap to resend)"
+                                  : formatDistanceToNowStrict(new Date(m.created_at), { addSuffix: true })}
                             </div>
                           </div>
                         </div>
@@ -289,7 +456,7 @@ export default function TechMessages() {
                   }}
                   disabled={sending}
                 />
-                <Button onClick={() => send()} disabled={sending || draft.trim().length === 0}>
+                <Button onClick={() => void send()} disabled={sending || draft.trim().length === 0}>
                   <Send className="h-4 w-4 mr-2" />
                   Send
                 </Button>
