@@ -75,6 +75,7 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
         technicians={data.technicians}
         jobs={allJobs}
         sites={data.sites}
+        technicianLocations={data.technicianLocations}
       />
 
       {/* LOSING MONEY */}

@@ -10,23 +10,27 @@ import { cn } from "@/lib/utils";
 import { MapPin, PackageSearch, Users } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { formatDistanceToNowStrict } from "date-fns";
 
 type InventoryItem = Tables<"inventory_items">;
 type Technician = Tables<"technicians">;
 type JobCard = Tables<"job_cards">;
 type Site = Tables<"sites">;
+type TechnicianLocation = Tables<"technician_locations">;
 
 export function OpsSnapshot({
   inventoryItems,
   technicians,
   jobs,
   sites,
+  technicianLocations,
   title = "Overview",
 }: {
   inventoryItems: InventoryItem[];
   technicians: Technician[];
   jobs: JobCard[];
   sites: Site[];
+  technicianLocations: TechnicianLocation[];
   title?: string;
 }) {
   return (
@@ -34,7 +38,10 @@ export function OpsSnapshot({
       <SectionHeader title={title} question="What needs attention right now?" />
       <div className="grid gap-4 lg:grid-cols-2">
         <LowStockOverviewCard items={inventoryItems} />
-        <TechnicianStatusOverviewCard technicians={technicians} jobs={jobs} sites={sites} />
+        <div className="space-y-4">
+          <TechnicianStatusOverviewCard technicians={technicians} jobs={jobs} sites={sites} />
+          <TechnicianLiveLocationsOverviewCard technicians={technicians} technicianLocations={technicianLocations} />
+        </div>
       </div>
     </div>
   );
@@ -248,4 +255,120 @@ function StatusDot({ status }: { status: TechStatus }) {
         ? "bg-sky-500 animate-pulse"
         : "bg-rose-500";
   return <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", cls)} aria-hidden="true" />;
+}
+
+function TechnicianLiveLocationsOverviewCard({
+  technicians,
+  technicianLocations,
+}: {
+  technicians: Technician[];
+  technicianLocations: TechnicianLocation[];
+}) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const locationsByTechId = React.useMemo(() => {
+    const m = new Map<string, TechnicianLocation>();
+    for (const loc of technicianLocations ?? []) {
+      const tid = (loc as any)?.technician_id as string | undefined;
+      if (!tid) continue;
+      m.set(tid, loc);
+    }
+    return m;
+  }, [technicianLocations]);
+
+  const rows = React.useMemo(() => {
+    return technicians.map((t) => {
+      const loc = locationsByTechId.get(t.id) ?? null;
+      const last = (loc?.updated_at ?? (loc as any)?.recorded_at) as string | null | undefined;
+      const lastMs = last ? new Date(last).getTime() : null;
+      const isLive = lastMs != null && now - lastMs < 2 * 60 * 1000;
+      return {
+        id: t.id,
+        name: t.name,
+        loc,
+        last,
+        isLive,
+      };
+    }).sort((a, b) => {
+      if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+      const aMs = a.last ? new Date(a.last).getTime() : 0;
+      const bMs = b.last ? new Date(b.last).getTime() : 0;
+      return bMs - aMs;
+    });
+  }, [locationsByTechId, now, technicians]);
+
+  const liveCount = rows.filter((r) => r.isLive).length;
+
+  return (
+    <Card className="bg-card/70 backdrop-blur-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Live Technician View
+          </span>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{liveCount}/{technicians.length} live</Badge>
+            <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs">
+              <Link to="/dashboard/technicians">All techs</Link>
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {technicians.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No technicians yet.</div>
+        ) : (
+          <div className="space-y-3">
+            {rows.slice(0, 6).map((r, idx) => {
+              const lat = (r.loc as any)?.lat as number | null | undefined;
+              const lng = (r.loc as any)?.lng as number | null | undefined;
+              const hasCoords = typeof lat === "number" && typeof lng === "number";
+              return (
+                <div key={r.id}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={cn(
+                            "h-2.5 w-2.5 rounded-full shrink-0",
+                            r.isLive ? "bg-emerald-500 animate-pulse" : r.last ? "bg-amber-500" : "bg-muted",
+                          )}
+                          aria-hidden="true"
+                        />
+                        <div className="text-sm font-medium truncate">{r.name}</div>
+                        {r.isLive ? <Badge className="bg-emerald-600 hover:bg-emerald-600">LIVE</Badge> : null}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {r.last ? `Updated ${formatDistanceToNowStrict(new Date(r.last))} ago` : "No GPS updates yet"}
+                        {hasCoords ? ` · ${lat.toFixed(5)}, ${lng.toFixed(5)}` : ""}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      {hasCoords ? (
+                        <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs">
+                          <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer">
+                            Map
+                          </a>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  {idx < rows.slice(0, 6).length - 1 ? <Separator className="mt-3" /> : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="text-[11px] text-muted-foreground">
+          Tracking updates when technicians keep the dispatch view open on a mobile/touch device (best-effort).
+        </div>
+      </CardContent>
+    </Card>
+  );
 }

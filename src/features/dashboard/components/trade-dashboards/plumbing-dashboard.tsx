@@ -74,6 +74,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
         technicians={data.technicians}
         jobs={allJobs}
         sites={data.sites}
+        technicianLocations={data.technicianLocations}
       />
 
       {/* ─── LOSING MONEY ─── */}
