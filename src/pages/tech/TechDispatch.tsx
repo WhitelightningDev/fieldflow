@@ -159,13 +159,17 @@ export default function TechDispatch() {
         user_id: user.id,
         job_card_id: activeJob?.id ?? null,
         site_id: activeJob?.site_id ?? null,
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
         accuracy: typeof pos.coords.accuracy === "number" ? pos.coords.accuracy : null,
         heading: typeof pos.coords.heading === "number" ? pos.coords.heading : null,
         speed: typeof pos.coords.speed === "number" ? pos.coords.speed : null,
         recorded_at: new Date(pos.timestamp).toISOString(),
       };
+
+      if (typeof payload.latitude !== "number" || typeof payload.longitude !== "number") {
+        return;
+      }
 
       if (!payload.technician_id) return;
 
@@ -173,8 +177,8 @@ export default function TechDispatch() {
         t: payload.technician_id,
         j: payload.job_card_id,
         s: payload.site_id,
-        la: Math.round(payload.lat * 1e5),
-        ln: Math.round(payload.lng * 1e5),
+        la: Math.round(payload.latitude * 1e5),
+        ln: Math.round(payload.longitude * 1e5),
       });
 
       if (payloadKey === lastLocationPayloadRef.current && now - lastLocationSentAtRef.current < HEARTBEAT_MS) return;
