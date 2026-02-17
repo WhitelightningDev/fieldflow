@@ -7,12 +7,14 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { toast } from "@/hooks/use-toast";
+import { useChatTyping } from "@/hooks/use-chat-typing";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNowStrict } from "date-fns";
 import { MessageSquare, Send } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
+import TypingBubble from "@/components/chat/typing-bubble";
 
 type ChatThread = {
   id: string;
@@ -126,6 +128,7 @@ export default function Messages() {
 
   const companyId = profile?.company_id ?? null;
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
+  const { othersTyping, bumpTyping, stopTyping } = useChatTyping(selectedThreadId, user?.id);
 
   const threadsByTechId = React.useMemo(() => {
     const m = new Map<string, ChatThread>();
@@ -324,6 +327,7 @@ export default function Messages() {
     sendingRef.current = true;
     setSending(true);
     try {
+      stopTyping();
       const optimistic: ChatMessageUI = {
         id: messageId,
         thread_id: selectedThreadId,
@@ -368,7 +372,7 @@ export default function Messages() {
       setSending(false);
       sendingRef.current = false;
     }
-  }, [companyId, markRead, scrollToBottom, selectedThreadId, user?.id]);
+  }, [companyId, markRead, scrollToBottom, selectedThreadId, stopTyping, user?.id]);
 
   const send = React.useCallback(async () => {
     const body = draft.trim();
@@ -626,13 +630,13 @@ export default function Messages() {
               <div className="py-16 text-center text-sm text-muted-foreground">Pick a technician to start chatting.</div>
             ) : (
               <div className="flex flex-col h-[70vh]">
-                <ScrollArea className="flex-1 px-4" viewportRef={scrollRef}>
-                  {loadingMessages ? (
-                    <div className="py-10 text-center text-sm text-muted-foreground">Loading messages…</div>
-                  ) : messages.length === 0 ? (
-                    <div className="py-10 text-center text-sm text-muted-foreground">No messages yet.</div>
-                  ) : (
-                    <div className="py-4 space-y-3">
+	                <ScrollArea className="flex-1 px-4" viewportRef={scrollRef}>
+	                  {loadingMessages ? (
+	                    <div className="py-10 text-center text-sm text-muted-foreground">Loading messages…</div>
+	                  ) : messages.length === 0 ? (
+	                    <div className="py-10 text-center text-sm text-muted-foreground">No messages yet.</div>
+	                  ) : (
+	                    <div className="py-4 space-y-3">
 	                      {messages.map((m) => {
 	                        const mine = m.sender_user_id === user?.id;
                           const status = m._status ?? null;
@@ -669,25 +673,34 @@ export default function Messages() {
 	                          </div>
 	                        );
 	                      })}
-                    </div>
-                  )}
-                </ScrollArea>
+	                    </div>
+	                  )}
+                    {othersTyping ? (
+                      <div className="pb-4">
+                        <TypingBubble align="left" label="Typing" />
+                      </div>
+                    ) : null}
+	                </ScrollArea>
 
                 <Separator />
 
                 <div className="p-3 flex items-end gap-2">
-                  <Input
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Type a message…"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void send();
-                      }
-                    }}
-                    disabled={sending}
-                  />
+	                  <Input
+	                    value={draft}
+	                    onChange={(e) => {
+                        setDraft(e.target.value);
+                        bumpTyping();
+                      }}
+	                    placeholder="Type a message…"
+	                    onKeyDown={(e) => {
+	                      if (e.key === "Enter" && !e.shiftKey) {
+	                        e.preventDefault();
+	                        void send();
+	                      }
+	                    }}
+                      onBlur={() => stopTyping()}
+	                    disabled={sending}
+	                  />
 	                  <Button onClick={() => void send()} disabled={sending || draft.trim().length === 0}>
 	                    <Send className="h-4 w-4 mr-2" />
 	                    Send

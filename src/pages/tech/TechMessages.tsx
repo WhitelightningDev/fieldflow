@@ -5,12 +5,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
+import { useChatTyping } from "@/hooks/use-chat-typing";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNowStrict } from "date-fns";
 import { MessageSquare, Send } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
+import TypingBubble from "@/components/chat/typing-bubble";
 
 type ChatThread = {
   id: string;
@@ -98,6 +100,7 @@ export default function TechMessages() {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const lastServerCreatedAtRef = React.useRef<string>("");
   const companyId = profile?.company_id ?? null;
+  const { othersTyping, bumpTyping, stopTyping } = useChatTyping(thread?.id, user?.id);
 
   const scrollToBottom = React.useCallback(() => {
     const el = scrollRef.current;
@@ -244,6 +247,7 @@ export default function TechMessages() {
 	    sendingRef.current = true;
 	    setSending(true);
 	    try {
+        stopTyping();
 	      const optimistic: ChatMessageUI = {
 	        id: messageId,
 	        thread_id: thread.id,
@@ -281,7 +285,7 @@ export default function TechMessages() {
 	      setSending(false);
 	      sendingRef.current = false;
 	    }
-	  }, [companyId, markRead, scrollToBottom, thread?.id, user?.id]);
+	  }, [companyId, markRead, scrollToBottom, stopTyping, thread?.id, user?.id]);
 
     const send = React.useCallback(async () => {
       const body = draft.trim();
@@ -395,13 +399,13 @@ export default function TechMessages() {
           ) : !thread ? (
             <div className="py-16 text-center text-sm text-muted-foreground">Chat unavailable.</div>
           ) : (
-            <div className="flex flex-col h-[70vh]">
-              <ScrollArea className="flex-1 px-4" viewportRef={scrollRef}>
-                {messages.length === 0 ? (
-                  <div className="py-10 text-center text-sm text-muted-foreground">No messages yet.</div>
-                ) : (
-                  <div className="py-4 space-y-3">
-                    {messages.map((m) => {
+	            <div className="flex flex-col h-[70vh]">
+	              <ScrollArea className="flex-1 px-4" viewportRef={scrollRef}>
+	                {messages.length === 0 ? (
+	                  <div className="py-10 text-center text-sm text-muted-foreground">No messages yet.</div>
+	                ) : (
+	                  <div className="py-4 space-y-3">
+	                    {messages.map((m) => {
                       const mine = m.sender_user_id === user?.id;
                       const status = m._status ?? null;
                       const canResend = status === "failed";
@@ -435,18 +439,26 @@ export default function TechMessages() {
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
+	                      );
+	                    })}
+	                  </div>
+	                )}
+                  {othersTyping ? (
+                    <div className="pb-4">
+                      <TypingBubble align="left" label="Typing" />
+                    </div>
+                  ) : null}
+	              </ScrollArea>
 
               <Separator />
 
               <div className="p-3 flex items-end gap-2">
                 <Input
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    bumpTyping();
+                  }}
                   placeholder="Type a message…"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -454,6 +466,7 @@ export default function TechMessages() {
                       void send();
                     }
                   }}
+                  onBlur={() => stopTyping()}
                   disabled={sending}
                 />
                 <Button onClick={() => void send()} disabled={sending || draft.trim().length === 0}>
