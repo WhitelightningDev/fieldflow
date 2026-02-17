@@ -1,6 +1,7 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSystemNotificationsEnabled, showSystemNotification } from "@/lib/system-notifications";
 
 export type Notification = {
   id: string;
@@ -18,6 +19,7 @@ export function useNotifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const lastSystemTagRef = React.useRef<string>("");
 
   const fetchNotifications = React.useCallback(async () => {
     if (!user) return;
@@ -49,7 +51,21 @@ export function useNotifications() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const n = payload.new as Notification;
+          setNotifications((prev) => [n, ...prev]);
+
+          // PWA/system notification (best-effort). Only fire when the app isn't visible to avoid noise.
+          try {
+            if (document.visibilityState === "visible") return;
+          } catch {
+            // ignore
+          }
+          if (!getSystemNotificationsEnabled()) return;
+
+          const tag = `n:${n.id}`;
+          if (lastSystemTagRef.current === tag) return;
+          lastSystemTagRef.current = tag;
+          void showSystemNotification({ title: n.title, body: n.body, tag });
         },
       )
       .subscribe();

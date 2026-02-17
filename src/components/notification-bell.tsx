@@ -3,7 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useNotifications, type Notification } from "@/hooks/use-notifications";
+import {
+  explainDeniedNotifications,
+  getSystemNotificationPermission,
+  getSystemNotificationsEnabled,
+  isSystemNotificationsSupported,
+  requestSystemNotificationPermission,
+  setSystemNotificationsEnabled,
+  showSystemNotification,
+} from "@/lib/system-notifications";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import * as React from "react";
@@ -56,6 +66,15 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
+  const [permission, setPermission] = React.useState<NotificationPermission | "unsupported">(() => getSystemNotificationPermission());
+  const [enabled, setEnabled] = React.useState<boolean>(() => (typeof window === "undefined" ? false : getSystemNotificationsEnabled()));
+  const [requesting, setRequesting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    setPermission(getSystemNotificationPermission());
+    setEnabled(getSystemNotificationsEnabled());
+  }, [open]);
 
   const handleNavigate = (n: Notification) => {
     const jobCardId = n.metadata?.job_card_id;
@@ -90,6 +109,80 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
             </Button>
           )}
         </div>
+
+        <div className="px-3 py-2 border-b border-border space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-medium">Device alerts (PWA)</div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {permission === "unsupported"
+                  ? "Not supported on this device/browser."
+                  : permission === "granted"
+                    ? "Allowed"
+                    : permission === "denied"
+                      ? "Blocked"
+                      : "Not enabled"}
+              </div>
+            </div>
+            <Switch
+              checked={enabled && permission === "granted"}
+              disabled={permission !== "granted"}
+              onCheckedChange={(v) => {
+                setEnabled(Boolean(v));
+                setSystemNotificationsEnabled(Boolean(v));
+              }}
+              aria-label="Enable device notifications"
+            />
+          </div>
+
+          {isSystemNotificationsSupported() && permission !== "granted" ? (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={requesting}
+                onClick={async () => {
+                  setRequesting(true);
+                  const p = await requestSystemNotificationPermission();
+                  setRequesting(false);
+                  setPermission(p);
+                  if (p === "granted") {
+                    setEnabled(true);
+                    setSystemNotificationsEnabled(true);
+                    await showSystemNotification({ title: "FieldFlow notifications enabled", body: "You'll receive job updates here." });
+                  } else if (p === "denied") {
+                    explainDeniedNotifications();
+                  }
+                }}
+              >
+                {requesting ? "Requesting..." : permission === "denied" ? "Retry" : "Enable"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={async () => {
+                  setPermission(getSystemNotificationPermission());
+                  await showSystemNotification({ title: "Test notification", body: "If you can read this, alerts are working." });
+                }}
+              >
+                Test
+              </Button>
+            </div>
+          ) : permission === "granted" ? (
+            <div className="flex items-center justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => showSystemNotification({ title: "Test notification", body: "If you can read this, alerts are working." })}
+              >
+                Test
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
         <ScrollArea className="max-h-80">
           {notifications.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">No notifications yet</div>
