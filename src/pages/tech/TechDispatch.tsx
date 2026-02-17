@@ -183,7 +183,8 @@ export default function TechDispatch() {
 
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
-    if (typeof lat !== "number" || typeof lng !== "number") return;
+    // `typeof NaN === 'number'`, so ensure the values are actually usable.
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     if (!basePayload.technician_id) return;
 
     const payloadKey = JSON.stringify({
@@ -200,22 +201,25 @@ export default function TechDispatch() {
     lastLocationPayloadRef.current = payloadKey;
     setLastSentAtMs(now);
 
-    // DB schema has existed with either `lat/lng` or `latitude/longitude` fields.
-    // Try the preferred `lat/lng` first, then fall back to `latitude/longitude` if needed.
-    const payloadLatLng = { ...basePayload, lat, lng };
+    // DB schema has existed with either `latitude/longitude` or `lat/lng` fields.
+    // IMPORTANT: some schemas enforce NOT NULL on `latitude`, so try `latitude/longitude` first.
     const payloadLatitudeLongitude = { ...basePayload, latitude: lat, longitude: lng };
-    let rowToWrite: any = payloadLatLng;
+    const payloadLatLng = { ...basePayload, lat, lng };
+    let rowToWrite: any = payloadLatitudeLongitude;
 
     const writeUpsert = async (row: any) => {
       return await supabase.from("technician_locations").upsert(row as any, { onConflict: "technician_id" });
     };
 
-    let { error } = await writeUpsert(payloadLatLng);
+    let { error } = await writeUpsert(payloadLatitudeLongitude);
     if (error) {
       const msg = String(error.message ?? "").toLowerCase();
-      const isMissingLatLng = msg.includes("column") && msg.includes("does not exist") && (msg.includes("lat") || msg.includes("lng"));
-      if (isMissingLatLng) {
-        rowToWrite = payloadLatitudeLongitude;
+      const isMissingLatitudeLongitude =
+        msg.includes("column") &&
+        msg.includes("does not exist") &&
+        (msg.includes("latitude") || msg.includes("longitude"));
+      if (isMissingLatitudeLongitude) {
+        rowToWrite = payloadLatLng;
         ({ error } = await writeUpsert(rowToWrite));
       }
     }
