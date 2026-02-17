@@ -2,9 +2,9 @@ import TechSidebar from "./tech-sidebar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/notification-bell";
-import { Menu } from "lucide-react";
+import { Menu, MessageSquare } from "lucide-react";
 import * as React from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 
 function useDrawerNav() {
@@ -59,18 +59,23 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0">
         {drawerNav ? (
           <div className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-            <div className="h-14 px-4 flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="Open menu">
-                <Menu className="h-5 w-5" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold truncate">{title}</div>
-                <div className="text-[11px] text-muted-foreground truncate">{profile?.full_name ?? "Technician"}</div>
-              </div>
-              <NotificationBell basePath="/tech" />
-            </div>
-          </div>
-        ) : null}
+	            <div className="h-14 px-4 flex items-center gap-2">
+	              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+	                <Menu className="h-5 w-5" />
+	              </Button>
+	              <div className="min-w-0 flex-1">
+	                <div className="text-sm font-semibold truncate">{title}</div>
+	                <div className="text-[11px] text-muted-foreground truncate">{profile?.full_name ?? "Technician"}</div>
+	              </div>
+	              <Button asChild variant="ghost" size="icon" aria-label="Messages">
+	                <Link to="/tech/messages">
+	                  <MessageSquare className="h-5 w-5" />
+	                </Link>
+	              </Button>
+	              <NotificationBell basePath="/tech" />
+	            </div>
+	          </div>
+	        ) : null}
 
         {drawerNav ? (
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
