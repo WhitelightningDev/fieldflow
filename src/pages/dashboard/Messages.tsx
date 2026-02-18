@@ -659,7 +659,7 @@ export default function Messages() {
             ) : (
 	              <div className="flex flex-col h-[70vh]">
                   <div className="relative flex-1">
-		                <ScrollArea className="h-full px-4" viewportRef={scrollRef}>
+		                <ScrollArea className="h-full px-4">
 		                  {loadingMessages ? (
 		                    <div className="py-10 text-center text-sm text-muted-foreground">Loading messages…</div>
 		                  ) : messages.length === 0 ? (

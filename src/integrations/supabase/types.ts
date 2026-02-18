@@ -14,102 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      coc_certificates: {
-        Row: {
-          certificate_no: string | null
-          certificate_number: string
-          certificate_type: string | null
-          company_id: string | null
-          created_at: string | null
-          customer_id: string
-          data: string | null
-          expiry_date: string | null
-          id: string
-          issued_at: string | null
-          issued_date: string
-          site_id: string | null
-          status: string | null
-          test_report: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          certificate_no?: string | null
-          certificate_number: string
-          certificate_type?: string | null
-          company_id?: string | null
-          created_at?: string | null
-          customer_id: string
-          data?: string | null
-          expiry_date?: string | null
-          id?: string
-          issued_at?: string | null
-          issued_date: string
-          site_id?: string | null
-          status?: string | null
-          test_report?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          certificate_no?: string | null
-          certificate_number?: string
-          certificate_type?: string | null
-          company_id?: string | null
-          created_at?: string | null
-          customer_id?: string
-          data?: string | null
-          expiry_date?: string | null
-          id?: string
-          issued_at?: string | null
-          issued_date?: string
-          site_id?: string | null
-          status?: string | null
-          test_report?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      companies: {
-        Row: {
-          address: string | null
-          callout_fee_cents: number
-          callout_radius_km: number
-          created_at: string
-          id: string
-          industry: string
-          labour_overhead_percent: number
-          name: string
-          team_size: string | null
-          updated_at: string
-          vat_number: string | null
-        }
-        Insert: {
-          address?: string | null
-          callout_fee_cents?: number
-          callout_radius_km?: number
-          created_at?: string
-          id?: string
-          industry: string
-          labour_overhead_percent?: number
-          name: string
-          team_size?: string | null
-          updated_at?: string
-          vat_number?: string | null
-        }
-        Update: {
-          address?: string | null
-          callout_fee_cents?: number
-          callout_radius_km?: number
-          created_at?: string
-          id?: string
-          industry?: string
-          labour_overhead_percent?: number
-          name?: string
-          team_size?: string | null
-          updated_at?: string
-          vat_number?: string | null
-        }
-        Relationships: []
-      }
       chat_messages: {
         Row: {
           body: string
@@ -222,6 +126,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      coc_certificates: {
+        Row: {
+          certificate_no: string | null
+          certificate_number: string
+          certificate_type: string | null
+          company_id: string | null
+          created_at: string | null
+          customer_id: string
+          data: string | null
+          expiry_date: string | null
+          id: string
+          issued_at: string | null
+          issued_date: string
+          site_id: string | null
+          status: string | null
+          test_report: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          certificate_no?: string | null
+          certificate_number: string
+          certificate_type?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          data?: string | null
+          expiry_date?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_date: string
+          site_id?: string | null
+          status?: string | null
+          test_report?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          certificate_no?: string | null
+          certificate_number?: string
+          certificate_type?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          data?: string | null
+          expiry_date?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_date?: string
+          site_id?: string | null
+          status?: string | null
+          test_report?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      companies: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          industry: string
+          name: string
+          team_size: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          industry: string
+          name: string
+          team_size?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          industry?: string
+          name?: string
+          team_size?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
       }
       customers: {
         Row: {
@@ -879,38 +870,59 @@ export type Database = {
       sites: {
         Row: {
           address: string | null
+          billing_reference: string | null
           code: string | null
           company_id: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           customer_id: string | null
+          gps_lat: string | null
+          gps_lng: string | null
           id: string
           is_active: boolean
           name: string
           notes: string | null
+          scope_of_work: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          billing_reference?: string | null
           code?: string | null
           company_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_id?: string | null
+          gps_lat?: string | null
+          gps_lng?: string | null
           id?: string
           is_active?: boolean
           name: string
           notes?: string | null
+          scope_of_work?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          billing_reference?: string | null
           code?: string | null
           company_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_id?: string | null
+          gps_lat?: string | null
+          gps_lng?: string | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
+          scope_of_work?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1293,40 +1305,61 @@ export type Database = {
           accuracy: number | null
           company_id: string | null
           created_at: string | null
+          heading: string | null
           id: string
+          job_card_id: string | null
+          lat: string | null
           latitude: number
+          lng: string | null
           longitude: number
           recorded_at: string | null
+          site_id: string | null
+          speed: string | null
           technician_id: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           accuracy?: number | null
           company_id?: string | null
           created_at?: string | null
+          heading?: string | null
           id?: string
+          job_card_id?: string | null
+          lat?: string | null
           latitude: number
+          lng?: string | null
           longitude: number
           recorded_at?: string | null
+          site_id?: string | null
+          speed?: string | null
           technician_id: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           accuracy?: number | null
           company_id?: string | null
           created_at?: string | null
+          heading?: string | null
           id?: string
+          job_card_id?: string | null
+          lat?: string | null
           latitude?: number
+          lng?: string | null
           longitude?: number
           recorded_at?: string | null
+          site_id?: string | null
+          speed?: string | null
           technician_id?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "fk_technician"
             columns: ["technician_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "technicians"
             referencedColumns: ["id"]
           },
