@@ -35,6 +35,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [rolesLoading, setRolesLoading] = React.useState(false);
   const [resumeChecking, setResumeChecking] = React.useState(false);
 
+  const associationRepairAttemptedRef = React.useRef(new Set<string>());
+  const lastUserIdRef = React.useRef<string | null>(null);
+  const rolesRef = React.useRef<AppRole[]>([]);
+  const profileRef = React.useRef<AuthContextValue["profile"]>(null);
+
+  React.useEffect(() => {
+    rolesRef.current = roles;
+  }, [roles]);
+
+  React.useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
   const fetchProfile = React.useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -42,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq("user_id", userId)
       .maybeSingle();
     if (error) {
-      setProfile(null);
       setProfileError(error.message ?? "Failed to fetch profile");
       throw error;
     }
@@ -57,7 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select("role")
       .eq("user_id", userId);
     if (error) {
-      setRoles([]);
       setRolesError(error.message ?? "Failed to fetch roles");
       throw error;
     }
@@ -69,13 +80,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return next;
   }, []);
 
+  const repairAssociationIfNeeded = React.useCallback(async (userId: string, currentProfile: Awaited<ReturnType<typeof fetchProfile>> | null) => {
+    const hasCompany = Boolean(currentProfile?.company_id);
+    if (hasCompany) return;
+    if (associationRepairAttemptedRef.current.has(userId)) return;
+    associationRepairAttemptedRef.current.add(userId);
+
+    try {
+      // Best-effort: ensure the user is fully linked (roles + company + profile).
+      // In newer DBs, ensure_user_role() also creates/links the company for company-account signups.
+      await withTimeout(
+        supabase.rpc("ensure_user_role" as any),
+        8000,
+        "Association repair timed out.",
+      );
+    } catch {
+      // ignore
+    }
+
+    // Refresh both; the RPC may have created company + linked profile.
+    await Promise.allSettled([
+      fetchRoles(userId),
+      fetchProfile(userId),
+    ]);
+  }, [fetchProfile, fetchRoles]);
+
   const ensureRoles = React.useCallback(async (userId: string) => {
     let current: AppRole[] = [];
     try {
       current = await fetchRoles(userId);
     } catch {
       // If role reads are broken, we can't safely proceed.
-      return [];
+      return rolesRef.current ?? [];
     }
 
     if (current.length > 0) return current;
@@ -105,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       return await fetchRoles(userId);
     } catch {
-      return [];
+      return rolesRef.current ?? [];
     }
   }, [fetchRoles]);
 
@@ -121,25 +157,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(newSession);
 
         if (newSession?.user) {
+          const nextUserId = newSession.user.id;
+          const userChanged = lastUserIdRef.current !== nextUserId;
+          lastUserIdRef.current = nextUserId;
+
+          if (userChanged) {
+            setProfile(null);
+            setRoles([]);
+            setProfileError(null);
+            setRolesError(null);
+          }
+
           // Dispatch after callback completes to avoid deadlock
-          setProfileLoading(true);
-          setRolesLoading(true);
+          const hasRoles = (rolesRef.current?.length ?? 0) > 0;
+          const hasProfile = Boolean(profileRef.current);
+          // Always block if we don't have enough local state to decide yet.
+          // The "TOKEN_REFRESHED" event is very common on background/foreground;
+          // we avoid blocking only when we already have roles + profile.
+          const shouldBlockUI = userChanged || !hasRoles || !hasProfile;
+
+          if (shouldBlockUI) {
+            setProfileLoading(true);
+            setRolesLoading(true);
+          }
           setTimeout(() => {
             if (isMounted) {
-              Promise.all([
-                fetchProfile(newSession.user.id),
-                ensureRoles(newSession.user.id),
-              ])
+              ensureRoles(nextUserId)
+                .catch(console.error)
+                .then(() => fetchProfile(nextUserId))
+                .then((p) => repairAssociationIfNeeded(nextUserId, p))
                 .catch(console.error)
                 .finally(() => {
                   if (isMounted) {
-                    setProfileLoading(false);
-                    setRolesLoading(false);
+                    if (shouldBlockUI) {
+                      setProfileLoading(false);
+                      setRolesLoading(false);
+                    }
                   }
                 });
             }
           }, 0);
         } else {
+          lastUserIdRef.current = null;
           setProfile(null);
           setProfileLoading(false);
           setRoles([]);
@@ -162,10 +221,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (s?.user) {
           setProfileLoading(true);
           setRolesLoading(true);
-          await Promise.all([
-            fetchProfile(s.user.id),
-            ensureRoles(s.user.id),
-          ]);
+          await ensureRoles(s.user.id);
+          const p = await fetchProfile(s.user.id);
+          await repairAssociationIfNeeded(s.user.id, p);
           if (isMounted) setProfileLoading(false);
           if (isMounted) setRolesLoading(false);
         }
@@ -191,7 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, fetchRoles]);
+  }, [ensureRoles, fetchProfile, repairAssociationIfNeeded]);
 
   // iOS PWAs can suspend the page; on resume, re-check the session to avoid a brief "logged out" flash.
   React.useEffect(() => {
@@ -214,12 +272,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (data.session.user) {
               setProfileLoading(true);
               setRolesLoading(true);
-              void Promise.all([
-                fetchProfile(data.session.user.id),
-                ensureRoles(data.session.user.id),
-              ]).catch(() => {
-                // ignore
-              })
+              void ensureRoles(data.session.user.id)
+                .then(() => fetchProfile(data.session.user.id))
+                .then((p) => repairAssociationIfNeeded(data.session.user.id, p))
+                .catch(() => {
+                  // ignore
+                })
                 .finally(() => {
                   if (!cancelled) {
                     setProfileLoading(false);
@@ -246,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("focus", onResume);
       window.removeEventListener("pageshow", onResume as any);
     };
-  }, [fetchProfile, ensureRoles, loading, session]);
+  }, [fetchProfile, ensureRoles, loading, repairAssociationIfNeeded, session]);
 
   const signOut = React.useCallback(async () => {
     try {
@@ -277,15 +335,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileLoading(true);
     setRolesLoading(true);
     try {
-      await Promise.all([
-        fetchProfile(userId),
-        ensureRoles(userId),
-      ]);
+      await ensureRoles(userId);
+      const p = await fetchProfile(userId);
+      await repairAssociationIfNeeded(userId, p);
     } finally {
       setProfileLoading(false);
       setRolesLoading(false);
     }
-  }, [fetchProfile, ensureRoles]);
+  }, [fetchProfile, ensureRoles, repairAssociationIfNeeded]);
 
   const value = React.useMemo<AuthContextValue>(
     () => ({
@@ -365,7 +422,11 @@ export function RequireAuth({
       });
   }, [hasRequiredRole, loading, rolesLoading, navigate, session, signOut]);
 
-  if (loading || rolesLoading || pending || lockingDown) {
+  // Don't unmount the entire app during background token refreshes.
+  // Only block UI when we still don't have enough role info to decide.
+  const shouldBlockForRoleCheck = rolesLoading && !hasRequiredRole;
+
+  if (loading || pending || lockingDown || shouldBlockForRoleCheck) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

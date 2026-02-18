@@ -41,7 +41,7 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
 
   const submit = React.useMemo(() => {
     return form.handleSubmit(async (values) => {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
@@ -60,9 +60,12 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
         return;
       }
 
+      const needsEmailConfirm = !data?.session;
       toastSuccess(
-        "Company created!",
-        "Check your email to confirm your account, then log in.",
+        "Account created",
+        needsEmailConfirm
+          ? "Check your email to confirm your account, then log in."
+          : "Email confirmation is disabled for this project. You can log in now.",
       );
       args?.onSuccess?.(values);
     });

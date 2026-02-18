@@ -27,7 +27,7 @@ export default function SignupForm() {
   });
 
   const submit = form.handleSubmit(async (values) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
       options: {
@@ -39,9 +39,12 @@ export default function SignupForm() {
       toastError("Signup failed", error.message);
       return;
     }
+    const needsEmailConfirm = !data?.session;
     toastInfo(
       "Account created",
-      "Check your email to confirm your account before signing in.",
+      needsEmailConfirm
+        ? "Check your email to confirm your account before signing in."
+        : "Email confirmation is disabled for this project. You can sign in now.",
     );
   });
 

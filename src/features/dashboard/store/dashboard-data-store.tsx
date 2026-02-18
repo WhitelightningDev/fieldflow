@@ -86,7 +86,7 @@ function mergeById<T extends { id: string }>(primary: T[], fallback: T[]) {
 }
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading, profileLoading, rolesLoading } = useAuth();
   const companyId = profile?.company_id;
 
   const [data, setData] = React.useState<DashboardData>({
@@ -105,8 +105,16 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   });
   const [loading, setLoading] = React.useState(true);
   const fetchErrorShownRef = React.useRef(new Set<string>());
+  const hasLoadedOnceRef = React.useRef(false);
 
   const fetchAll = React.useCallback(async (opts?: { silent?: boolean }) => {
+    if (authLoading || profileLoading || rolesLoading) {
+      // Avoid showing "No company yet" while auth/profile/roles are still resolving.
+      // If we've already loaded data once, keep rendering the current dashboard state
+      // instead of flipping back to a global spinner on token refresh.
+      if (!hasLoadedOnceRef.current) setLoading(true);
+      return;
+    }
     if (!companyId) {
       setLoading(false);
       return;
@@ -215,8 +223,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         siteMaterialUsage: materialRes?.data ?? [],
       };
     });
+    hasLoadedOnceRef.current = true;
     if (!opts?.silent) setLoading(false);
-  }, [companyId]);
+  }, [authLoading, companyId, profileLoading, rolesLoading]);
 
   React.useEffect(() => {
     fetchAll();

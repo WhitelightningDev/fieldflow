@@ -1,19 +1,20 @@
 import { registerSW } from "virtual:pwa-register";
 
 // Register the service worker for PWA support (offline shell + installability).
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    // Auto-apply updates to avoid "stuck" cached versions that require clearing site data.
-    const key = "fieldflow_pwa_refreshed";
-    if (typeof window !== "undefined") {
+//
+// Important: do not auto-reload on update — that can feel like the app is “reloading”
+// whenever you background/foreground the tab (especially during active development or frequent deploys).
+if (import.meta.env.PROD) {
+  registerSW({
+    immediate: false,
+    onNeedRefresh() {
+      // Best-effort: mark that an update exists (you can choose to surface UI later).
       try {
-        if (window.sessionStorage.getItem(key)) return;
-        window.sessionStorage.setItem(key, "1");
+        window.localStorage.setItem("fieldflow_pwa_update_available", "1");
       } catch {
         // ignore
       }
-    }
-    updateSW(true);
-  },
-});
+      // No automatic reload here.
+    },
+  });
+}
