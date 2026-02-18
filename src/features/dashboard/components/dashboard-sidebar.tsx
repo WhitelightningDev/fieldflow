@@ -16,7 +16,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { getIndustryNav } from "@/features/dashboard/constants/industry-nav";
 import { cn } from "@/lib/utils";
-import { LogOut } from "lucide-react";
+import { LogOut, Building2 } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
@@ -26,6 +26,7 @@ export default function DashboardSidebar() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { data } = useDashboardData();
+  const company = data.company as any;
 
   const navItems = React.useMemo(
     () => getIndustryNav(data.company?.industry),
@@ -50,10 +51,31 @@ export default function DashboardSidebar() {
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-sidebar-border">
       <SidebarHeader className="px-2">
-        <Link to="/" className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-accent">
-          <BrandIcon size={32} />
-          <BrandWordmark className="text-base font-semibold leading-tight" />
+      {/* Company branding — text hidden when collapsed via overflow-hidden on the group */}
+      {company?.logo_url ? (
+        <Link to="/" className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-accent overflow-hidden">
+          <img
+            src={company.logo_url}
+            alt={company.name}
+            className="h-8 w-8 rounded-md object-contain shrink-0"
+          />
+          <span className="text-sm font-semibold leading-tight truncate min-w-0">
+            {company.name}
+          </span>
         </Link>
+      ) : (
+        <Link to="/" className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-accent overflow-hidden">
+          <BrandIcon size={32} />
+          <span className="min-w-0">
+            <BrandWordmark className="text-base font-semibold leading-tight" />
+            {company?.name && (
+              <span className="block text-xs text-muted-foreground truncate">
+                {company.name}
+              </span>
+            )}
+          </span>
+        </Link>
+      )}
       </SidebarHeader>
 
       <SidebarSeparator />
@@ -79,7 +101,18 @@ export default function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <Button variant="ghost" className="justify-start text-sidebar-foreground/80 hover:text-sidebar-accent-foreground" onClick={handleSignOut}>
+        {/* Mini company info strip at the bottom */}
+        {company?.name && (
+          <div className="px-3 py-2 flex items-center gap-2 text-xs text-sidebar-foreground/60 border-t border-sidebar-border overflow-hidden">
+            <Building2 className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate min-w-0">{company.name}</span>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          className="justify-start text-sidebar-foreground/80 hover:text-sidebar-accent-foreground"
+          onClick={handleSignOut}
+        >
           <LogOut className="h-4 w-4 mr-2" />
           <span>Sign out</span>
         </Button>
