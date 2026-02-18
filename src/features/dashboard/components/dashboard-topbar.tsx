@@ -6,13 +6,14 @@ import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import TradeFilterSelect from "@/features/dashboard/components/trade-filter-select";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import NotificationBell from "@/components/notification-bell";
-import { LayoutGrid } from "lucide-react";
+import { Building2, LayoutGrid } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 
 export default function DashboardTopbar() {
   const { profile, loading: authLoading, profileLoading } = useAuth();
   const { data } = useDashboardData();
+  const company = data.company as any;
 
   const allowedTradeIds = React.useMemo<TradeId[] | null>(() => {
     const industry = data.company?.industry ?? null;
@@ -34,8 +35,17 @@ export default function DashboardTopbar() {
             <NotificationBell basePath="/dashboard" />
             {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
             {!authLoading && !profileLoading && profile?.company_id ? (
-              <div className="hidden sm:block text-sm text-muted-foreground">
-                {data.company?.name ?? "Company"}
+              <div className="hidden sm:flex items-center gap-2">
+                {company?.logo_url ? (
+                  <img
+                    src={company.logo_url}
+                    alt={company.name}
+                    className="h-6 w-6 rounded object-contain"
+                  />
+                ) : (
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-sm text-muted-foreground">{company?.name ?? "Company"}</span>
               </div>
             ) : !authLoading && !profileLoading ? (
               <Button asChild variant="outline" size="sm">
@@ -48,3 +58,4 @@ export default function DashboardTopbar() {
     </div>
   );
 }
+

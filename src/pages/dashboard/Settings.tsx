@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { supabase } from "@/integrations/supabase/client";
+import { Building2, Globe, Phone, Upload, X } from "lucide-react";
 import * as React from "react";
 
 function toCents(v: string) {
@@ -15,24 +17,49 @@ function toCents(v: string) {
 
 export default function DashboardSettings() {
   const { data, actions } = useDashboardData();
-  const company = data.company;
+  const company = data.company as any;
 
+  // Finance
   const [calloutFee, setCalloutFee] = React.useState("");
   const [calloutRadiusKm, setCalloutRadiusKm] = React.useState("50");
   const [labourOverheadPercent, setLabourOverheadPercent] = React.useState("15");
-  const [saving, setSaving] = React.useState(false);
+  const [savingFinance, setSavingFinance] = React.useState(false);
+
+  // Profile
+  const [phone, setPhone] = React.useState("");
+  const [website, setWebsite] = React.useState("");
+  const [address, setAddress] = React.useState("");
+  const [vatNumber, setVatNumber] = React.useState("");
+  const [logoFile, setLogoFile] = React.useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = React.useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (!company) return;
-    const fee = typeof (company as any).callout_fee_cents === "number" ? (company as any).callout_fee_cents : 0;
-    const radius = typeof (company as any).callout_radius_km === "number" ? (company as any).callout_radius_km : 50;
-    const overhead = typeof (company as any).labour_overhead_percent === "number" ? (company as any).labour_overhead_percent : 15;
+    const fee = typeof company.callout_fee_cents === "number" ? company.callout_fee_cents : 0;
+    const radius = typeof company.callout_radius_km === "number" ? company.callout_radius_km : 50;
+    const overhead = typeof company.labour_overhead_percent === "number" ? company.labour_overhead_percent : 15;
     setCalloutFee((fee / 100).toFixed(2));
     setCalloutRadiusKm(String(radius));
     setLabourOverheadPercent(String(overhead));
+    setPhone(company.phone ?? "");
+    setWebsite(company.website ?? "");
+    setAddress(company.address ?? "");
+    setVatNumber(company.vat_number ?? "");
+    setLogoPreview(company.logo_url ?? null);
   }, [company?.id]);
 
-  const save = async () => {
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const saveFinance = async () => {
     if (!company?.id) return;
     const feeCents = toCents(calloutFee);
     const radius = Number.parseInt(calloutRadiusKm, 10);
@@ -51,26 +78,166 @@ export default function DashboardSettings() {
       return;
     }
 
-    setSaving(true);
+    setSavingFinance(true);
     const { error } = await supabase
       .from("companies")
       .update({ callout_fee_cents: feeCents, callout_radius_km: radius, labour_overhead_percent: overhead } as any)
       .eq("id", company.id);
-    setSaving(false);
+    setSavingFinance(false);
 
     if (error) {
       toast({ title: "Could not save settings", description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({ title: "Settings saved" });
+    toast({ title: "Finance settings saved" });
+    await actions.refreshData();
+  };
+
+  const saveProfile = async () => {
+    if (!company?.id) return;
+    setSavingProfile(true);
+
+    let logoUrl: string | null = company.logo_url ?? null;
+
+    if (logoFile) {
+      const ext = logoFile.name.split(".").pop();
+      const path = `${company.id}/logo.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("company-logos")
+        .upload(path, logoFile, { upsert: true });
+      if (upErr) {
+        toast({ title: "Logo upload failed", description: upErr.message, variant: "destructive" });
+        setSavingProfile(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("company-logos").getPublicUrl(path);
+      logoUrl = urlData.publicUrl;
+    }
+
+    const { error } = await supabase
+      .from("companies")
+      .update({
+        phone: phone || null,
+        website: website || null,
+        address: address || null,
+        vat_number: vatNumber || null,
+        logo_url: logoUrl,
+        profile_complete: true,
+      } as any)
+      .eq("id", company.id);
+
+    setSavingProfile(false);
+
+    if (error) {
+      toast({ title: "Could not save profile", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Company profile saved" });
     await actions.refreshData();
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" subtitle="Company finance settings used for invoicing and profitability." />
+      <PageHeader title="Settings" subtitle="Manage your company profile, branding, and finance configuration." />
 
+      {/* Company Profile */}
+      <Card className="bg-card/70 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            Company profile
+          </CardTitle>
+          <CardDescription>
+            This information appears on invoices, certificates, and throughout your dashboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Logo */}
+          <div className="space-y-2">
+            <Label>Company logo</Label>
+            <div className="flex items-center gap-4">
+              <div
+                onClick={() => fileRef.current?.click()}
+                className="relative h-20 w-20 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary/60 hover:bg-secondary/30 transition-colors overflow-hidden"
+                style={logoPreview ? { borderStyle: "solid" } : {}}
+              >
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="h-full w-full object-contain p-1" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <Upload className="h-5 w-5" />
+                    <span className="text-[10px]">Upload</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                  {logoPreview ? "Change logo" : "Upload logo"}
+                </Button>
+                {logoPreview && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive ml-2"
+                    onClick={() => { setLogoPreview(null); setLogoFile(null); }}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Remove
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">PNG or JPG, max 2 MB. Appears in your sidebar and on invoices.</p>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+            </div>
+          </div>
+
+          {/* Contact details */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-phone" className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                Phone number
+              </Label>
+              <Input id="s-phone" placeholder="+27 11 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-website" className="flex items-center gap-1.5">
+                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                Website
+              </Label>
+              <Input id="s-website" placeholder="https://yourcompany.com" value={website} onChange={(e) => setWebsite(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="s-address">Business address</Label>
+              <Input id="s-address" placeholder="123 Main St, Sandton" value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-vat">VAT number</Label>
+              <Input id="s-vat" placeholder="4123456789" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={saveProfile} disabled={savingProfile || !company?.id} className="gradient-bg hover:opacity-90 shadow-glow">
+              {savingProfile ? "Saving…" : "Save profile"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Finance settings */}
       <Card className="bg-card/70 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Finance</CardTitle>
@@ -95,8 +262,8 @@ export default function DashboardSettings() {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={save} disabled={saving || !company?.id} className="gradient-bg hover:opacity-90 shadow-glow">
-              {saving ? "Saving..." : "Save settings"}
+            <Button onClick={saveFinance} disabled={savingFinance || !company?.id} className="gradient-bg hover:opacity-90 shadow-glow">
+              {savingFinance ? "Saving..." : "Save finance settings"}
             </Button>
           </div>
         </CardContent>
@@ -104,4 +271,3 @@ export default function DashboardSettings() {
     </div>
   );
 }
-
