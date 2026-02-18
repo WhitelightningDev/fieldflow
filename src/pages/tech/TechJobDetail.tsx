@@ -133,12 +133,12 @@ export default function TechJobDetail() {
     if (!user) return;
     supabase
       .from("technicians")
-      .select("id, hourly_bill_rate_cents")
+      .select("id, hourly_cost_cents")
       .eq("user_id", user.id)
       .single()
       .then(({ data: tech }) => {
         setTechId(tech?.id ?? null);
-        setTechRate(tech?.hourly_bill_rate_cents ?? 0);
+        setTechRate(tech?.hourly_cost_cents ?? 0);
       });
   }, [user]);
 

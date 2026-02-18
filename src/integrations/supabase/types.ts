@@ -71,9 +71,12 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          callout_fee_cents: number
+          callout_radius_km: number
           created_at: string
           id: string
           industry: string
+          labour_overhead_percent: number
           name: string
           team_size: string | null
           updated_at: string
@@ -81,9 +84,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          callout_fee_cents?: number
+          callout_radius_km?: number
           created_at?: string
           id?: string
           industry: string
+          labour_overhead_percent?: number
           name: string
           team_size?: string | null
           updated_at?: string
@@ -91,9 +97,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          callout_fee_cents?: number
+          callout_radius_km?: number
           created_at?: string
           id?: string
           industry?: string
+          labour_overhead_percent?: number
           name?: string
           team_size?: string | null
           updated_at?: string

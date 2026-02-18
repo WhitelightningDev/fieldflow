@@ -125,6 +125,9 @@ export default function Messages() {
 
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const lastServerCreatedAtRef = React.useRef(new Map<string, string>());
+  const autoScrollRef = React.useRef(true);
+  const [autoScrollEnabled, setAutoScrollEnabled] = React.useState(true);
+  const [hasNewBelow, setHasNewBelow] = React.useState(false);
 
   const companyId = profile?.company_id ?? null;
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
@@ -147,12 +150,21 @@ export default function Messages() {
     el.scrollTop = el.scrollHeight;
   }, []);
 
-  const shouldStickToBottom = React.useCallback(() => {
+  const updateAutoScroll = React.useCallback(() => {
     const el = scrollRef.current;
-    if (!el) return true;
+    if (!el) return;
     const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return remaining < 120;
+    const next = remaining < 140;
+    autoScrollRef.current = next;
+    setAutoScrollEnabled(next);
+    if (next) setHasNewBelow(false);
   }, []);
+
+  const scrollIfPinned = React.useCallback(() => {
+    if (!autoScrollRef.current) return;
+    setHasNewBelow(false);
+    setTimeout(scrollToBottom, 0);
+  }, [scrollToBottom]);
 
   const markRead = React.useCallback(async (threadId: string) => {
     if (!user?.id) return;
@@ -232,11 +244,17 @@ export default function Messages() {
       setMessages(nextRows);
       const last = nextRows.length > 0 ? nextRows[nextRows.length - 1].created_at : "";
       lastServerCreatedAtRef.current.set(threadId, last);
-      setTimeout(scrollToBottom, 0);
+      autoScrollRef.current = true;
+      setAutoScrollEnabled(true);
+      setHasNewBelow(false);
+      setTimeout(() => {
+        scrollToBottom();
+        updateAutoScroll();
+      }, 0);
       void markRead(threadId);
     }
     setLoadingMessages(false);
-  }, [markRead, scrollToBottom]);
+  }, [markRead, scrollToBottom, updateAutoScroll]);
 
   const refreshNewMessages = React.useCallback(async (threadId: string) => {
     const lastServerCreatedAt = lastServerCreatedAtRef.current.get(threadId) || null;
@@ -255,15 +273,15 @@ export default function Messages() {
     const last = (rows as any[])[(rows as any[]).length - 1]?.created_at as string | undefined;
     if (last) lastServerCreatedAtRef.current.set(threadId, last);
 
-    const stick = shouldStickToBottom();
+    if (!autoScrollRef.current) setHasNewBelow(true);
     setMessages((prev) => mergeMessagesById(prev, rows as ChatMessage[]));
-    if (stick) setTimeout(scrollToBottom, 0);
+    scrollIfPinned();
     try {
       if (document.visibilityState === "visible") void markRead(threadId);
     } catch {
       // ignore
     }
-  }, [markRead, messages, scrollToBottom, shouldStickToBottom]);
+  }, [markRead, scrollIfPinned]);
 
   const ensureThreadForTech = React.useCallback(async (technicianId: string) => {
     if (!companyId) return null;
@@ -404,6 +422,16 @@ export default function Messages() {
     void loadMessages(selectedThreadId);
   }, [loadMessages, selectedThreadId]);
 
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => updateAutoScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    // Initialize
+    updateAutoScroll();
+    return () => el.removeEventListener("scroll", onScroll as any);
+  }, [selectedThreadId, updateAutoScroll]);
+
   // Fallback polling: some iOS/PWA sessions miss realtime events. Poll for new messages while visible.
   React.useEffect(() => {
     if (!selectedThreadId) return;
@@ -506,9 +534,9 @@ export default function Messages() {
             if (!currentLast || safeDateMs(row.created_at) > safeDateMs(currentLast)) {
               lastServerCreatedAtRef.current.set(row.thread_id, row.created_at);
             }
-            const stick = shouldStickToBottom();
             setMessages((prev) => mergeMessagesById(prev, [row]));
-            if (stick) setTimeout(scrollToBottom, 0);
+            if (!autoScrollRef.current) setHasNewBelow(true);
+            scrollIfPinned();
             try {
               if (document.visibilityState === "visible") void markRead(row.thread_id);
             } catch {
@@ -523,7 +551,7 @@ export default function Messages() {
       supabase.removeChannel(threadsChannel);
       supabase.removeChannel(channel);
     };
-  }, [companyId, markRead, scrollToBottom, selectedThreadId, user?.id]);
+  }, [companyId, markRead, scrollIfPinned, selectedThreadId, user?.id]);
 
   const rows = React.useMemo(() => {
     const techs = data.technicians.slice();
@@ -629,13 +657,14 @@ export default function Messages() {
             {!selectedThreadId ? (
               <div className="py-16 text-center text-sm text-muted-foreground">Pick a technician to start chatting.</div>
             ) : (
-              <div className="flex flex-col h-[70vh]">
-	                <ScrollArea className="flex-1 px-4" viewportRef={scrollRef}>
-	                  {loadingMessages ? (
-	                    <div className="py-10 text-center text-sm text-muted-foreground">Loading messages…</div>
-	                  ) : messages.length === 0 ? (
-	                    <div className="py-10 text-center text-sm text-muted-foreground">No messages yet.</div>
-	                  ) : (
+	              <div className="flex flex-col h-[70vh]">
+                  <div className="relative flex-1">
+		                <ScrollArea className="h-full px-4" viewportRef={scrollRef}>
+		                  {loadingMessages ? (
+		                    <div className="py-10 text-center text-sm text-muted-foreground">Loading messages…</div>
+		                  ) : messages.length === 0 ? (
+		                    <div className="py-10 text-center text-sm text-muted-foreground">No messages yet.</div>
+		                  ) : (
 	                    <div className="py-4 space-y-3">
 	                      {messages.map((m) => {
 	                        const mine = m.sender_user_id === user?.id;
@@ -675,12 +704,32 @@ export default function Messages() {
 	                      })}
 	                    </div>
 	                  )}
-                    {othersTyping ? (
-                      <div className="pb-4">
-                        <TypingBubble align="left" label="Typing" />
+	                    {othersTyping ? (
+	                      <div className="pb-4">
+	                        <TypingBubble align="left" label="Typing" />
+	                      </div>
+	                    ) : null}
+		                </ScrollArea>
+                    {!autoScrollEnabled && hasNewBelow ? (
+                      <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
+                        <Button
+                          size="sm"
+                          className="pointer-events-auto shadow"
+                          onClick={() => {
+                            autoScrollRef.current = true;
+                            setAutoScrollEnabled(true);
+                            setHasNewBelow(false);
+                            setTimeout(() => {
+                              scrollToBottom();
+                              updateAutoScroll();
+                            }, 0);
+                          }}
+                        >
+                          New messages
+                        </Button>
                       </div>
                     ) : null}
-	                </ScrollArea>
+                  </div>
 
                 <Separator />
 

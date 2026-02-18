@@ -31,12 +31,14 @@ export function computeJobProfitability(args: {
   materials: SiteMaterialUsage[];
   techniciansById: Map<string, Technician>;
   inventoryById: Map<string, InventoryItem>;
+  labourOverheadPercent?: number;
 }): Profitability {
   const { job, timeEntries, materials, techniciansById, inventoryById } = args;
+  const overheadPct = typeof args.labourOverheadPercent === "number" ? args.labourOverheadPercent : 15;
 
   const revenueCents = typeof (job as any).revenue_cents === "number" ? (job as any).revenue_cents : null;
 
-  let laborCostCents = 0;
+  let laborBaseCostCents = 0;
   let materialCostCents = 0;
   let wasteCostCents = 0;
   let missingRates = false;
@@ -49,7 +51,7 @@ export function computeJobProfitability(args: {
     const tech: any = techniciansById.get(techId);
     const rate = typeof tech?.hourly_cost_cents === "number" ? tech.hourly_cost_cents : null;
     if (rate === null) { missingRates = true; continue; }
-    laborCostCents += Math.round((mins * rate) / 60);
+    laborBaseCostCents += Math.round((mins * rate) / 60);
   }
 
   for (const m of materials) {
@@ -62,6 +64,7 @@ export function computeJobProfitability(args: {
     wasteCostCents += wasted * unitCost;
   }
 
+  const laborCostCents = Math.round(laborBaseCostCents * (1 + overheadPct / 100));
   const complete = revenueCents !== null && !missingRates;
   const grossMarginCents = revenueCents === null ? null : revenueCents - laborCostCents - materialCostCents;
   const grossMarginPct =
@@ -84,12 +87,14 @@ export function computeSiteProfitability(args: {
   materials: SiteMaterialUsage[];
   techniciansById: Map<string, Technician>;
   inventoryById: Map<string, InventoryItem>;
+  labourOverheadPercent?: number;
 }): Profitability {
   const { jobs, timeEntries, materials, techniciansById, inventoryById } = args;
+  const overheadPct = typeof args.labourOverheadPercent === "number" ? args.labourOverheadPercent : 15;
 
   let revenueCents = 0;
   let missingRevenue = false;
-  let laborCostCents = 0;
+  let laborBaseCostCents = 0;
   let materialCostCents = 0;
   let wasteCostCents = 0;
   let missingRates = false;
@@ -111,7 +116,7 @@ export function computeSiteProfitability(args: {
     const tech: any = techniciansById.get(techId);
     const rate = typeof tech?.hourly_cost_cents === "number" ? tech.hourly_cost_cents : null;
     if (rate === null) { missingRates = true; continue; }
-    laborCostCents += Math.round((mins * rate) / 60);
+    laborBaseCostCents += Math.round((mins * rate) / 60);
   }
 
   for (const m of materials) {
@@ -124,6 +129,7 @@ export function computeSiteProfitability(args: {
     wasteCostCents += wasted * unitCost;
   }
 
+  const laborCostCents = Math.round(laborBaseCostCents * (1 + overheadPct / 100));
   const finalRevenue = jobs.length === 0 ? null : revenueCents;
   const complete = finalRevenue !== null && !missingRevenue && !missingRates;
   const grossMarginCents = finalRevenue === null ? null : finalRevenue - laborCostCents - materialCostCents;

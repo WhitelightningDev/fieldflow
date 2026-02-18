@@ -24,7 +24,7 @@ type Props = {
   timeEntries: any[];
   usedParts: any[];
   companyId: string;
-  technicianRate: number; // cents per hour
+  technicianRate: number; // internal hourly cost (cents per hour)
   onInvoiceCreated?: () => void;
 };
 
@@ -48,6 +48,9 @@ export default function JobInvoiceForm({
   const [loading, setLoading] = React.useState(true);
   const [creating, setCreating] = React.useState(false);
   const [notes, setNotes] = React.useState("");
+  const [calloutFeeCents, setCalloutFeeCents] = React.useState<number>(0);
+  const [calloutRadiusKm, setCalloutRadiusKm] = React.useState<number>(50);
+  const [labourOverheadPct, setLabourOverheadPct] = React.useState<number>(15);
 
   // Payment state
   const [payMethod, setPayMethod] = React.useState("cash");
@@ -57,19 +60,24 @@ export default function JobInvoiceForm({
   const [recordingPay, setRecordingPay] = React.useState(false);
   const [payments, setPayments] = React.useState<any[]>([]);
   const [sending, setSending] = React.useState(false);
+  const [showInternal, setShowInternal] = React.useState(false);
   const proofRef = React.useRef<HTMLInputElement>(null);
 
   // Calculate totals
   const totalMinutes = timeEntries.filter((e) => e.minutes != null).reduce((s, e) => s + e.minutes, 0);
-  const labourCents = Math.round((totalMinutes / 60) * technicianRate);
+  const labourBaseCents = Math.round((totalMinutes / 60) * technicianRate);
+  const labourOverheadCents = Math.round(labourBaseCents * (labourOverheadPct / 100));
+  const labourCostToCompanyCents = labourBaseCents + labourOverheadCents;
   const partsCents = usedParts.reduce((s, p) => {
     const unitCost = p.inventory_items?.unit_cost_cents ?? 0;
     return s + unitCost * (p.quantity_used ?? 1);
   }, 0);
-  const subtotal = labourCents + partsCents;
+  const subtotal = calloutFeeCents + partsCents;
   const vatPct = 15;
   const vatCents = Math.round(subtotal * (vatPct / 100));
   const totalCents = subtotal + vatCents;
+  const netProfitCents = totalCents - (partsCents + labourCostToCompanyCents);
+  const netProfitForInvoiceCents = (invoice?.total_cents ?? totalCents) - (partsCents + labourCostToCompanyCents);
 
   // Fetch existing invoice
   React.useEffect(() => {
@@ -84,6 +92,24 @@ export default function JobInvoiceForm({
         setLoading(false);
       });
   }, [job.id]);
+
+  React.useEffect(() => {
+    // Best-effort: load finance settings from company (older DBs may not have these columns).
+    supabase
+      .from("companies")
+      .select("callout_fee_cents,callout_radius_km,labour_overhead_percent")
+      .eq("id", companyId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        const fee = typeof (data as any).callout_fee_cents === "number" ? (data as any).callout_fee_cents : 0;
+        const km = typeof (data as any).callout_radius_km === "number" ? (data as any).callout_radius_km : 50;
+        const pct = typeof (data as any).labour_overhead_percent === "number" ? (data as any).labour_overhead_percent : 15;
+        setCalloutFeeCents(fee);
+        setCalloutRadiusKm(km);
+        setLabourOverheadPct(pct);
+      });
+  }, [companyId]);
 
   // Fetch payments
   const fetchPayments = React.useCallback(async () => {
@@ -105,10 +131,9 @@ export default function JobInvoiceForm({
     const invoiceNumber = invNum ?? `INV-${Date.now()}`;
 
     const lineItems = [
-      {
-        description: `Labour: ${totalMinutes} min @ ${formatZarFromCents(technicianRate)}/hr`,
-        amount_cents: labourCents,
-      },
+      ...(calloutFeeCents > 0
+        ? [{ description: `Call-out fee (includes travel up to ${calloutRadiusKm}km)`, amount_cents: calloutFeeCents }]
+        : []),
       ...usedParts.map((p) => ({
         description: `${p.inventory_items?.name ?? "Part"} x${p.quantity_used}`,
         amount_cents: (p.inventory_items?.unit_cost_cents ?? 0) * (p.quantity_used ?? 1),
@@ -122,8 +147,8 @@ export default function JobInvoiceForm({
       invoice_number: invoiceNumber,
       status: "draft",
       labour_minutes: totalMinutes,
-      labour_rate_cents: technicianRate,
-      labour_total_cents: labourCents,
+      labour_rate_cents: technicianRate, // internal cost (not customer-facing)
+      labour_total_cents: labourCostToCompanyCents, // internal cost-to-company
       parts_total_cents: partsCents,
       subtotal_cents: subtotal,
       vat_percent: vatPct,
@@ -192,6 +217,8 @@ export default function JobInvoiceForm({
       .eq("id", invoice.id);
 
     setInvoice((prev: any) => ({ ...prev, amount_paid_cents: newPaid, status: newStatus }));
+    // Best-effort: treat job "revenue" as realised income (paid amount).
+    await supabase.from("job_cards").update({ revenue_cents: newPaid } as any).eq("id", job.id);
     setRecordingPay(false);
     setPayAmount("");
     setPayRef("");
@@ -244,10 +271,12 @@ export default function JobInvoiceForm({
         </h4>
 
         <div className="rounded-lg border p-4 space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Labour ({totalMinutes} min)</span>
-            <span className="font-medium">{formatZarFromCents(labourCents)}</span>
-          </div>
+          {calloutFeeCents > 0 ? (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Call-out fee</span>
+              <span className="font-medium">{formatZarFromCents(calloutFeeCents)}</span>
+            </div>
+          ) : null}
           {usedParts.map((p, i) => (
             <div key={i} className="flex justify-between">
               <span className="text-muted-foreground">
@@ -258,6 +287,20 @@ export default function JobInvoiceForm({
               </span>
             </div>
           ))}
+          <div className="flex justify-end">
+            <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowInternal((v) => !v)}>
+              {showInternal ? "Hide internal" : "Show internal"}
+            </Button>
+          </div>
+          {showInternal ? (
+            <div className="rounded-md border bg-muted/20 p-3 space-y-1 text-[11px] text-muted-foreground">
+              <div>Internal only (not customer-facing):</div>
+              <div>Labour cost-to-company is calculated from time entries using hourly cost + {labourOverheadPct}% overhead.</div>
+              <div>Labour base: {formatZarFromCents(labourBaseCents)}</div>
+              <div>Overhead: {formatZarFromCents(labourOverheadCents)}</div>
+              <div className="font-medium text-foreground/80">Cost to company (labour + parts): {formatZarFromCents(labourCostToCompanyCents + partsCents)}</div>
+            </div>
+          ) : null}
           <Separator />
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
@@ -333,6 +376,33 @@ export default function JobInvoiceForm({
           </div>
         )}
       </div>
+
+      <div className="flex justify-end">
+        <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowInternal((v) => !v)}>
+          {showInternal ? "Hide internal" : "Show internal"}
+        </Button>
+      </div>
+      {showInternal ? (
+        <div className="rounded-lg border p-4 space-y-2 text-sm bg-muted/20">
+          <div className="text-xs font-semibold text-muted-foreground">Internal (not customer-facing)</div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Labour base</span>
+            <span>{formatZarFromCents(labourBaseCents)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Overhead ({labourOverheadPct}%)</span>
+            <span>{formatZarFromCents(labourOverheadCents)}</span>
+          </div>
+          <div className="flex justify-between font-medium">
+            <span className="text-muted-foreground">Cost to company (labour + parts)</span>
+            <span>{formatZarFromCents(labourCostToCompanyCents + partsCents)}</span>
+          </div>
+          <div className="flex justify-between font-semibold">
+            <span className="text-muted-foreground">Net profit (if fully paid)</span>
+            <span>{formatZarFromCents(netProfitForInvoiceCents)}</span>
+          </div>
+        </div>
+      ) : null}
 
       {/* Send buttons */}
       {!invoice.sent_at && (

@@ -30,6 +30,7 @@ import ComplianceRecords from "./pages/dashboard/ComplianceRecords";
 import WarrantyTracker from "./pages/dashboard/WarrantyTracker";
 import RepairHistory from "./pages/dashboard/RepairHistory";
 import Messages from "./pages/dashboard/Messages";
+import DashboardSettings from "./pages/dashboard/Settings";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
@@ -57,14 +58,15 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/company-signup" element={<CompanySignup />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/dashboard" element={<Dashboard />}>
-              <Route index element={<DashboardHome />} />
-              <Route path="create-company" element={<CreateCompany />} />
-              <Route path="jobs" element={<Jobs />} />
-              <Route path="customers" element={<Customers />} />
-              <Route path="technicians" element={<Technicians />} />
-              <Route path="inventory" element={<Inventory />} />
-              <Route path="sites" element={<Sites />} />
+	            <Route path="/dashboard" element={<Dashboard />}>
+	              <Route index element={<DashboardHome />} />
+	              <Route path="create-company" element={<CreateCompany />} />
+	              <Route path="settings" element={<DashboardSettings />} />
+	              <Route path="jobs" element={<Jobs />} />
+	              <Route path="customers" element={<Customers />} />
+	              <Route path="technicians" element={<Technicians />} />
+	              <Route path="inventory" element={<Inventory />} />
+	              <Route path="sites" element={<Sites />} />
               <Route path="teams" element={<Teams />} />
               <Route path="solar" element={<SolarProjects />} />
               <Route path="coc-certificates" element={<CocCertificates />} />
