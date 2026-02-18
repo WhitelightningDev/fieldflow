@@ -60,17 +60,6 @@ export default function CreateCompany() {
       return;
     }
 
-    // Best-effort: store the canonical company info on the user so bootstrap can link later if needed.
-    await supabase.auth.updateUser({
-      data: {
-        company_id: companyId,
-        company_name: values.companyName,
-        industry: values.industry,
-        team_size: values.teamSize,
-        role: "owner",
-      },
-    }).catch(() => {});
-
     toast({ title: "Company created" });
     await refreshProfile();
     navigate("/dashboard", { replace: true });

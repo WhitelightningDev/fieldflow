@@ -1,32 +1,57 @@
 import AuthLayout from "@/features/auth/components/auth-layout";
 import LoginForm from "@/features/auth/components/login-form";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import TradeBadges from "@/features/company-signup/components/trade-badges";
 import { COMPANY_SIGNUP_FEATURES } from "@/features/company-signup/content/features";
 import { CheckCircle2 } from "lucide-react";
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { session, user, loading } = useAuth();
+  const { session, user, loading, roles, rolesLoading, rolesError, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const reason = React.useMemo(() => {
+    const qs = new URLSearchParams(location.search.startsWith("?") ? location.search.slice(1) : location.search);
+    return qs.get("reason");
+  }, [location.search]);
 
   React.useEffect(() => {
-    if (loading || !session || !user) return;
+    if (loading || rolesLoading || !session || !user) return;
 
-    // Route based on role
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .then(({ data: roles }) => {
-        const isTech = roles?.some((r) => r.role === "technician");
-        navigate(isTech ? "/tech" : "/dashboard", { replace: true });
+    const roleSet = new Set(roles);
+    const isAssociated =
+      roleSet.has("owner") ||
+      roleSet.has("admin") ||
+      roleSet.has("office_staff") ||
+      roleSet.has("technician");
+
+    if (!isAssociated) {
+      try {
+        sessionStorage.setItem(
+          "ff-auth-debug",
+          JSON.stringify({
+            at: new Date().toISOString(),
+            userId: user.id,
+            roles,
+            rolesError: rolesError ?? null,
+          }),
+        );
+      } catch {
+        // ignore
+      }
+      void signOut().finally(() => {
+        navigate("/login?reason=unauthorized", { replace: true });
       });
-  }, [loading, session, user, navigate]);
+      return;
+    }
 
-  if (loading || session) {
+    const isTech = roleSet.has("technician");
+    navigate(isTech ? "/tech" : "/dashboard", { replace: true });
+  }, [loading, rolesLoading, roles, session, user, navigate, signOut]);
+
+  if (loading || rolesLoading || session) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -62,7 +87,39 @@ export default function Login() {
         </div>
       }
     >
+      {reason === "unauthorized" ? (
+        <div className="mb-4 rounded-md border border-border/60 bg-muted/30 px-4 py-3 text-sm">
+          This account isn’t linked to a technician, admin, owner, or staff seat yet. Ask your administrator to add you, then try again.
+          {rolesError ? (
+            <div className="mt-2 text-xs text-muted-foreground">
+              Role lookup error: {rolesError}
+            </div>
+          ) : null}
+          <DebugDetails />
+        </div>
+      ) : null}
       <LoginForm />
     </AuthLayout>
+  );
+}
+
+function DebugDetails() {
+  const [value, setValue] = React.useState<string>("");
+
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("ff-auth-debug") ?? "";
+      setValue(raw);
+    } catch {
+      setValue("");
+    }
+  }, []);
+
+  if (!value) return null;
+  return (
+    <details className="mt-2">
+      <summary className="cursor-pointer text-xs text-muted-foreground">Debug details</summary>
+      <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] text-muted-foreground">{value}</pre>
+    </details>
   );
 }

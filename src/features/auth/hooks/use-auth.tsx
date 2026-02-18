@@ -1,16 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import { clearSupabaseAuthStorage } from "@/integrations/supabase/clear-auth";
+import type { Database } from "@/integrations/supabase/types";
 import type { Session, User } from "@supabase/supabase-js";
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { withTimeout } from "@/lib/with-timeout";
 
+type AppRole = Database["public"]["Enums"]["app_role"];
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
   profile: { id: string; full_name: string; email: string | null; company_id: string | null } | null;
+  roles: AppRole[];
+  profileError: string | null;
+  rolesError: string | null;
   loading: boolean;
   profileLoading: boolean;
+  rolesLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -20,86 +27,87 @@ const AuthContext = React.createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null);
   const [profile, setProfile] = React.useState<AuthContextValue["profile"]>(null);
+  const [roles, setRoles] = React.useState<AppRole[]>([]);
+  const [profileError, setProfileError] = React.useState<string | null>(null);
+  const [rolesError, setRolesError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [profileLoading, setProfileLoading] = React.useState(false);
+  const [rolesLoading, setRolesLoading] = React.useState(false);
   const [resumeChecking, setResumeChecking] = React.useState(false);
 
-  const bootstrapAttemptedRef = React.useRef(new Set<string>());
-
-  const bootstrapCompanyClientSide = React.useCallback(async (userId: string) => {
-    const { data: userRes, error: userErr } = await supabase.auth.getUser();
-    if (userErr) return false;
-    const meta: any = userRes.user?.user_metadata ?? {};
-
-    const companyName = (meta.company_name ?? "").toString().trim();
-    if (!companyName) return false;
-
-    const industry = (meta.industry ?? "general").toString();
-    const teamSize = meta.team_size ? meta.team_size.toString() : null;
-    const fullName = meta.full_name ? meta.full_name.toString() : "";
-    const email = userRes.user?.email ?? null;
-
-    await supabase
-      .from("profiles")
-      .upsert(
-        { user_id: userId, full_name: fullName, email },
-        { onConflict: "user_id" },
-      );
-
-    const { data: company, error: companyErr } = await supabase
-      .from("companies")
-      .insert({ name: companyName, industry, team_size: teamSize })
-      .select("id")
-      .single();
-    if (companyErr || !company?.id) return false;
-
-    const { error: linkErr } = await supabase
-      .from("profiles")
-      .update({ company_id: company.id })
-      .eq("user_id", userId);
-    if (linkErr) return false;
-
-    await supabase
-      .from("user_roles")
-      .insert({ user_id: userId, role: "owner" } as any);
-
-    return true;
-  }, []);
-
   const fetchProfile = React.useCallback(async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, email, company_id")
       .eq("user_id", userId)
       .maybeSingle();
+    if (error) {
+      setProfile(null);
+      setProfileError(error.message ?? "Failed to fetch profile");
+      throw error;
+    }
+    setProfileError(null);
+    setProfile(data ?? null);
+    return data ?? null;
+  }, []);
 
-    const shouldBootstrap = !bootstrapAttemptedRef.current.has(userId) && (!data || !data.company_id);
-    if (shouldBootstrap) {
-      bootstrapAttemptedRef.current.add(userId);
-      const { data: companyId, error } = await supabase.rpc("bootstrap_company_from_user_metadata" as any);
-      if (!error && companyId) {
-        const { data: updated } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, company_id")
-          .eq("user_id", userId)
-          .maybeSingle();
-        setProfile(updated);
-        return;
-      }
-      const clientBootstrapped = await bootstrapCompanyClientSide(userId);
-      if (clientBootstrapped) {
-        const { data: updated } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, company_id")
-          .eq("user_id", userId)
-          .maybeSingle();
-        setProfile(updated);
-        return;
-      }
+  const fetchRoles = React.useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    if (error) {
+      setRoles([]);
+      setRolesError(error.message ?? "Failed to fetch roles");
+      throw error;
+    }
+    setRolesError(null);
+    const next = (Array.isArray(data) ? data : [])
+      .map((r) => r.role)
+      .filter((r): r is AppRole => Boolean(r));
+    setRoles(next);
+    return next;
+  }, []);
+
+  const ensureRoles = React.useCallback(async (userId: string) => {
+    let current: AppRole[] = [];
+    try {
+      current = await fetchRoles(userId);
+    } catch {
+      // If role reads are broken, we can't safely proceed.
+      return [];
     }
 
-    setProfile(data);
-  }, [bootstrapCompanyClientSide]);
+    if (current.length > 0) return current;
+
+    // Best-effort repair (DB function should only grant roles when user is legitimately associated).
+    try {
+      const res: any = await withTimeout(
+        supabase.rpc("ensure_user_role" as any),
+        8000,
+        "Role repair timed out.",
+      );
+      const rpcErr = res?.error;
+      if (rpcErr) {
+        const msg = String(rpcErr.message ?? rpcErr);
+        // Common symptom: migrations not applied yet (function missing from schema cache).
+        if (msg.toLowerCase().includes("could not find the function")) {
+          setRolesError('Database is missing the "ensure_user_role" RPC (apply Supabase migrations).');
+        } else {
+          setRolesError(`Role repair RPC error: ${msg}`);
+        }
+        return [];
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      return await fetchRoles(userId);
+    } catch {
+      return [];
+    }
+  }, [fetchRoles]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -115,18 +123,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (newSession?.user) {
           // Dispatch after callback completes to avoid deadlock
           setProfileLoading(true);
+          setRolesLoading(true);
           setTimeout(() => {
             if (isMounted) {
-              fetchProfile(newSession.user.id)
+              Promise.all([
+                fetchProfile(newSession.user.id),
+                ensureRoles(newSession.user.id),
+              ])
                 .catch(console.error)
                 .finally(() => {
-                  if (isMounted) setProfileLoading(false);
+                  if (isMounted) {
+                    setProfileLoading(false);
+                    setRolesLoading(false);
+                  }
                 });
             }
           }, 0);
         } else {
           setProfile(null);
           setProfileLoading(false);
+          setRoles([]);
+          setRolesLoading(false);
         }
       }
     );
@@ -144,8 +161,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(s);
         if (s?.user) {
           setProfileLoading(true);
-          await fetchProfile(s.user.id);
+          setRolesLoading(true);
+          await Promise.all([
+            fetchProfile(s.user.id),
+            ensureRoles(s.user.id),
+          ]);
           if (isMounted) setProfileLoading(false);
+          if (isMounted) setRolesLoading(false);
         }
       } catch (e) {
         console.error("getSession error", e);
@@ -154,6 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(null);
         setProfile(null);
         setProfileLoading(false);
+        setRoles([]);
+        setRolesLoading(false);
+        setProfileError(null);
+        setRolesError(null);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -165,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, fetchRoles]);
 
   // iOS PWAs can suspend the page; on resume, re-check the session to avoid a brief "logged out" flash.
   React.useEffect(() => {
@@ -187,12 +213,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(data.session);
             if (data.session.user) {
               setProfileLoading(true);
-              void fetchProfile(data.session.user.id)
-                .catch(() => {
-                  // ignore
-                })
+              setRolesLoading(true);
+              void Promise.all([
+                fetchProfile(data.session.user.id),
+                ensureRoles(data.session.user.id),
+              ]).catch(() => {
+                // ignore
+              })
                 .finally(() => {
-                  if (!cancelled) setProfileLoading(false);
+                  if (!cancelled) {
+                    setProfileLoading(false);
+                    setRolesLoading(false);
+                  }
                 });
             }
           }
@@ -214,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("focus", onResume);
       window.removeEventListener("pageshow", onResume as any);
     };
-  }, [fetchProfile, loading, session]);
+  }, [fetchProfile, ensureRoles, loading, session]);
 
   const signOut = React.useCallback(async () => {
     try {
@@ -229,8 +261,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setSession(null);
       setProfile(null);
+      setRoles([]);
+      setProfileError(null);
+      setRolesError(null);
       setLoading(false);
       setProfileLoading(false);
+      setRolesLoading(false);
     }
   }, []);
 
@@ -238,12 +274,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data } = await supabase.auth.getSession();
     const userId = data.session?.user?.id;
     if (!userId) return;
-    await fetchProfile(userId);
-  }, [fetchProfile]);
+    setProfileLoading(true);
+    setRolesLoading(true);
+    try {
+      await Promise.all([
+        fetchProfile(userId),
+        ensureRoles(userId),
+      ]);
+    } finally {
+      setProfileLoading(false);
+      setRolesLoading(false);
+    }
+  }, [fetchProfile, ensureRoles]);
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ session, user: session?.user ?? null, profile, loading: loading || resumeChecking, profileLoading, signOut, refreshProfile }),
-    [session, profile, loading, profileLoading, resumeChecking, signOut, refreshProfile]
+    () => ({
+      session,
+      user: session?.user ?? null,
+      profile,
+      roles,
+      profileError,
+      rolesError,
+      loading: loading || resumeChecking,
+      profileLoading,
+      rolesLoading,
+      signOut,
+      refreshProfile,
+    }),
+    [session, profile, roles, profileError, rolesError, loading, profileLoading, rolesLoading, resumeChecking, signOut, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -255,10 +313,25 @@ export function useAuth() {
   return ctx;
 }
 
-export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+export function RequireAuth({
+  children,
+  allowedRoles,
+}: {
+  children: React.ReactNode;
+  allowedRoles?: AppRole[];
+}) {
+  const { session, loading, roles, rolesLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [pending, setPending] = React.useState(false);
+  const [lockingDown, setLockingDown] = React.useState(false);
+
+  const hasRequiredRole = React.useMemo(() => {
+    if (!session) return false;
+    if (allowedRoles && allowedRoles.length > 0) {
+      return roles.some((r) => allowedRoles.includes(r));
+    }
+    return roles.length > 0;
+  }, [allowedRoles, roles, session]);
 
   React.useEffect(() => {
     if (loading) {
@@ -279,7 +352,20 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(id);
   }, [loading, session, navigate]);
 
-  if (loading || pending) {
+  React.useEffect(() => {
+    if (loading || rolesLoading) return;
+    if (!session) return;
+    if (hasRequiredRole) return;
+
+    setLockingDown(true);
+    void signOut()
+      .catch(() => {})
+      .finally(() => {
+        navigate("/login?reason=unauthorized", { replace: true });
+      });
+  }, [hasRequiredRole, loading, rolesLoading, navigate, session, signOut]);
+
+  if (loading || rolesLoading || pending || lockingDown) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -288,5 +374,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }
 
   if (!session) return null;
+  if (!hasRequiredRole) return null;
   return <>{children}</>;
 }

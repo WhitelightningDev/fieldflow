@@ -5,7 +5,7 @@ import { Outlet } from "react-router-dom";
 
 export default function Dashboard() {
   return (
-    <RequireAuth>
+    <RequireAuth allowedRoles={["owner", "admin", "office_staff"]}>
       <DashboardDataProvider>
         <DashboardShell>
           <Outlet />

@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom";
 
 export default function TechDashboard() {
   return (
-    <RequireAuth>
+    <RequireAuth allowedRoles={["technician"]}>
       <TechShell>
         <Outlet />
       </TechShell>
