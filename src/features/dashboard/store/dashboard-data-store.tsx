@@ -106,6 +106,35 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const [loading, setLoading] = React.useState(true);
   const fetchErrorShownRef = React.useRef(new Set<string>());
   const hasLoadedOnceRef = React.useRef(false);
+  const prevCompanyIdRef = React.useRef<string | null | undefined>(undefined);
+
+  // When the company changes (including after company creation or deletion), reset all
+  // stale data immediately so the old company's industry dashboard never bleeds through.
+  React.useEffect(() => {
+    if (prevCompanyIdRef.current === undefined) {
+      prevCompanyIdRef.current = companyId;
+      return;
+    }
+    if (prevCompanyIdRef.current === companyId) return;
+    prevCompanyIdRef.current = companyId;
+    hasLoadedOnceRef.current = false;
+    fetchErrorShownRef.current = new Set();
+    setData({
+      company: null,
+      customers: [],
+      technicians: [],
+      jobCards: [],
+      inventoryItems: [],
+      sites: [],
+      teams: [],
+      teamMembers: [],
+      siteTeamAssignments: [],
+      technicianLocations: [],
+      jobTimeEntries: [],
+      siteMaterialUsage: [],
+    });
+    if (!companyId) setLoading(false);
+  }, [companyId]);
 
   const fetchAll = React.useCallback(async (opts?: { silent?: boolean }) => {
     if (authLoading || profileLoading || rolesLoading) {
