@@ -23,7 +23,7 @@ export type CompanySignupValues = z.infer<typeof companySignupSchema>;
 
 type UseCompanySignupFormArgs = {
   defaultIndustry?: TradeId;
-  onSuccess?: (values: CompanySignupValues) => void;
+  onSuccess?: (args: { values: CompanySignupValues; needsEmailConfirm: boolean }) => void;
 };
 
 export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
@@ -42,6 +42,15 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
 
   const submit = React.useMemo(() => {
     return form.handleSubmit(async (values) => {
+      // If someone tries to sign up while already logged in, Supabase may keep the
+      // existing session (especially when email confirmation is enabled). That can
+      // make it look like the "new company" signup still opens the old company dashboard.
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        // ignore
+      }
+
       const { data, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -68,7 +77,7 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
           ? "Check your email to confirm your account, then log in."
           : "Email confirmation is disabled for this project. You can log in now.",
       );
-      args?.onSuccess?.(values);
+      args?.onSuccess?.({ values, needsEmailConfirm });
     });
   }, [args, form]);
 

@@ -15,7 +15,7 @@ export default function CompanySignup() {
   const { industry, setIndustry } = useIndustrySearchParam();
   const { form, submit } = useCompanySignupForm({
     defaultIndustry: industry ?? TRADES[0].id,
-    onSuccess: () => navigate("/login"),
+    onSuccess: ({ needsEmailConfirm }) => navigate(needsEmailConfirm ? "/login" : "/dashboard"),
   });
 
   React.useEffect(() => {

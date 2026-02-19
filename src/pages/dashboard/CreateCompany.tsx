@@ -44,6 +44,15 @@ export default function CreateCompany() {
 
   const submit = form.handleSubmit(async (values) => {
     if (!user) return;
+    if (profile?.company_id) {
+      toast({
+        title: "You're already linked to a company",
+        description: "You can't create a second company with the same account. Update your company from Settings instead.",
+        variant: "destructive",
+      });
+      navigate("/dashboard/settings", { replace: true });
+      return;
+    }
 
     const { data: companyId, error } = await supabase.rpc("create_company_for_current_user" as any, {
       _name: values.companyName,

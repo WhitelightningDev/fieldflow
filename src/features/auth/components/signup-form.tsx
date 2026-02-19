@@ -27,6 +27,12 @@ export default function SignupForm() {
   });
 
   const submit = form.handleSubmit(async (values) => {
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // ignore
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
