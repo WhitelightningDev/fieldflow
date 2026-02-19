@@ -184,9 +184,12 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          callout_fee_cents: string | null
+          callout_radius_km: string | null
           created_at: string
           id: string
           industry: string
+          labour_overhead_percent: string | null
           logo_url: string | null
           name: string
           phone: string | null
@@ -198,9 +201,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          callout_fee_cents?: string | null
+          callout_radius_km?: string | null
           created_at?: string
           id?: string
           industry: string
+          labour_overhead_percent?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
@@ -212,9 +218,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          callout_fee_cents?: string | null
+          callout_radius_km?: string | null
           created_at?: string
           id?: string
           industry?: string
+          labour_overhead_percent?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
@@ -1457,6 +1466,10 @@ export type Database = {
       create_company_for_current_user: {
         Args: { _industry: string; _name: string; _team_size?: string }
         Returns: string
+      }
+      ensure_user_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"][]
       }
       generate_invoice_number: {
         Args: { _company_id: string }

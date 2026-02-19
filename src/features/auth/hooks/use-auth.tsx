@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Best-effort: ensure the user is fully linked (roles + company + profile).
       // In newer DBs, ensure_user_role() also creates/links the company for company-account signups.
       await withTimeout(
-        supabase.rpc("ensure_user_role" as any),
+        Promise.resolve(supabase.rpc("ensure_user_role" as any)),
         8000,
         "Association repair timed out.",
       );
@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Best-effort repair (DB function should only grant roles when user is legitimately associated).
     try {
       const res: any = await withTimeout(
-        supabase.rpc("ensure_user_role" as any),
+        Promise.resolve(supabase.rpc("ensure_user_role" as any)),
         8000,
         "Role repair timed out.",
       );
@@ -333,6 +333,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data } = await supabase.auth.getSession();
     const userId = data.session?.user?.id;
     if (!userId) return;
+    // Allow association repair to run again in case company was just created/changed.
+    associationRepairAttemptedRef.current.delete(userId);
     setProfileLoading(true);
     setRolesLoading(true);
     try {
