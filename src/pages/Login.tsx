@@ -6,6 +6,7 @@ import { COMPANY_SIGNUP_FEATURES } from "@/features/company-signup/content/featu
 import { CheckCircle2 } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function Login() {
   const { session, user, loading, roles, rolesLoading, rolesError, signOut } = useAuth();
@@ -54,7 +55,7 @@ export default function Login() {
   if (loading || rolesLoading || session) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <Spinner />
       </div>
     );
   }

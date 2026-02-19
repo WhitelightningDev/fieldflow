@@ -3,6 +3,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
+import { TEAM_SIZE_OPTIONS } from "@/features/company-signup/content/team-sizes";
 import { cn } from "@/lib/utils";
 import type { UseFormReturn } from "react-hook-form";
 import type { CompanySignupValues } from "@/features/company-signup/hooks/use-company-signup-form";
@@ -90,11 +91,11 @@ export default function CompanySignupForm({ form, onSubmit, onIndustrySelect, cl
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="1">Just me</SelectItem>
-                      <SelectItem value="2-5">2–5 techs</SelectItem>
-                      <SelectItem value="6-15">6–15 techs</SelectItem>
-                      <SelectItem value="16-30">16–30 techs</SelectItem>
-                      <SelectItem value="31+">31+ techs</SelectItem>
+                      {TEAM_SIZE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

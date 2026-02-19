@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
+import { Spinner } from "@/components/ui/spinner";
 import { Briefcase, CheckCircle2, ChevronRight, Clock, MapPin, Phone } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
@@ -80,15 +82,13 @@ export default function TechMyJobs() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <Spinner />
         </div>
       ) : jobs.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <div className="font-medium">No jobs assigned yet</div>
-          </CardContent>
-        </Card>
+        <EmptyStateCard
+          icon={<Briefcase className="h-10 w-10" />}
+          title="No jobs assigned yet"
+        />
       ) : (
         <div className="space-y-3">
           {jobs.map((job) => {

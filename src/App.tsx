@@ -31,6 +31,7 @@ import WarrantyTracker from "./pages/dashboard/WarrantyTracker";
 import RepairHistory from "./pages/dashboard/RepairHistory";
 import Messages from "./pages/dashboard/Messages";
 import DashboardSettings from "./pages/dashboard/Settings";
+import DashboardNotFound from "./pages/dashboard/DashboardNotFound";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
@@ -40,6 +41,7 @@ import TechCocCertificates from "./pages/tech/TechCocCertificates";
 import TechPlaceholder from "./pages/tech/TechPlaceholder";
 import TechSettings from "./pages/tech/TechSettings";
 import TechMessages from "./pages/tech/TechMessages";
+import TechNotFound from "./pages/tech/TechNotFound";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +81,7 @@ const App = () => (
               <Route path="warranty-tracker" element={<WarrantyTracker />} />
               <Route path="repair-history" element={<RepairHistory />} />
               <Route path="messages" element={<Messages />} />
+              <Route path="*" element={<DashboardNotFound />} />
             </Route>
             {/* Technician dashboard */}
             <Route path="/tech" element={<TechDashboard />}>
@@ -96,6 +99,7 @@ const App = () => (
               <Route path="compliance" element={<TechPlaceholder title="Compliance" />} />
               <Route path="warranty" element={<TechPlaceholder title="Warranty" />} />
               <Route path="repairs" element={<TechPlaceholder title="Repairs" />} />
+              <Route path="*" element={<TechNotFound />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

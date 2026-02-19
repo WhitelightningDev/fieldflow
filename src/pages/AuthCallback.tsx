@@ -4,6 +4,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { withTimeout } from "@/lib/with-timeout";
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Spinner } from "@/components/ui/spinner";
 
 function parseHashParams() {
   const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
@@ -147,7 +148,7 @@ export default function AuthCallback() {
           </div>
         ) : (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <Spinner />
           </div>
         )}
       </div>

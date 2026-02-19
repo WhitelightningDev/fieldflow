@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
+import { TEAM_SIZE_OPTIONS, TEAM_SIZE_VALUES } from "@/features/company-signup/content/team-sizes";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +19,7 @@ const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 const schema = z.object({
   companyName: z.string().min(2, "Company name is required"),
   industry: z.enum(tradeIds, { required_error: "Select an industry" }),
-  teamSize: z.enum(["1", "2-5", "6-15", "16-30", "31+"], { required_error: "Select a team size" }),
+  teamSize: z.enum(TEAM_SIZE_VALUES, { required_error: "Select a team size" }),
 });
 
 type Values = z.infer<typeof schema>;
@@ -127,11 +128,11 @@ export default function CreateCompany() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">Just me</SelectItem>
-                          <SelectItem value="2-5">2–5 techs</SelectItem>
-                          <SelectItem value="6-15">6–15 techs</SelectItem>
-                          <SelectItem value="16-30">16–30 techs</SelectItem>
-                          <SelectItem value="31+">31+ techs</SelectItem>
+                          {TEAM_SIZE_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

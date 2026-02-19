@@ -1,7 +1,9 @@
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Spinner } from "@/components/ui/spinner";
 import { Boxes } from "lucide-react";
 import * as React from "react";
 
@@ -32,15 +34,13 @@ export default function TechInventory() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <Spinner />
         </div>
       ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Boxes className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <div className="font-medium">No inventory items</div>
-          </CardContent>
-        </Card>
+        <EmptyStateCard
+          icon={<Boxes className="h-10 w-10" />}
+          title="No inventory items"
+        />
       ) : (
         <>
           {/* Mobile cards */}

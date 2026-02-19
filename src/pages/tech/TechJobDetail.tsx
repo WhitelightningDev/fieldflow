@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
+import { EmptyStateCard } from "@/components/ui/empty-state-card";
+import { Spinner } from "@/components/ui/spinner";
 import JobTimer from "@/features/technician/components/job-timer";
 import JobPhotoUpload from "@/features/technician/components/job-photo-upload";
 import JobNotesEditor from "@/features/technician/components/job-notes-editor";
@@ -200,7 +202,7 @@ export default function TechJobDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <Spinner />
       </div>
     );
   }
@@ -211,7 +213,7 @@ export default function TechJobDetail() {
         <Button variant="ghost" asChild className="gap-1.5">
           <Link to="/tech/my-jobs"><ArrowLeft className="h-4 w-4" /> Back</Link>
         </Button>
-        <Card><CardContent className="py-12 text-center text-muted-foreground">Job not found.</CardContent></Card>
+        <EmptyStateCard title="Job not found" />
       </div>
     );
   }

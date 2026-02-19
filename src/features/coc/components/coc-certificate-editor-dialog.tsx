@@ -23,9 +23,10 @@ import {
   type CocTestReportData,
   type CocTestItemResult,
 } from "@/features/coc/lib/sa-electrical-coc";
+import { ensureShortString, logVarcharLengths } from "@/features/coc/lib/varchar-guards";
 
 const schema = z.object({
-  certificate_no: z.string().min(1, "Certificate number is required"),
+  certificate_no: z.string().min(1, "Certificate number is required").max(150, "Certificate number must be 150 characters or less"),
   certificate_type: z.enum(["initial", "supplementary"]),
   issued_at: z.string().optional(),
   site_id: z.string().optional(),
@@ -196,9 +197,28 @@ export default function CocCertificateEditorDialog({
   const save = form.handleSubmit(async (values) => {
     setSaving(true);
     try {
+      let certificateNo: string;
+      let certificateType: CocCertificateType;
+      try {
+        certificateNo = ensureShortString("certificate_no", values.certificate_no, 150);
+        certificateType = ensureShortString("certificate_type", values.certificate_type, 150) as CocCertificateType;
+      } catch (e: any) {
+        toast({
+          title: "Invalid certificate details",
+          description: e?.message ?? "Please check the certificate fields and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      logVarcharLengths("coc_certificates.update", {
+        certificate_no: certificateNo,
+        certificate_type: certificateType,
+      });
+
       const patch: TablesUpdate<"coc_certificates"> = {
-        certificate_no: values.certificate_no.trim(),
-        certificate_type: values.certificate_type,
+        certificate_no: certificateNo,
+        certificate_type: certificateType,
         issued_at: values.issued_at ? values.issued_at : null,
         site_id: values.site_id && values.site_id !== NONE ? values.site_id : null,
         data: values.data as unknown as TablesUpdate<"coc_certificates">["data"],

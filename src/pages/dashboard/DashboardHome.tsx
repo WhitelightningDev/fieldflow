@@ -1,7 +1,4 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { isTradeId, type TradeId } from "@/features/company-signup/content/trades";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -30,7 +27,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Spinner } from "@/components/ui/spinner";
+import NoCompanyStateCard from "@/features/dashboard/components/no-company-state-card";
 
 /* ─── Trade-specific dashboard imports ─── */
 import PlumbingDashboard from "@/features/dashboard/components/trade-dashboards/plumbing-dashboard";
@@ -123,7 +121,7 @@ export default function DashboardHome() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <Spinner />
       </div>
     );
   }
@@ -132,19 +130,7 @@ export default function DashboardHome() {
     return (
       <div className="space-y-6">
         <PageHeader title="Overview" subtitle="Set up your company to start using the dashboard." />
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">No company yet</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="text-sm text-muted-foreground">
-              Create your company to unlock job cards, inventory, teams, and sites.
-            </div>
-            <Button asChild className="gradient-bg hover:opacity-90 shadow-glow">
-              <Link to="/dashboard/create-company">Create company</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <NoCompanyStateCard />
       </div>
     );
   }
