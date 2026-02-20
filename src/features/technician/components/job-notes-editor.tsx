@@ -7,7 +7,11 @@ import * as React from "react";
 
 type Props = { jobId: string; initialNotes: string | null };
 
-export default function JobNotesEditor({ jobId, initialNotes }: Props) {
+type ExtendedProps = Props & {
+  onSaved?: () => void;
+};
+
+export default function JobNotesEditor({ jobId, initialNotes, onSaved }: ExtendedProps) {
   const [notes, setNotes] = React.useState(initialNotes ?? "");
   const [saving, setSaving] = React.useState(false);
 
@@ -20,6 +24,7 @@ export default function JobNotesEditor({ jobId, initialNotes }: Props) {
     setSaving(false);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Notes saved" });
+    onSaved?.();
   };
 
   return (

@@ -11,9 +11,10 @@ type Props = {
   jobId: string;
   siteId: string | null;
   companyId: string;
+  onPartsLogged?: () => void;
 };
 
-export default function JobPartsUsed({ jobId, siteId, companyId }: Props) {
+export default function JobPartsUsed({ jobId, siteId, companyId, onPartsLogged }: Props) {
   const [inventory, setInventory] = React.useState<any[]>([]);
   const [usedParts, setUsedParts] = React.useState<any[]>([]);
   const [selectedItem, setSelectedItem] = React.useState("");
@@ -65,6 +66,7 @@ export default function JobPartsUsed({ jobId, siteId, companyId }: Props) {
     setSelectedItem("");
     setQty("1");
     fetchUsed();
+    onPartsLogged?.();
   };
 
   return (

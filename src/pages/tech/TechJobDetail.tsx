@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { EmptyStateCard } from "@/components/ui/empty-state-card";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,7 +11,7 @@ import JobPhotoUpload from "@/features/technician/components/job-photo-upload";
 import JobNotesEditor from "@/features/technician/components/job-notes-editor";
 import JobPartsUsed from "@/features/technician/components/job-parts-used";
 import SignaturePad from "@/features/technician/components/signature-pad";
-import JobFlowSteps, { type JobFlowStep } from "@/features/technician/components/job-flow-steps";
+import JobFlowSteps, { JOB_FLOW_STEPS, type JobFlowStep } from "@/features/technician/components/job-flow-steps";
 import JobFlowPrompts from "@/features/technician/components/job-flow-prompts";
 import JobQuickActions from "@/features/technician/components/job-quick-actions";
 import JobInteractiveChecklist from "@/features/technician/components/job-interactive-checklist";
@@ -27,10 +26,9 @@ import {
   Mail,
   Play,
   User,
-  Wrench,
 } from "lucide-react";
 import * as React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRealtimeRefetch } from "@/hooks/use-realtime-refetch";
 
 const statusColor: Record<string, string> = {
@@ -68,6 +66,8 @@ function deriveCompleted(job: any, timeEntries: any[], hasBeforePhotos: boolean,
 
 export default function TechJobDetail() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [job, setJob] = React.useState<any>(null);
   const [techId, setTechId] = React.useState<string | null>(null);
@@ -80,6 +80,32 @@ export default function TechJobDetail() {
   const [hasInvoice, setHasInvoice] = React.useState(false);
   const [beforePhotoCount, setBeforePhotoCount] = React.useState(0);
   const [afterPhotoCount, setAfterPhotoCount] = React.useState(0);
+  const [signatureCount, setSignatureCount] = React.useState(0);
+
+  const initialStepSetRef = React.useRef(false);
+
+  const setStep = React.useCallback((step: JobFlowStep) => {
+    setCurrentStep(step);
+    try {
+      const next = new URLSearchParams(searchParams);
+      next.set("step", step);
+      setSearchParams(next, { replace: true });
+    } catch {
+      // ignore
+    }
+  }, [searchParams, setSearchParams]);
+
+  const stepIndex = React.useCallback((step: JobFlowStep) => JOB_FLOW_STEPS.findIndex((s) => s.id === step), []);
+  const prevStep = React.useCallback((step: JobFlowStep) => {
+    const idx = stepIndex(step);
+    if (idx <= 0) return null;
+    return JOB_FLOW_STEPS[idx - 1]?.id ?? null;
+  }, [stepIndex]);
+  const nextStep = React.useCallback((step: JobFlowStep) => {
+    const idx = stepIndex(step);
+    if (idx === -1) return null;
+    return JOB_FLOW_STEPS[idx + 1]?.id ?? null;
+  }, [stepIndex]);
 
   const fetchJob = React.useCallback(async () => {
     if (!jobId) return;
@@ -123,12 +149,14 @@ export default function TechJobDetail() {
 
   const fetchPhotoCounts = React.useCallback(async () => {
     if (!jobId) return;
-    const [{ count: bCount }, { count: aCount }] = await Promise.all([
+    const [{ count: bCount }, { count: aCount }, { count: sCount }] = await Promise.all([
       supabase.from("job_photos").select("id", { count: "exact", head: true }).eq("job_card_id", jobId).eq("kind", "before"),
       supabase.from("job_photos").select("id", { count: "exact", head: true }).eq("job_card_id", jobId).eq("kind", "after"),
+      supabase.from("job_photos").select("id", { count: "exact", head: true }).eq("job_card_id", jobId).eq("kind", "signature"),
     ]);
     setBeforePhotoCount(bCount ?? 0);
     setAfterPhotoCount(aCount ?? 0);
+    setSignatureCount(sCount ?? 0);
   }, [jobId]);
 
   React.useEffect(() => {
@@ -174,30 +202,91 @@ export default function TechJobDetail() {
       .then(({ data }) => setHasInvoice((data?.length ?? 0) > 0));
   }, [jobId]);
 
-  // Auto-derive step
+  // Initial step: URL > derived
   React.useEffect(() => {
     if (!job) return;
+    if (initialStepSetRef.current) return;
+
+    const urlStep = (searchParams.get("step") ?? "") as JobFlowStep;
+    const isValidUrlStep = JOB_FLOW_STEPS.some((s) => s.id === urlStep);
+    if (isValidUrlStep) {
+      setCurrentStep(urlStep);
+      initialStepSetRef.current = true;
+      return;
+    }
+
     setCurrentStep(deriveStep(job, hasInvoice));
-  }, [job, hasInvoice]);
+    initialStepSetRef.current = true;
+  }, [job, hasInvoice, searchParams]);
+
+  // Keep URL in sync (best-effort)
+  React.useEffect(() => {
+    try {
+      const current = searchParams.get("step");
+      if (current === currentStep) return;
+      const next = new URLSearchParams(searchParams);
+      next.set("step", currentStep);
+      setSearchParams(next, { replace: true });
+    } catch {
+      // ignore
+    }
+  }, [currentStep, searchParams, setSearchParams]);
 
   const completedSteps = job
     ? deriveCompleted(job, timeEntries, beforePhotoCount > 0, afterPhotoCount > 0, hasInvoice)
     : new Set<JobFlowStep>();
 
-  const updateStatus = async (status: string) => {
-    if (!jobId) return;
+  const updateStatus = async (status: string): Promise<boolean> => {
+    if (!jobId) return false;
     const { error } = await supabase
       .from("job_cards")
       .update({ status: status as any })
       .eq("id", jobId);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return false; }
     setJob((prev: any) => ({ ...prev, status }));
     toast({ title: `Job ${status === "in-progress" ? "started" : status}` });
+    return true;
   };
 
   const totalMinutes = timeEntries
     .filter((e) => e.minutes != null)
     .reduce((sum, e) => sum + e.minutes, 0);
+
+  const canGoNext = React.useMemo(() => {
+    if (!job) return false;
+    if (currentStep === "signoff") {
+      return signatureCount > 0 || hasInvoice || job.status === "invoiced";
+    }
+    // Always allow finishing the flow on the last step.
+    return nextStep(currentStep) !== null || currentStep === "invoice";
+  }, [currentStep, hasInvoice, job, nextStep, signatureCount]);
+
+  const goPrev = React.useCallback(() => {
+    const prev = prevStep(currentStep);
+    if (prev) setStep(prev);
+  }, [currentStep, prevStep, setStep]);
+
+  const goNext = React.useCallback(async () => {
+    const next = nextStep(currentStep);
+    if (!next) {
+      // End of flow (invoice) -> back to job list
+      navigate("/tech/my-jobs");
+      return;
+    }
+
+    // Ensure job is "started" when leaving Arrive
+    if (currentStep === "arrive" && (job.status === "new" || job.status === "scheduled")) {
+      const ok = await updateStatus("in-progress");
+      if (!ok) return;
+    }
+
+    if (currentStep === "signoff" && !(signatureCount > 0 || hasInvoice || job.status === "invoiced")) {
+      toast({ title: "Signature required", description: "Capture customer signature before moving to invoicing.", variant: "destructive" });
+      return;
+    }
+
+    setStep(next);
+  }, [currentStep, hasInvoice, job, navigate, nextStep, setStep, signatureCount]);
 
   if (loading) {
     return (
@@ -240,12 +329,12 @@ export default function TechJobDetail() {
           </div>
           <div className="flex gap-2">
             {(job.status === "new" || job.status === "scheduled") && (
-              <Button size="sm" onClick={() => updateStatus("in-progress")} className="gradient-bg hover:opacity-90 shadow-glow gap-1.5">
+              <Button size="sm" onClick={() => void updateStatus("in-progress")} className="gradient-bg hover:opacity-90 shadow-glow gap-1.5">
                 <Play className="h-3.5 w-3.5" /> Start Job
               </Button>
             )}
             {job.status === "in-progress" && (
-              <Button size="sm" variant="outline" onClick={() => updateStatus("completed")} className="gap-1.5">
+              <Button size="sm" variant="outline" onClick={() => void updateStatus("completed")} className="gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Complete
               </Button>
             )}
@@ -261,7 +350,11 @@ export default function TechJobDetail() {
       />
 
       {/* Step Navigator */}
-      <JobFlowSteps currentStep={currentStep} completedSteps={completedSteps} onStepClick={setCurrentStep} />
+      <JobFlowSteps
+        currentStep={currentStep}
+        completedSteps={completedSteps}
+        onStepClick={(step) => setStep(step)}
+      />
 
       {/* Contextual Prompts */}
       <JobFlowPrompts step={currentStep} />
@@ -325,7 +418,7 @@ export default function TechJobDetail() {
           {/* Before Photos */}
           <Card className="bg-card/70 backdrop-blur-sm">
             <CardContent className="py-4">
-              <JobPhotoUpload jobId={job.id} kind="before" />
+              <JobPhotoUpload jobId={job.id} kind="before" onUploaded={() => void fetchPhotoCounts()} />
             </CardContent>
           </Card>
         </div>
@@ -360,7 +453,16 @@ export default function TechJobDetail() {
               <CardTitle className="text-sm">Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <JobNotesEditor jobId={job.id} initialNotes={job.notes} />
+              <JobNotesEditor
+                jobId={job.id}
+                initialNotes={job.notes}
+                onSaved={() => {
+                  if (currentStep !== "diagnose") return;
+                  const next = nextStep("diagnose");
+                  if (!next) return;
+                  setStep(next);
+                }}
+              />
             </CardContent>
           </Card>
         </div>
@@ -405,7 +507,12 @@ export default function TechJobDetail() {
           {profile?.company_id && (
             <Card className="bg-card/70 backdrop-blur-sm">
               <CardContent className="py-4">
-                <JobPartsUsed jobId={job.id} siteId={job.site_id} companyId={profile.company_id} />
+                <JobPartsUsed
+                  jobId={job.id}
+                  siteId={job.site_id}
+                  companyId={profile.company_id}
+                  onPartsLogged={() => void fetchUsedParts()}
+                />
               </CardContent>
             </Card>
           )}
@@ -416,7 +523,20 @@ export default function TechJobDetail() {
         <div className="space-y-4">
           <Card className="bg-card/70 backdrop-blur-sm">
             <CardContent className="py-4 space-y-6">
-              <JobPhotoUpload jobId={job.id} kind="after" />
+              <JobPhotoUpload
+                jobId={job.id}
+                kind="after"
+                onUploaded={() => {
+                  void fetchPhotoCounts();
+                  // Only auto-advance if they are actively on the Document step.
+                  if (currentStep !== "document") return;
+                  // Don't repeatedly kick them forward if they are uploading multiple photos.
+                  if (afterPhotoCount > 0) return;
+                  const next = nextStep("document");
+                  if (!next) return;
+                  setStep(next);
+                }}
+              />
             </CardContent>
           </Card>
 
@@ -425,7 +545,16 @@ export default function TechJobDetail() {
               <CardTitle className="text-sm">Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <JobNotesEditor jobId={job.id} initialNotes={job.notes} />
+              <JobNotesEditor
+                jobId={job.id}
+                initialNotes={job.notes}
+                onSaved={() => {
+                  if (currentStep !== "document") return;
+                  const next = nextStep("document");
+                  if (!next) return;
+                  setStep(next);
+                }}
+              />
             </CardContent>
           </Card>
         </div>
@@ -440,7 +569,7 @@ export default function TechJobDetail() {
                   <p className="text-sm text-muted-foreground">
                     Complete the job before capturing signature.
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => updateStatus("completed")} className="gap-1.5">
+                  <Button size="sm" variant="outline" onClick={() => void updateStatus("completed")} className="gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Mark Complete
                   </Button>
                 </div>
@@ -451,7 +580,14 @@ export default function TechJobDetail() {
           {(job.status === "completed" || job.status === "invoiced") && (
             <Card className="bg-card/70 backdrop-blur-sm">
               <CardContent className="py-4">
-                <SignaturePad jobId={job.id} onSigned={() => fetchJob()} />
+                <SignaturePad
+                  jobId={job.id}
+                  onSigned={() => {
+                    void fetchJob();
+                    void fetchPhotoCounts();
+                    setStep("invoice");
+                  }}
+                />
               </CardContent>
             </Card>
           )}
@@ -490,11 +626,41 @@ export default function TechJobDetail() {
               usedParts={usedParts}
               companyId={profile.company_id}
               technicianRate={techRate}
-              onInvoiceCreated={() => setHasInvoice(true)}
+              onInvoiceCreated={() => {
+                setHasInvoice(true);
+                setStep("invoice");
+              }}
             />
           </CardContent>
         </Card>
       )}
+
+      {/* Step navigation */}
+      <Card className="bg-card/70 backdrop-blur-sm">
+        <CardContent className="py-3 flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goPrev}
+            disabled={prevStep(currentStep) === null}
+          >
+            Back
+          </Button>
+          <div className="flex-1 text-center text-xs text-muted-foreground">
+            {JOB_FLOW_STEPS.find((s) => s.id === currentStep)?.description ?? ""}
+          </div>
+          <Button
+            type="button"
+            className="gradient-bg hover:opacity-90 shadow-glow"
+            onClick={() => void goNext()}
+            disabled={!canGoNext}
+          >
+            {nextStep(currentStep)
+              ? `Next: ${JOB_FLOW_STEPS.find((s) => s.id === nextStep(currentStep))?.label ?? "Next"}`
+              : "Finish"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

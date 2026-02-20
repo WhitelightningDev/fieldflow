@@ -10,9 +10,10 @@ type Photo = { id: string; storage_path: string; kind: string; caption: string |
 type Props = {
   jobId: string;
   kind: "before" | "after";
+  onUploaded?: () => void;
 };
 
-export default function JobPhotoUpload({ jobId, kind }: Props) {
+export default function JobPhotoUpload({ jobId, kind, onUploaded }: Props) {
   const [photos, setPhotos] = React.useState<Photo[]>([]);
   const [uploading, setUploading] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
@@ -58,6 +59,7 @@ export default function JobPhotoUpload({ jobId, kind }: Props) {
     fetchPhotos();
     toast({ title: `${kind} photo(s) uploaded` });
     if (fileRef.current) fileRef.current.value = "";
+    onUploaded?.();
   };
 
   const deletePhoto = async (photo: Photo) => {
