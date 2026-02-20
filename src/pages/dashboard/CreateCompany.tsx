@@ -52,8 +52,8 @@ export default function CreateCompany() {
           return;
         }
 
-        // Orphaned profile.company_id (company deleted externally). Clear association server-side.
-        await supabase.rpc("ensure_user_role" as any);
+        // Orphaned profile.company_id (company deleted externally). Clear it directly.
+        await supabase.from("profiles").update({ company_id: null }).eq("user_id", user.id);
         await refreshProfile();
       } finally {
         if (!cancelled) setCheckingExistingCompany(false);
@@ -96,7 +96,7 @@ export default function CreateCompany() {
       }
 
       // Orphaned reference: clear it so creation can proceed cleanly.
-      await supabase.rpc("ensure_user_role" as any);
+      await supabase.from("profiles").update({ company_id: null }).eq("user_id", user.id);
       await refreshProfile();
     }
 
@@ -117,12 +117,11 @@ export default function CreateCompany() {
     }
 
     toast({ title: "Company created" });
-    await Promise.allSettled([
-      supabase.auth.updateUser({
-        data: { company_id: companyId, company_name: null, industry: null, team_size: null },
-      }),
-      supabase.auth.refreshSession(),
-    ]);
+    // Clear stale signup metadata from JWT so ensure_user_role never resurrects ghost companies.
+    await supabase.auth.updateUser({
+      data: { company_id: companyId, company_name: null, industry: null, team_size: null },
+    });
+    await supabase.auth.refreshSession();
     await refreshProfile();
     navigate("/dashboard", { replace: true });
   });
