@@ -27,10 +27,44 @@ type Values = z.infer<typeof schema>;
 export default function CreateCompany() {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
+  const [checkingExistingCompany, setCheckingExistingCompany] = React.useState(false);
 
   React.useEffect(() => {
-    if (profile?.company_id) navigate("/dashboard", { replace: true });
-  }, [navigate, profile?.company_id]);
+    let cancelled = false;
+
+    const run = async () => {
+      if (!user) return;
+      if (!profile?.company_id) return;
+
+      setCheckingExistingCompany(true);
+      try {
+        const { data, error } = await supabase
+          .from("companies")
+          .select("id")
+          .eq("id", profile.company_id)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (error) return;
+
+        if (data?.id) {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Orphaned profile.company_id (company deleted externally). Clear association server-side.
+        await supabase.rpc("ensure_user_role" as any);
+        await refreshProfile();
+      } finally {
+        if (!cancelled) setCheckingExistingCompany(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, profile?.company_id, refreshProfile, user]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -45,13 +79,25 @@ export default function CreateCompany() {
   const submit = form.handleSubmit(async (values) => {
     if (!user) return;
     if (profile?.company_id) {
-      toast({
-        title: "You're already linked to a company",
-        description: "You can't create a second company with the same account. Update your company from Settings instead.",
-        variant: "destructive",
-      });
-      navigate("/dashboard/settings", { replace: true });
-      return;
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id")
+        .eq("id", profile.company_id)
+        .maybeSingle();
+
+      if (!error && data?.id) {
+        toast({
+          title: "You're already linked to a company",
+          description: "You can't create a second company with the same account. Update your company from Settings instead.",
+          variant: "destructive",
+        });
+        navigate("/dashboard/settings", { replace: true });
+        return;
+      }
+
+      // Orphaned reference: clear it so creation can proceed cleanly.
+      await supabase.rpc("ensure_user_role" as any);
+      await refreshProfile();
     }
 
     const { data: companyId, error } = await supabase.rpc("create_company_for_current_user" as any, {
@@ -71,6 +117,12 @@ export default function CreateCompany() {
     }
 
     toast({ title: "Company created" });
+    await Promise.allSettled([
+      supabase.auth.updateUser({
+        data: { company_id: companyId, company_name: null, industry: null, team_size: null },
+      }),
+      supabase.auth.refreshSession(),
+    ]);
     await refreshProfile();
     navigate("/dashboard", { replace: true });
   });
@@ -151,8 +203,12 @@ export default function CreateCompany() {
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
-                <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? "Creating..." : "Create company"}
+                <Button
+                  type="submit"
+                  className="gradient-bg hover:opacity-90 shadow-glow"
+                  disabled={form.formState.isSubmitting || checkingExistingCompany}
+                >
+                  {form.formState.isSubmitting ? "Creating..." : checkingExistingCompany ? "Checking..." : "Create company"}
                 </Button>
               </div>
             </form>
