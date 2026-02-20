@@ -46,6 +46,12 @@ export default function SignupForm() {
       return;
     }
     const needsEmailConfirm = !data?.session;
+    try {
+      localStorage.setItem("ff-last-signup-email", values.email);
+      localStorage.setItem("ff-last-signup-at", new Date().toISOString());
+    } catch {
+      // ignore
+    }
     toastInfo(
       "Account created",
       needsEmailConfirm

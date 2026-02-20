@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
@@ -17,12 +18,57 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+function getRecentSignupEmail(): string | null {
+  try {
+    const email = localStorage.getItem("ff-last-signup-email") ?? "";
+    const at = localStorage.getItem("ff-last-signup-at") ?? "";
+    if (!email.trim() || !at.trim()) return null;
+    const ts = Date.parse(at);
+    if (!Number.isFinite(ts)) return null;
+    const ageMs = Date.now() - ts;
+    if (ageMs < 0) return null;
+    // Only nudge for ~24 hours after signup.
+    if (ageMs > 24 * 60 * 60 * 1000) return null;
+    return email.trim();
+  } catch {
+    return null;
+  }
+}
+
 export default function LoginForm() {
+  const recentSignupEmail = React.useMemo(() => getRecentSignupEmail(), []);
+
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: recentSignupEmail ?? "", password: "" },
     mode: "onTouched",
   });
+
+  const emailValue = form.watch("email");
+
+  const resendConfirmation = React.useCallback(async () => {
+    const valid = await form.trigger("email");
+    if (!valid) {
+      toastError("Resend failed", "Enter a valid email first.");
+      return;
+    }
+
+    const email = form.getValues("email").trim();
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.resend({ type: "signup", email }),
+        15000,
+        "Resend timed out. Check your connection and try again.",
+      );
+      if (error) {
+        toastError("Resend failed", error.message);
+        return;
+      }
+      toastSuccess("Confirmation email sent", "Check your inbox (and spam folder), then try signing in again.");
+    } catch (e: any) {
+      toastError("Resend failed", e?.message ?? "Network error");
+    }
+  }, [form]);
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -35,12 +81,28 @@ export default function LoginForm() {
         "Sign-in timed out. Check your connection and try again.",
       );
       if (error) {
-        toastError("Login failed", error.message);
+        const msg = String(error.message ?? "");
+        const lower = msg.toLowerCase();
+        if (lower.includes("email not confirmed")) {
+          toastError("Login failed", "Confirm your email first, then sign in. Use “Resend confirmation email” if you need a new link.");
+          return;
+        }
+        if (lower.includes("invalid login credentials")) {
+          toastError("Login failed", "Invalid email or password. If you just signed up, confirm your email first.");
+          return;
+        }
+        toastError("Login failed", msg || "Sign-in failed");
         return;
       }
       if (!data.session) {
         toastError("Login failed", "No session returned. Try again.");
         return;
+      }
+      try {
+        localStorage.removeItem("ff-last-signup-email");
+        localStorage.removeItem("ff-last-signup-at");
+      } catch {
+        // ignore
       }
       toastSuccess("Logged in successfully");
     } catch (e: any) {
@@ -54,6 +116,23 @@ export default function LoginForm() {
         <div className="text-2xl font-bold">Log in</div>
         <div className="text-sm text-muted-foreground">Access your FieldFlow workspace.</div>
       </div>
+
+      {recentSignupEmail ? (
+        <Alert>
+          <AlertTitle>Just created an account?</AlertTitle>
+          <AlertDescription>
+            <p>
+              Your email may need to be confirmed before you can sign in. If you didn’t get the email, resend it to{" "}
+              <span className="font-medium text-foreground">{recentSignupEmail}</span>.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={resendConfirmation} disabled={form.formState.isSubmitting}>
+                Resend confirmation email
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <Form {...form}>
         <form onSubmit={submit} className="space-y-4">
@@ -90,6 +169,19 @@ export default function LoginForm() {
           <Button type="submit" className="w-full gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
+
+          <div className="flex items-center justify-end">
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              onClick={resendConfirmation}
+              disabled={form.formState.isSubmitting || !emailValue}
+            >
+              Resend confirmation email
+            </Button>
+          </div>
         </form>
       </Form>
 
