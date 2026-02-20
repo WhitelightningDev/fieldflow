@@ -56,13 +56,19 @@ type DashboardActions = {
   removeTeamMember: (teamMemberId: string) => Promise<void>;
   assignTeamToSite: (a: { siteId: string; teamId: string; company_id?: string; startsAt?: string; endsAt?: string | null; notes?: string | null }) => Promise<SiteTeamAssignment | null>;
   endSiteAssignment: (assignmentId: string, endsAt: string) => Promise<void>;
-  refreshData: () => Promise<void>;
+  refreshData: (opts?: { silent?: boolean }) => Promise<void>;
 };
 
 type DashboardStore = {
   data: DashboardData;
   actions: DashboardActions;
   loading: boolean;
+  companyState:
+    | { kind: "none" }
+    | { kind: "loading" }
+    | { kind: "ok" }
+    | { kind: "missing" }
+    | { kind: "error"; message: string; status?: number | null };
 };
 
 const DashboardDataContext = React.createContext<DashboardStore | null>(null);
@@ -86,7 +92,7 @@ function mergeById<T extends { id: string }>(primary: T[], fallback: T[]) {
 }
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
-  const { profile, loading: authLoading, profileLoading, rolesLoading } = useAuth();
+  const { profile, loading: authLoading, profileLoading, rolesLoading, profileError, rolesError } = useAuth();
   const companyId = profile?.company_id;
 
   const [data, setData] = React.useState<DashboardData>({
@@ -104,6 +110,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     siteMaterialUsage: [],
   });
   const [loading, setLoading] = React.useState(true);
+  const [companyState, setCompanyState] = React.useState<DashboardStore["companyState"]>({ kind: "none" });
   const fetchErrorShownRef = React.useRef(new Set<string>());
   const hasLoadedOnceRef = React.useRef(false);
   const prevCompanyIdRef = React.useRef<string | null | undefined>(undefined);
@@ -133,21 +140,41 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       jobTimeEntries: [],
       siteMaterialUsage: [],
     });
-    if (!companyId) setLoading(false);
+    if (!companyId) {
+      setCompanyState({ kind: "none" });
+      setLoading(false);
+    } else {
+      setCompanyState({ kind: "loading" });
+    }
   }, [companyId]);
 
   const fetchAll = React.useCallback(async (opts?: { silent?: boolean }) => {
+    if (profileError) {
+      setCompanyState({ kind: "error", message: profileError });
+      setLoading(false);
+      return;
+    }
+    if (rolesError) {
+      setCompanyState({ kind: "error", message: rolesError });
+      setLoading(false);
+      return;
+    }
     if (authLoading || profileLoading || rolesLoading) {
       // Avoid showing "No company yet" while auth/profile/roles are still resolving.
       // If we've already loaded data once, keep rendering the current dashboard state
       // instead of flipping back to a global spinner on token refresh.
-      if (!hasLoadedOnceRef.current) setLoading(true);
+      if (!hasLoadedOnceRef.current) {
+        setCompanyState(companyId ? { kind: "loading" } : { kind: "none" });
+        setLoading(true);
+      }
       return;
     }
     if (!companyId) {
+      setCompanyState({ kind: "none" });
       setLoading(false);
       return;
     }
+    if (!opts?.silent || !hasLoadedOnceRef.current) setCompanyState({ kind: "loading" });
     if (!opts?.silent) setLoading(true);
     let companyRes: any;
     let customersRes: any;
@@ -193,6 +220,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         variant: "destructive",
       });
       setLoading(false);
+      setCompanyState({ kind: "error", message: e?.message ?? "Network error while fetching dashboard data." });
       return;
     }
 
@@ -252,9 +280,22 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         siteMaterialUsage: materialRes?.data ?? [],
       };
     });
+
+    const companyErr: any = companyRes?.error ?? null;
+    if (companyErr) {
+      setCompanyState({
+        kind: "error",
+        message: companyErr.message ?? "Failed to load company",
+        status: (companyRes as any)?.status ?? companyErr.status ?? null,
+      });
+    } else if (!companyRes?.data) {
+      setCompanyState({ kind: "missing" });
+    } else {
+      setCompanyState({ kind: "ok" });
+    }
     hasLoadedOnceRef.current = true;
     if (!opts?.silent) setLoading(false);
-  }, [authLoading, companyId, profileLoading, rolesLoading]);
+  }, [authLoading, companyId, profileError, profileLoading, rolesError, rolesLoading]);
 
   React.useEffect(() => {
     fetchAll();
@@ -620,7 +661,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     refreshData: fetchAll,
   }), [companyId, data.inventoryItems, fetchAll]);
 
-  const value = React.useMemo<DashboardStore>(() => ({ data, actions, loading }), [data, actions, loading]);
+  const value = React.useMemo<DashboardStore>(() => ({ data, actions, loading, companyState }), [data, actions, loading, companyState]);
 
   return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
 }

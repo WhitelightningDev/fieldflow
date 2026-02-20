@@ -11,9 +11,10 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 
 export default function DashboardTopbar() {
-  const { profile, loading: authLoading, profileLoading } = useAuth();
+  const { profile, roles, loading: authLoading, profileLoading } = useAuth();
   const { data } = useDashboardData();
   const company = data.company as any;
+  const canCreateCompany = roles.includes("owner") || roles.includes("admin");
 
   const allowedTradeIds = React.useMemo<TradeId[] | null>(() => {
     const industry = data.company?.industry ?? null;
@@ -47,7 +48,7 @@ export default function DashboardTopbar() {
                 )}
                 <span className="text-sm text-muted-foreground">{company?.name ?? "Company"}</span>
               </div>
-            ) : !authLoading && !profileLoading ? (
+            ) : !authLoading && !profileLoading && canCreateCompany ? (
               <Button asChild variant="outline" size="sm">
                 <Link to="/dashboard/create-company">Create company</Link>
               </Button>
@@ -58,4 +59,3 @@ export default function DashboardTopbar() {
     </div>
   );
 }
-

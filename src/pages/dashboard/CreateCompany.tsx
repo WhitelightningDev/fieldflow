@@ -13,6 +13,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 
@@ -26,8 +27,31 @@ type Values = z.infer<typeof schema>;
 
 export default function CreateCompany() {
   const navigate = useNavigate();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, roles, signOut } = useAuth();
   const [checkingExistingCompany, setCheckingExistingCompany] = React.useState(false);
+  const [existingCompanyCheckError, setExistingCompanyCheckError] = React.useState<string | null>(null);
+  const canCreateCompany = roles.includes("owner") || roles.includes("admin");
+
+  if (!canCreateCompany) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card className="bg-card/70 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Company creation restricted</CardTitle>
+            <CardDescription>Only an owner or admin can create a company workspace.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate("/dashboard", { replace: true })}>
+              Back to dashboard
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => void signOut().finally(() => navigate("/login"))}>
+              Sign out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   React.useEffect(() => {
     let cancelled = false;
@@ -37,6 +61,7 @@ export default function CreateCompany() {
       if (!profile?.company_id) return;
 
       setCheckingExistingCompany(true);
+      setExistingCompanyCheckError(null);
       try {
         const { data, error } = await supabase
           .from("companies")
@@ -45,7 +70,10 @@ export default function CreateCompany() {
           .maybeSingle();
 
         if (cancelled) return;
-        if (error) return;
+        if (error) {
+          setExistingCompanyCheckError(error.message ?? "Could not verify existing company link.");
+          return;
+        }
 
         if (data?.id) {
           navigate("/dashboard", { replace: true });
@@ -85,7 +113,16 @@ export default function CreateCompany() {
         .eq("id", profile.company_id)
         .maybeSingle();
 
-      if (!error && data?.id) {
+      if (error) {
+        toast({
+          title: "Can't verify existing company",
+          description: error.message ?? "Database permissions are blocking a company lookup. Don’t create a new company until this is fixed.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.id) {
         toast({
           title: "You're already linked to a company",
           description: "You can't create a second company with the same account. Update your company from Settings instead.",
@@ -134,6 +171,14 @@ export default function CreateCompany() {
           <CardDescription>Set up your workspace. You can start creating job cards immediately.</CardDescription>
         </CardHeader>
         <CardContent>
+          {existingCompanyCheckError ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Company link check failed</AlertTitle>
+              <AlertDescription>
+                {existingCompanyCheckError} This usually means a Supabase policy/migration issue. Avoid creating a new company until this is resolved.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <Form {...form}>
             <form onSubmit={submit} className="space-y-4">
               <FormField

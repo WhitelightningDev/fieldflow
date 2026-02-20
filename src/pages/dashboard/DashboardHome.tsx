@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import NoCompanyStateCard from "@/features/dashboard/components/no-company-state-card";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 
 /* ─── Trade-specific dashboard imports ─── */
 import PlumbingDashboard from "@/features/dashboard/components/trade-dashboards/plumbing-dashboard";
@@ -111,7 +113,14 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
 
 /* ─── Main export: routes to trade-specific dashboard ─── */
 export default function DashboardHome() {
-  const { data, loading } = useDashboardData();
+  const { data, loading, companyState, actions } = useDashboardData();
+  const { roles, refreshProfile, signOut } = useAuth();
+  const canCreateCompany = roles.includes("owner") || roles.includes("admin");
+
+  const retryLink = async () => {
+    await refreshProfile();
+    await actions.refreshData({ silent: true });
+  };
   const allowedTradeIds: TradeId[] | null =
     data.company?.industry && isTradeId(data.company.industry) ? [data.company.industry] : null;
   const { trade } = useTradeFilter(allowedTradeIds);
@@ -126,11 +135,54 @@ export default function DashboardHome() {
     );
   }
 
+  if (companyState.kind === "error") {
+    const status = companyState.status ? ` (HTTP ${companyState.status})` : "";
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Overview" subtitle="We couldn't load your workspace." />
+        <NoCompanyStateCard
+          title="Workspace unavailable"
+          description={`${companyState.message}${status}. Try again. If this keeps happening, it’s usually a Supabase policy/migration issue rather than your password.`}
+          canCreateCompany={false}
+          onRetryLink={() => void retryLink()}
+        />
+        <div className="flex justify-end">
+          <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => void signOut()}>
+            Sign out
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (companyState.kind === "missing") {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Overview" subtitle="Your company link looks stale." />
+        <NoCompanyStateCard
+          title="Company not found"
+          description="Your account is linked to a company that no longer exists (or was deleted). Create a new company to continue."
+          canCreateCompany={canCreateCompany}
+          onRetryLink={() => void retryLink()}
+        />
+      </div>
+    );
+  }
+
   if (!data.company) {
     return (
       <div className="space-y-6">
         <PageHeader title="Overview" subtitle="Set up your company to start using the dashboard." />
-        <NoCompanyStateCard />
+        <NoCompanyStateCard
+          title={canCreateCompany ? "No company yet" : "Not linked to a company"}
+          description={
+            canCreateCompany
+              ? "Create your company to unlock job cards, inventory, teams, and sites."
+              : "This account has a dashboard role but isn’t linked to a company. Ask an admin/owner to link you, then retry."
+          }
+          canCreateCompany={canCreateCompany}
+          onRetryLink={() => void retryLink()}
+        />
       </div>
     );
   }
