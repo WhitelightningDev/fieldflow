@@ -1,4 +1,5 @@
 import TechSidebar from "./tech-sidebar";
+import TechBottomNav from "./tech-bottom-nav";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/notification-bell";
@@ -6,11 +7,25 @@ import { Menu, MessageSquare } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function TechShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [industry, setIndustry] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!profile?.company_id) return;
+    supabase
+      .from("companies")
+      .select("industry")
+      .eq("id", profile.company_id)
+      .single()
+      .then(({ data }) => {
+        if (data) setIndustry(data.industry);
+      });
+  }, [profile?.company_id]);
 
   const title = React.useMemo(() => {
     const p = location.pathname;
@@ -40,16 +55,15 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile topbar + drawer nav */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="xl:hidden sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-          <div className="h-14 px-4 flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+        <div className="xl:hidden sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+          <div className="h-12 px-3 flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold truncate">{title}</div>
-              <div className="text-[11px] text-muted-foreground truncate">{profile?.full_name ?? "Technician"}</div>
             </div>
-            <Button asChild variant="ghost" size="icon" aria-label="Messages">
+            <Button asChild variant="ghost" size="icon" className="h-9 w-9" aria-label="Messages">
               <Link to="/tech/messages">
                 <MessageSquare className="h-5 w-5" />
               </Link>
@@ -67,9 +81,13 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
           </Sheet>
         </div>
 
-        <main className="flex-1 overflow-y-auto px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6">
+        {/* Main content area — extra bottom padding for bottom nav on mobile */}
+        <main className="flex-1 overflow-y-auto px-3 py-3 pb-[calc(4rem+env(safe-area-inset-bottom))] xl:pb-6 sm:px-5 sm:py-4">
           {children}
         </main>
+
+        {/* Mobile bottom tab bar */}
+        <TechBottomNav industry={industry} />
       </div>
     </div>
   );

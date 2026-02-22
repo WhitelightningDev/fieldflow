@@ -1439,6 +1439,42 @@ export type Database = {
           },
         ]
       }
+      user_onboarding: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          id: string
+          is_completed: boolean
+          tutorial_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          is_completed?: boolean
+          tutorial_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          is_completed?: boolean
+          tutorial_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
