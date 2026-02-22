@@ -29,7 +29,7 @@ export default function TechCocCertificates() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">COC Certificates</h1>
           <div className="text-sm text-muted-foreground mt-1">Create and print South African electrical CoCs + Test Reports.</div>

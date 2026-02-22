@@ -106,7 +106,7 @@ export default function JobPhotoUpload({ jobId, kind, onUploaded }: Props) {
               <Button
                 size="icon"
                 variant="destructive"
-                className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 h-7 w-7 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 onClick={() => deletePhoto(photo)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
