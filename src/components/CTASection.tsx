@@ -45,7 +45,7 @@ const CTASection = () => {
               variant="outline"
               className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 backdrop-blur-sm"
             >
-              <a href="#pricing">Schedule a Demo</a>
+              <Link to="/contact?subject=Demo%20request">Schedule a Demo</Link>
             </Button>
           </div>
         </div>

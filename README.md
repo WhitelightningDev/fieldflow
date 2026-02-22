@@ -57,6 +57,36 @@ npm run lint     # eslint (note: repo may contain legacy lint errors)
 
 If the dashboard shows “Workspace unavailable”, it’s usually a Supabase policy/migration mismatch rather than an auth issue.
 
+## Onboarding tutorials (spotlight tour)
+
+On first login (per user + company), FieldFlow can show a step-by-step tutorial that highlights dashboard elements and persists progress in Supabase.
+
+- DB: `public.user_onboarding` (migration in `supabase/migrations/20260222150000_user_onboarding.sql`)
+- Tutorial steps: `src/features/onboarding/tutorials/plumberDashboardTutorial.ts`
+- Mount point: `src/pages/Dashboard.tsx` (wraps dashboard routes with `OnboardingProvider` + `OnboardingOverlay`)
+
+### Tagging UI targets
+
+Prefer stable data attributes instead of brittle selectors:
+
+```tsx
+<div data-tour="plumber-kpis">
+  {/* KPI cards grid */}
+</div>
+```
+
+Then reference it from a step:
+
+```ts
+targetSelector: '[data-tour="plumber-kpis"]'
+```
+
+### Adding a new tutorial
+
+1) Create a config file in `src/features/onboarding/tutorials/` with a new `tutorial_key`
+2) Add `data-tour="..."` attributes to the UI elements you want to spotlight
+3) Register the tutorial selection logic in `src/features/onboarding/OnboardingProvider.tsx`
+
 ## Plumbing overview notes (how KPIs are computed)
 
 - **Scheduling + dispatch**: uses `job_cards.scheduled_at` + `job_time_entries` (if available) to estimate start/end and detect delays.

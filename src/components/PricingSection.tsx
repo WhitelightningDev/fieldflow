@@ -83,7 +83,7 @@ const PricingSection = () => {
   const priceSuffix = billingCycle === "annual" ? "/month (billed annually)" : "/month";
 
   return (
-    <section id="pricing" className="py-16 md:py-24 relative">
+    <section id="pricing" className="py-16 md:py-24 relative scroll-mt-24">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,hsl(199_89%_48%/0.05),transparent_70%)]" />
       
       <div className="container mx-auto px-4 relative">

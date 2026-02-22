@@ -42,7 +42,7 @@ const features = [
 
 const FeaturesSection = () => {
   return (
-    <section id="features" className="py-16 md:py-24 relative">
+    <section id="features" className="py-16 md:py-24 relative scroll-mt-24">
       {/* Background */}
       <div className="absolute inset-0 bg-secondary/50" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(262_83%_58%/0.05),transparent_70%)]" />

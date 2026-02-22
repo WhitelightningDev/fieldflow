@@ -23,6 +23,7 @@ import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-s
 import { extractTags, getNoteLineValue, hasTag } from "@/features/dashboard/lib/service-calls";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import { isMaintenanceJob } from "@/features/dashboard/lib/maintenance";
+import { useOnboardingController } from "@/features/onboarding/OnboardingProvider";
 import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { formatZarFromCents } from "@/lib/money";
 import {
@@ -97,6 +98,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
   const jobs = React.useMemo(() => allJobs.filter((j: any) => j.trade_id === "plumbing"), [allJobs]);
   const base = computeBaseMetrics(jobs, data.technicians);
   const techMetrics = computeTechMetrics(jobs, data.technicians);
+  const onboarding = useOnboardingController();
 
   const company = data.company as any;
   const overheadPct = (() => {
@@ -353,34 +355,45 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Plumbing Overview"
-        subtitle={`${data.company?.name} — Scheduling, cashflow, compliance, and performance`}
-        actions={(
-          <>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/dashboard/service-calls">Service calls</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/dashboard/jobs">Job cards</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/dashboard/technicians">Technicians</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/dashboard/inventory">Inventory</Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/dashboard/customers">Customers</Link>
-            </Button>
-          </>
-        )}
-      />
+      <div data-tour="plumber-header">
+        <PageHeader
+          title="Plumbing Overview"
+          subtitle={`${data.company?.name} — Scheduling, cashflow, compliance, and performance`}
+          actions={(
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => onboarding?.actions.replay()}
+              >
+                <RefreshCcw className="h-4 w-4" /> Replay tutorial
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/dashboard/service-calls">Service calls</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/dashboard/jobs">Job cards</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/dashboard/technicians">Technicians</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/dashboard/inventory">Inventory</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/dashboard/customers">Customers</Link>
+              </Button>
+            </>
+          )}
+        />
+      </div>
 
       {/* ─── BUSINESS HEALTH KPIS ─── */}
       <div>
         <SectionHeader title="Business Health" question="Are ops, cashflow, and customers healthy?" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-tour="plumber-kpis">
           <KpiCard
             icon={ListChecks}
             label="Completion Rate (30d)"
@@ -508,7 +521,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
           </Card>
         </div>
         <div className="mt-3 grid gap-4 lg:grid-cols-3">
-          <Card className="bg-card/70 backdrop-blur-sm lg:col-span-2">
+          <Card className="bg-card/70 backdrop-blur-sm lg:col-span-2" data-tour="plumber-dispatch-timeline">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center justify-between gap-3">
                 <span>Dispatch timeline</span>
@@ -538,7 +551,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/70 backdrop-blur-sm">
+          <Card className="bg-card/70 backdrop-blur-sm" data-tour="plumber-live-tech-status">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Live technician status</CardTitle>
             </CardHeader>
@@ -681,7 +694,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       {/* ─── RISK ─── */}
       <div>
         <SectionHeader title="Compliance & Safety" question="What could cause rework, penalties, or safety incidents?" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-tour="plumber-compliance-kpis">
           <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="rework kills margin" />
           <KpiCard icon={ShieldCheck} label="Gas Compliance CoCs" value={openGasCoc} accent={openGasCoc > 0 ? "warning" : undefined} sub="open (tagged on service calls)" />
           <KpiCard icon={Briefcase} label="Pressure Tests" value={openPressureTests} accent={openPressureTests > 0 ? "warning" : undefined} sub="open (tagged on service calls)" />
@@ -711,7 +724,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       {/* ─── ENTRY POINTS ─── */}
       <div>
         <SectionHeader title="Reports & Analytics" question="Jump into deeper insights and full records." />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-tour="plumber-reports-links">
           <LinkCard to="/dashboard/service-calls" title="Service calls" subtitle="Dispatch, emergencies, after-hours, and compliance tags." />
           <LinkCard to="/dashboard/maintenance-schedules" title="Maintenance" subtitle="Recurring schedules, due dates, and maintenance history." />
           <LinkCard to="/dashboard/jobs" title="Job cards" subtitle="Full work history with profitability, photos, materials, and time." />

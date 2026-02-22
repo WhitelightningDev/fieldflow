@@ -26,7 +26,7 @@ const roles = [
 
 const RolesSection = () => {
   return (
-    <section className="py-16 md:py-24 relative">
+    <section id="roles" className="py-16 md:py-24 relative scroll-mt-24">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,hsl(199_89%_48%/0.05),transparent_50%)]" />
       
       <div className="container mx-auto px-4 relative">

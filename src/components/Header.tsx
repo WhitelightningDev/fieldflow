@@ -6,6 +6,7 @@ import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -19,15 +20,18 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Features
-            </a>
-            <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            </Link>
+            <Link to="/#roles" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Roles
+            </Link>
+            <Link to="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Pricing
-            </a>
-            <a href="#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            </Link>
+            <Link to="/#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Add-ons
-            </a>
+            </Link>
             <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Contact
             </Link>
@@ -56,24 +60,27 @@ const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border/50 py-4 animate-fade-in">
             <nav className="flex flex-col gap-4">
-              <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              <Link to="/#features" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={closeMobileMenu}>
                 Features
-              </a>
-              <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              </Link>
+              <Link to="/#roles" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={closeMobileMenu}>
+                Roles
+              </Link>
+              <Link to="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={closeMobileMenu}>
                 Pricing
-              </a>
-              <a href="#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              </Link>
+              <Link to="/#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={closeMobileMenu}>
                 Add-ons
-              </a>
-              <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              </Link>
+              <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={closeMobileMenu}>
                 Contact
               </Link>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
                 <Button asChild variant="ghost" className="w-full justify-start">
-                  <Link to="/login">Log in</Link>
+                  <Link to="/login" onClick={closeMobileMenu}>Log in</Link>
                 </Button>
                 <Button asChild className="w-full gradient-bg">
-                  <Link to="/company-signup">Start Free Trial</Link>
+                  <Link to="/company-signup" onClick={closeMobileMenu}>Start Free Trial</Link>
                 </Button>
               </div>
             </nav>

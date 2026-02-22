@@ -55,7 +55,7 @@ const addons = [
 
 const AddonsSection = () => {
   return (
-    <section id="addons" className="py-16 md:py-24 relative">
+    <section id="addons" className="py-16 md:py-24 relative scroll-mt-24">
       <div className="absolute inset-0 bg-secondary/50" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(262_83%_58%/0.08),transparent_50%)]" />
       

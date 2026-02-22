@@ -131,20 +131,22 @@ export default function ServiceCalls() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Service calls"
-        subtitle={subtitle}
-        actions={
-          <>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void actions.refreshData()}>
-              <RefreshCcw className="h-4 w-4" /> Refresh
-            </Button>
-            <CreateServiceCallDialog />
-          </>
-        }
-      />
+      <div data-tour="servicecalls-header">
+        <PageHeader
+          title="Service calls"
+          subtitle={subtitle}
+          actions={
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void actions.refreshData()}>
+                <RefreshCcw className="h-4 w-4" /> Refresh
+              </Button>
+              <CreateServiceCallDialog />
+            </>
+          }
+        />
+      </div>
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-6" data-tour="servicecalls-stats">
         <Card className="bg-card/70 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">Service calls</CardTitle>
@@ -195,7 +197,7 @@ export default function ServiceCalls() {
         </Card>
       </div>
 
-      <Card className="bg-card/70 backdrop-blur-sm">
+      <Card className="bg-card/70 backdrop-blur-sm" data-tour="servicecalls-filters">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Filters</CardTitle>
         </CardHeader>
@@ -243,7 +245,7 @@ export default function ServiceCalls() {
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden" data-tour="servicecalls-table">
         <div className="hidden sm:block overflow-x-auto">
           <div className="min-w-[1200px]">
             <Table>

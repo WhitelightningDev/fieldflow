@@ -8,8 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { Mail, MapPin, Phone } from "lucide-react";
 import * as React from "react";
+import { useSearchParams } from "react-router-dom";
 
 export default function Contact() {
+  const [searchParams] = useSearchParams();
   const [form, setForm] = React.useState({
     name: "",
     email: "",
@@ -18,6 +20,17 @@ export default function Contact() {
     subject: "",
     message: "",
   });
+
+  React.useEffect(() => {
+    const subject = searchParams.get("subject") ?? "";
+    const message = searchParams.get("message") ?? "";
+    if (!subject && !message) return;
+    setForm((p) => ({
+      ...p,
+      subject: p.subject || subject,
+      message: p.message || message,
+    }));
+  }, [searchParams]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,4 +190,3 @@ export default function Contact() {
     </div>
   );
 }
-

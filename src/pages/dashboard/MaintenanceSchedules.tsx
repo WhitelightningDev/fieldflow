@@ -182,20 +182,22 @@ export default function MaintenanceSchedules() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Maintenance"
-        subtitle={subtitle}
-        actions={(
-          <>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void actions.refreshData()}>
-              <RefreshCcw className="h-4 w-4" /> Refresh
-            </Button>
-            <CreateMaintenancePlanDialog onCreated={() => void actions.refreshData({ silent: true })} />
-          </>
-        )}
-      />
+      <div data-tour="maintenance-header">
+        <PageHeader
+          title="Maintenance"
+          subtitle={subtitle}
+          actions={(
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void actions.refreshData()}>
+                <RefreshCcw className="h-4 w-4" /> Refresh
+              </Button>
+              <CreateMaintenancePlanDialog onCreated={() => void actions.refreshData({ silent: true })} />
+            </>
+          )}
+        />
+      </div>
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4" data-tour="maintenance-stats">
         <Card className="bg-card/70 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">Plans</CardTitle>
@@ -230,7 +232,7 @@ export default function MaintenanceSchedules() {
         </Card>
       </div>
 
-      <Card className="bg-card/70 backdrop-blur-sm">
+      <Card className="bg-card/70 backdrop-blur-sm" data-tour="maintenance-view">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">View</CardTitle>
         </CardHeader>
@@ -252,7 +254,7 @@ export default function MaintenanceSchedules() {
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden" data-tour="maintenance-table">
         <div className="hidden sm:block overflow-x-auto">
           <div className="min-w-[1100px]">
             <Table>
