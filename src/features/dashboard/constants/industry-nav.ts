@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Refrigerator,
+  Receipt,
   Settings,
   ShieldCheck,
   Sun,
@@ -33,6 +34,7 @@ export type NavItem = {
 const SHARED_NAV: NavItem[] = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/dashboard/jobs", label: "Job cards", icon: Briefcase },
+  { to: "/dashboard/invoices", label: "Invoices", icon: Receipt },
   { to: "/dashboard/sites", label: "Sites", icon: Building2 },
   { to: "/dashboard/customers", label: "Customers", icon: Users },
   { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
@@ -42,7 +44,7 @@ const SHARED_NAV: NavItem[] = [
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-/** Industry-specific nav items inserted after "Job cards" */
+/** Industry-specific nav items inserted after "Invoices" */
 const INDUSTRY_NAV: Record<TradeId, NavItem[]> = {
   "electrical-contracting": [
     { to: "/dashboard/solar", label: "Solar projects", icon: Sun },
@@ -68,7 +70,7 @@ const INDUSTRY_NAV: Record<TradeId, NavItem[]> = {
 
 /**
  * Build the full sidebar nav for a given industry.
- * Industry-specific items are inserted right after "Job cards".
+ * Industry-specific items are inserted right after "Invoices".
  */
 export function getIndustryNav(industry: string | null | undefined): NavItem[] {
   const industryItems = (industry && industry in INDUSTRY_NAV)
@@ -77,10 +79,10 @@ export function getIndustryNav(industry: string | null | undefined): NavItem[] {
 
   if (industryItems.length === 0) return SHARED_NAV;
 
-  // Insert industry items after "Job cards" (index 1)
+  // Insert industry items after "Invoices" (index 2)
   return [
-    ...SHARED_NAV.slice(0, 2), // Overview + Job cards
+    ...SHARED_NAV.slice(0, 3), // Overview + Job cards + Invoices
     ...industryItems,
-    ...SHARED_NAV.slice(2),    // Sites, Customers, etc.
+    ...SHARED_NAV.slice(3),    // Sites, Customers, etc.
   ];
 }

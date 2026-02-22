@@ -27,6 +27,20 @@ export function OnboardingOverlay() {
   const scrollAttemptedRef = React.useRef<string | null>(null);
   const autoClickAttemptedRef = React.useRef(new Set<string>());
 
+  // Expose a global flag so dismissible layers (Dialog/Sheet) can avoid closing
+  // when interacting with the tutorial wizard UI (which sits "outside" the modal).
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (isOpen) {
+      document.documentElement.dataset.onboardingOverlayOpen = "1";
+    } else {
+      delete document.documentElement.dataset.onboardingOverlayOpen;
+    }
+    return () => {
+      delete document.documentElement.dataset.onboardingOverlayOpen;
+    };
+  }, [isOpen]);
+
   // Navigate to the step route (if needed) and then look for the target.
   React.useEffect(() => {
     if (!isOpen || !step) {
@@ -76,10 +90,18 @@ export function OnboardingOverlay() {
         const opener = findTarget(step.autoClickSelector);
         if (opener) {
           autoClickAttemptedRef.current.add(step.id);
+          // Avoid toggling UI closed if the opener is already in an "open" state.
+          // Radix triggers typically expose `data-state="open"` (and/or `aria-expanded="true"`).
+          const state = opener.getAttribute("data-state");
+          const expanded = opener.getAttribute("aria-expanded");
+          if (state === "open" || expanded === "true") {
+            // The UI is already open; clicking again could close it.
+          } else {
           try {
             opener.click();
           } catch {
             // ignore
+          }
           }
         }
       }

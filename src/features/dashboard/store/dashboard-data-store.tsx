@@ -7,6 +7,8 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase
 type Customer = Tables<"customers">;
 type Technician = Tables<"technicians">;
 type JobCard = Tables<"job_cards">;
+type Invoice = Tables<"invoices">;
+type InvoicePayment = Tables<"invoice_payments">;
 type InventoryItem = Tables<"inventory_items">;
 type Site = Tables<"sites">;
 type Team = Tables<"teams">;
@@ -24,6 +26,8 @@ export type DashboardData = {
   customers: Customer[];
   technicians: Technician[];
   jobCards: JobCard[];
+  invoices: Invoice[];
+  invoicePayments: InvoicePayment[];
   inventoryItems: InventoryItem[];
   sites: Site[];
   teams: Team[];
@@ -103,6 +107,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     customers: [],
     technicians: [],
     jobCards: [],
+    invoices: [],
+    invoicePayments: [],
     inventoryItems: [],
     sites: [],
     teams: [],
@@ -134,6 +140,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       customers: [],
       technicians: [],
       jobCards: [],
+      invoices: [],
+      invoicePayments: [],
       inventoryItems: [],
       sites: [],
       teams: [],
@@ -183,6 +191,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     let customersRes: any;
     let techRes: any;
     let jobsRes: any;
+    let invoicesRes: any;
+    let invoicePaysRes: any;
     let invRes: any;
     let sitesRes: any;
     let teamsRes: any;
@@ -193,11 +203,13 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     let materialRes: any;
 
     try {
-      [companyRes, customersRes, techRes, jobsRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes, locationsRes] = await Promise.all([
+      [companyRes, customersRes, techRes, jobsRes, invoicesRes, invoicePaysRes, invRes, sitesRes, teamsRes, teamMembersRes, assignmentsRes, locationsRes] = await Promise.all([
         supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
         supabase.from("customers").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("technicians").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("job_cards").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("invoices").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("invoice_payments").select("*").eq("company_id", companyId).order("paid_at", { ascending: false }),
         supabase.from("inventory_items").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("sites").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
         supabase.from("teams").select("*").eq("company_id", companyId).order("created_at", { ascending: false }),
@@ -232,6 +244,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       { name: "customers", res: customersRes },
       { name: "technicians", res: techRes },
       { name: "job_cards", res: jobsRes },
+      { name: "invoices", res: invoicesRes },
+      { name: "invoice_payments", res: invoicePaysRes },
       { name: "inventory_items", res: invRes },
       { name: "sites", res: sitesRes },
       { name: "teams", res: teamsRes },
@@ -273,6 +287,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         customers: mergeById(fetchedCustomers, prevCustomers),
         technicians: techRes.data ?? [],
         jobCards: jobsRes.data ?? [],
+        invoices: invoicesRes.data ?? [],
+        invoicePayments: invoicePaysRes.data ?? [],
         inventoryItems: invRes.data ?? [],
         sites: sitesRes.data ?? [],
         teams: teamsRes.data ?? [],
@@ -333,6 +349,38 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
           const row = payload?.new as JobCard | undefined;
           if (!row?.id) return;
           setData((prev) => ({ ...prev, jobCards: upsertByKey(prev.jobCards, row, "id") }));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "invoices", filter: `company_id=eq.${companyId}` },
+        (payload: any) => {
+          const type = payload?.eventType as string;
+          if (type === "DELETE") {
+            const id = payload?.old?.id as string | undefined;
+            if (!id) return;
+            setData((prev) => ({ ...prev, invoices: prev.invoices.filter((i) => i.id !== id) }));
+            return;
+          }
+          const row = payload?.new as Invoice | undefined;
+          if (!row?.id) return;
+          setData((prev) => ({ ...prev, invoices: upsertByKey(prev.invoices, row, "id") }));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "invoice_payments", filter: `company_id=eq.${companyId}` },
+        (payload: any) => {
+          const type = payload?.eventType as string;
+          if (type === "DELETE") {
+            const id = payload?.old?.id as string | undefined;
+            if (!id) return;
+            setData((prev) => ({ ...prev, invoicePayments: prev.invoicePayments.filter((p) => p.id !== id) }));
+            return;
+          }
+          const row = payload?.new as InvoicePayment | undefined;
+          if (!row?.id) return;
+          setData((prev) => ({ ...prev, invoicePayments: upsertByKey(prev.invoicePayments, row, "id") }));
         },
       )
       .on(

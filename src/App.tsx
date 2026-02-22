@@ -20,6 +20,7 @@ import Technicians from "./pages/dashboard/Technicians";
 import Inventory from "./pages/dashboard/Inventory";
 import Sites from "./pages/dashboard/Sites";
 import Teams from "./pages/dashboard/Teams";
+import Invoices from "./pages/dashboard/Invoices";
 import CreateCompany from "./pages/dashboard/CreateCompany";
 import SolarProjects from "./pages/dashboard/SolarProjects";
 import CocCertificates from "./pages/dashboard/CocCertificates";
@@ -69,6 +70,7 @@ const App = () => (
 	              <Route path="create-company" element={<CreateCompany />} />
 	              <Route path="settings" element={<DashboardSettings />} />
 	              <Route path="jobs" element={<Jobs />} />
+	              <Route path="invoices" element={<Invoices />} />
 	              <Route path="customers" element={<Customers />} />
 	              <Route path="technicians" element={<Technicians />} />
 	              <Route path="inventory" element={<Inventory />} />
