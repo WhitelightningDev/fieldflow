@@ -1,4 +1,5 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -27,6 +28,7 @@ import {
   TrendingUp,
   WashingMachine,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type Props = { data: any; allJobs: any[] };
 
@@ -89,7 +91,20 @@ export default function ApplianceRepairDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Appliance Repair Dashboard" subtitle={`${data.company?.name} — Warranty, parts, and first-visit performance`} />
+      <PageHeader
+        title="Appliance Repair Dashboard"
+        subtitle={`${data.company?.name} — Warranty, parts, and first-visit performance`}
+        actions={(
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/dashboard/repair-history">Repair history</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/dashboard/warranty-tracker">Warranty tracker</Link>
+            </Button>
+          </>
+        )}
+      />
 
       {/* WARRANTY & PARTS */}
       <div>
