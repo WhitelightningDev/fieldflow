@@ -41,27 +41,70 @@ const statusColor: Record<string, string> = {
 };
 
 function deriveStep(job: any, hasInvoice: boolean): JobFlowStep {
-  if (job.status === "new" || job.status === "scheduled") return "arrive";
+  // NOTE: kept for compatibility; the real derive uses job evidence below.
   if (job.status === "invoiced" || hasInvoice) return "invoice";
   if (job.status === "completed") return "signoff";
-  return "work";
+  return "arrive";
 }
 
-function deriveCompleted(job: any, timeEntries: any[], hasBeforePhotos: boolean, hasAfterPhotos: boolean, hasInvoice: boolean): Set<JobFlowStep> {
+type StepEvidence = {
+  timeEntries: any[];
+  usedParts: any[];
+  checkedItems: boolean[];
+  hasBeforePhotos: boolean;
+  hasAfterPhotos: boolean;
+  signatureCount: number;
+  hasInvoice: boolean;
+};
+
+function hasMeaningfulNotes(notes: unknown) {
+  return String(notes ?? "").trim().length > 0;
+}
+
+function deriveCompleted(job: any, evidence: StepEvidence): Set<JobFlowStep> {
+  const {
+    timeEntries,
+    usedParts,
+    checkedItems,
+    hasBeforePhotos,
+    hasAfterPhotos,
+    signatureCount,
+    hasInvoice,
+  } = evidence;
   const s = new Set<JobFlowStep>();
-  if (job.status !== "new" && job.status !== "scheduled") s.add("arrive");
-  if (timeEntries.length > 0) s.add("work");
-  if (hasBeforePhotos) s.add("arrive");
+  // "Arrive" is only complete once there's evidence (timer or before photos),
+  // not merely because someone toggled status to in-progress elsewhere.
+  if (hasBeforePhotos || timeEntries.length > 0) s.add("arrive");
+
+  // "Diagnose" is complete once they checked any checklist item or captured notes.
+  if (checkedItems.some(Boolean) || hasMeaningfulNotes(job?.notes)) s.add("diagnose");
+
+  // "Work" is complete once time or parts are logged.
+  if (timeEntries.length > 0 || usedParts.length > 0) s.add("work");
+
+  // "Document" is complete once after photos exist.
   if (hasAfterPhotos) s.add("document");
-  if (job.status === "completed" || job.status === "invoiced") {
-    s.add("arrive");
-    s.add("diagnose");
-    s.add("work");
-    s.add("document");
-    s.add("signoff");
-  }
-  if (hasInvoice) s.add("invoice");
+
+  // "Sign-off" is complete once signed (or invoiced).
+  if (signatureCount > 0 || job.status === "invoiced" || hasInvoice) s.add("signoff");
+
+  if (hasInvoice || job.status === "invoiced") s.add("invoice");
   return s;
+}
+
+function deriveInitialStep(job: any, evidence: StepEvidence): JobFlowStep {
+  const completed = deriveCompleted(job, evidence);
+
+  if (job.status === "invoiced" || evidence.hasInvoice) return "invoice";
+  if (job.status === "completed") return completed.has("signoff") ? "invoice" : "signoff";
+  if (job.status === "cancelled") return "arrive";
+  if (job.status === "new" || job.status === "scheduled") return "arrive";
+
+  // For in-progress work, resume from the first incomplete step.
+  for (const step of JOB_FLOW_STEPS) {
+    if (!completed.has(step.id)) return step.id;
+  }
+  return "invoice";
 }
 
 export default function TechJobDetail() {
@@ -215,9 +258,17 @@ export default function TechJobDetail() {
       return;
     }
 
-    setCurrentStep(deriveStep(job, hasInvoice));
+    setCurrentStep(deriveInitialStep(job, {
+      timeEntries,
+      usedParts,
+      checkedItems,
+      hasBeforePhotos: beforePhotoCount > 0,
+      hasAfterPhotos: afterPhotoCount > 0,
+      signatureCount,
+      hasInvoice,
+    }));
     initialStepSetRef.current = true;
-  }, [job, hasInvoice, searchParams]);
+  }, [afterPhotoCount, beforePhotoCount, checkedItems, hasInvoice, job, searchParams, signatureCount, timeEntries, usedParts]);
 
   // Keep URL in sync (best-effort)
   React.useEffect(() => {
@@ -233,7 +284,15 @@ export default function TechJobDetail() {
   }, [currentStep, searchParams, setSearchParams]);
 
   const completedSteps = job
-    ? deriveCompleted(job, timeEntries, beforePhotoCount > 0, afterPhotoCount > 0, hasInvoice)
+    ? deriveCompleted(job, {
+        timeEntries,
+        usedParts,
+        checkedItems,
+        hasBeforePhotos: beforePhotoCount > 0,
+        hasAfterPhotos: afterPhotoCount > 0,
+        signatureCount,
+        hasInvoice,
+      })
     : new Set<JobFlowStep>();
 
   const updateStatus = async (status: string): Promise<boolean> => {
