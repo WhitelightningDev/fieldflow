@@ -25,6 +25,7 @@ export function OnboardingOverlay() {
 
   const lastNavStepIdRef = React.useRef<string | null>(null);
   const scrollAttemptedRef = React.useRef<string | null>(null);
+  const autoClickAttemptedRef = React.useRef(new Set<string>());
 
   // Navigate to the step route (if needed) and then look for the target.
   React.useEffect(() => {
@@ -48,10 +49,10 @@ export function OnboardingOverlay() {
 
     lastNavStepIdRef.current = null;
 
-    const timeoutMs = 2800;
     const startedAt = Date.now();
+    const showWarningAfterMs = 1200;
 
-    const poll = () => {
+    const tick = () => {
       if (cancelled) return;
       const el = findTarget(step.targetSelector);
       if (el) {
@@ -64,56 +65,37 @@ export function OnboardingOverlay() {
             // ignore
           }
         }
-
-        // Measure after a paint to avoid stale rects right after navigation/scroll.
-        requestAnimationFrame(() => {
-          if (cancelled) return;
-          setTargetRect(el.getBoundingClientRect());
-          setMissingTarget(false);
-        });
+        const rect = el.getBoundingClientRect();
+        setTargetRect(rect);
+        setMissingTarget(false);
         return;
       }
 
-      if (Date.now() - startedAt >= timeoutMs) {
-        setTargetRect(null);
-        setMissingTarget(true);
-        return;
+      // If the step depends on opening UI (like a modal), attempt it once.
+      if (step.autoClickSelector && !autoClickAttemptedRef.current.has(step.id)) {
+        const opener = findTarget(step.autoClickSelector);
+        if (opener) {
+          autoClickAttemptedRef.current.add(step.id);
+          try {
+            opener.click();
+          } catch {
+            // ignore
+          }
+        }
       }
 
-      window.setTimeout(poll, 120);
+      setTargetRect(null);
+      if (Date.now() - startedAt >= showWarningAfterMs) setMissingTarget(true);
     };
 
-    poll();
+    tick();
+    const intervalId = window.setInterval(tick, 250);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
-  }, [isOpen, step?.id, step?.route, step?.targetSelector, location.pathname, navigate]);
-
-  // Keep the spotlight aligned during scroll/resize while the target exists.
-  React.useEffect(() => {
-    if (!isOpen || !step) return;
-    if (missingTarget) return;
-
-    let raf = 0;
-    const update = () => {
-      const el = findTarget(step.targetSelector);
-      if (!el) return;
-      setTargetRect(el.getBoundingClientRect());
-    };
-    const onEvent = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(update);
-    };
-
-    window.addEventListener("resize", onEvent);
-    window.addEventListener("scroll", onEvent, true);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onEvent);
-      window.removeEventListener("scroll", onEvent, true);
-    };
-  }, [isOpen, step?.id, step?.targetSelector, missingTarget]);
+  }, [isOpen, step?.id, step?.route, step?.targetSelector, step?.autoClickSelector, location.pathname, navigate]);
 
   // Escape to skip (best-effort).
   React.useEffect(() => {
@@ -130,12 +112,7 @@ export function OnboardingOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9998] pointer-events-none">
-      {/* Click-catcher to prevent background interaction */}
-      <div className="absolute inset-0 pointer-events-auto" />
-
-      {/* If the target isn't available yet, still dim the page behind the card. */}
-      {!targetRect ? <div aria-hidden="true" className="fixed inset-0 bg-black/60 pointer-events-none" /> : null}
-      <Spotlight rect={targetRect} />
+      <Spotlight rect={targetRect} mode="outline" />
       <TutorialCard
         step={step}
         stepIndex={controller.currentStepIndex}

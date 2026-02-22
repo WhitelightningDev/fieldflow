@@ -23,7 +23,8 @@ import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-s
 import { extractTags, getNoteLineValue, hasTag } from "@/features/dashboard/lib/service-calls";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
 import { isMaintenanceJob } from "@/features/dashboard/lib/maintenance";
-import { useOnboardingController } from "@/features/onboarding/OnboardingProvider";
+import { useOnboardingManager } from "@/features/onboarding/OnboardingProvider";
+import { PLUMBER_DASHBOARD_TUTORIAL_KEY } from "@/features/onboarding/tutorials/plumberDashboardTutorial";
 import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { formatZarFromCents } from "@/lib/money";
 import {
@@ -98,7 +99,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
   const jobs = React.useMemo(() => allJobs.filter((j: any) => j.trade_id === "plumbing"), [allJobs]);
   const base = computeBaseMetrics(jobs, data.technicians);
   const techMetrics = computeTechMetrics(jobs, data.technicians);
-  const onboarding = useOnboardingController();
+  const onboarding = useOnboardingManager();
 
   const company = data.company as any;
   const overheadPct = (() => {
@@ -366,7 +367,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
-                onClick={() => onboarding?.actions.replay()}
+                onClick={() => onboarding?.replay(PLUMBER_DASHBOARD_TUTORIAL_KEY)}
               >
                 <RefreshCcw className="h-4 w-4" /> Replay tutorial
               </Button>

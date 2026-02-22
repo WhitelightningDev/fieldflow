@@ -167,7 +167,7 @@ export default function CreateTechnicianDialog() {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="sm">Add technician</Button>
+          <Button size="sm" data-tour="technicians-add">Add technician</Button>
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -186,7 +186,7 @@ export default function CreateTechnicianDialog() {
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Jordan" autoComplete="name" {...field} />
+                    <Input placeholder="e.g. Jordan" autoComplete="name" data-tour="technician-name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -239,7 +239,7 @@ export default function CreateTechnicianDialog() {
                     </Button>
                   </div>
                   <FormControl>
-                    <Input type="text" placeholder="Set a password (min 8 chars)" autoComplete="new-password" {...field} />
+                    <Input type="text" placeholder="Set a password (min 8 chars)" autoComplete="new-password" data-tour="technician-password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -308,7 +308,7 @@ export default function CreateTechnicianDialog() {
             </div>
 
             <DialogFooter>
-              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting} data-tour="technician-submit">
                 {form.formState.isSubmitting ? "Creating..." : "Create technician access"}
               </Button>
             </DialogFooter>

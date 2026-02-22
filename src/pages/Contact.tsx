@@ -177,7 +177,7 @@ export default function Contact() {
                       Tell us your trade (e.g. plumbing), team size, and what you want to improve (dispatch, compliance, billing, inventory).
                     </div>
                     <Button asChild variant="outline" className="w-full">
-                      <a href="mailto:sales@yourcompany.co.za?subject=Demo%20request">Email sales</a>
+                      <a href="mailto:systems.devconone@gmail.com?subject=Demo%20request">Email sales</a>
                     </Button>
                   </CardContent>
                 </Card>

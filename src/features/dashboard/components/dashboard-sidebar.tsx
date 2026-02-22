@@ -21,6 +21,18 @@ import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 
+function tourIdForNavPath(to: string) {
+  if (to === "/dashboard") return "nav-overview";
+  const suffix = to.replace("/dashboard/", "");
+  // Keep ids stable and selector-friendly.
+  const cleaned = suffix
+    .replace(/[^a-z0-9-]/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  return `nav-${cleaned}`;
+}
+
 export default function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -88,7 +100,11 @@ export default function DashboardSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton asChild isActive={isActive(item.to)} tooltip={item.label}>
-                    <Link to={item.to} className={cn("flex items-center gap-2")}>
+                    <Link
+                      to={item.to}
+                      data-tour={tourIdForNavPath(item.to)}
+                      className={cn("flex items-center gap-2")}
+                    >
                       <item.icon />
                       <span>{item.label}</span>
                     </Link>

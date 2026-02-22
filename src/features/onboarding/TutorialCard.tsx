@@ -60,6 +60,7 @@ export function TutorialCard({
 }: Props) {
   const cardRef = React.useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = React.useState<{ left: number; top: number } | null>(null);
+  const [arrow, setArrow] = React.useState<{ side: "top" | "bottom" | "left" | "right"; x: number; y: number } | null>(null);
 
   const isFirst = stepIndex <= 0;
   const isLast = stepIndex >= totalSteps - 1;
@@ -71,23 +72,50 @@ export function TutorialCard({
     if (!el) return;
 
     const { width, height } = el.getBoundingClientRect();
+    const arrowSize = 12;
+    const arrowEdgePad = 18;
 
     if (!targetRect || missingTarget) {
       setPos({ left: Math.max(12, (vw - width) / 2), top: Math.max(12, (vh - height) / 2) });
+      setArrow(null);
       return;
     }
 
-    setPos(
-      computePosition({
-        placement: step.placement,
-        rect: targetRect,
-        cardW: width,
-        cardH: height,
-        margin: 12,
-        viewportW: vw,
-        viewportH: vh,
-      }),
-    );
+    const nextPos = computePosition({
+      placement: step.placement,
+      rect: targetRect,
+      cardW: width,
+      cardH: height,
+      margin: 12,
+      viewportW: vw,
+      viewportH: vh,
+    });
+    setPos(nextPos);
+
+    const targetCx = targetRect.left + targetRect.width / 2;
+    const targetCy = targetRect.top + targetRect.height / 2;
+
+    // Arrow should point toward the target, so it's rendered on the card edge
+    // opposite to the placement direction.
+    const side =
+      step.placement === "top"
+        ? "bottom"
+        : step.placement === "bottom"
+          ? "top"
+          : step.placement === "left"
+            ? "right"
+            : "left";
+
+    const xInCard = clamp(targetCx - nextPos.left, arrowEdgePad, Math.max(arrowEdgePad, width - arrowEdgePad));
+    const yInCard = clamp(targetCy - nextPos.top, arrowEdgePad, Math.max(arrowEdgePad, height - arrowEdgePad));
+
+    // Convert "in card" coords to absolute arrow top/left.
+    const arrowX =
+      side === "left" ? -arrowSize / 2 : side === "right" ? width - arrowSize / 2 : xInCard - arrowSize / 2;
+    const arrowY =
+      side === "top" ? -arrowSize / 2 : side === "bottom" ? height - arrowSize / 2 : yInCard - arrowSize / 2;
+
+    setArrow({ side, x: arrowX, y: arrowY });
   }, [step.id, step.placement, targetRect, missingTarget]);
 
   return (
@@ -103,6 +131,13 @@ export function TutorialCard({
       aria-modal="true"
       aria-label="Onboarding tutorial"
     >
+      {arrow ? (
+        <div
+          aria-hidden="true"
+          className="absolute h-3 w-3 rotate-45 border bg-background/95"
+          style={{ left: arrow.x, top: arrow.y }}
+        />
+      ) : null}
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

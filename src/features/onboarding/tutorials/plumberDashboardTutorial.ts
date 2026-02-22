@@ -5,75 +5,58 @@ export const PLUMBER_DASHBOARD_TUTORIAL_KEY = "plumber-dashboard-v1";
 export const plumberDashboardTutorialSteps: TutorialStep[] = [
   {
     id: "welcome",
-    title: "Welcome to your Plumbing Overview",
-    description:
-      "This quick tour shows where to spot today’s workload, cashflow risk, and compliance alerts. You can skip anytime.",
-    targetSelector: '[data-tour="plumber-header"]',
-    placement: "bottom",
-    route: "/dashboard",
+    title: "Welcome",
+    description: "Use the sidebar to move through the core pages. This tour explains what each page is for.",
+    targetSelector: '[data-tour="nav-overview"]',
+    placement: "right",
   },
   {
-    id: "kpis",
-    title: "Business health KPIs",
-    description:
-      "Track completion rate, backlog, revenue per tech, break-even, billing backlog, and repeat customers at a glance.",
-    targetSelector: '[data-tour="plumber-kpis"]',
-    placement: "bottom",
-    route: "/dashboard",
-  },
-  {
-    id: "dispatch",
-    title: "Scheduling & dispatch",
-    description:
-      "Use the dispatch timeline to see today’s jobs, assignments, and delays so you can intervene early.",
-    targetSelector: '[data-tour="plumber-dispatch-timeline"]',
-    placement: "top",
-    route: "/dashboard",
-  },
-  {
-    id: "tech-status",
-    title: "Live technician status",
-    description:
-      "See who’s on-site, en route, completed, or idle. GPS freshness helps spot stale location updates.",
-    targetSelector: '[data-tour="plumber-live-tech-status"]',
-    placement: "left",
-    route: "/dashboard",
-  },
-  {
-    id: "compliance",
-    title: "Compliance & safety alerts",
-    description:
-      "Keep an eye on open Gas CoCs, PIRB CoCs, and pressure tests. These reduce rework and regulatory risk.",
-    targetSelector: '[data-tour="plumber-compliance-kpis"]',
-    placement: "bottom",
-    route: "/dashboard",
+    id: "jobs",
+    title: "Job cards",
+    description: "All work orders in one place: scheduling, status, notes/photos, time, parts, and invoicing state.",
+    targetSelector: '[data-tour="nav-jobs"]',
+    placement: "right",
   },
   {
     id: "service-calls",
-    title: "Service calls: filter fast",
-    description:
-      "Use filters to find emergencies, after-hours work, and tagged compliance items (e.g. #gas-coc, #pressure-test).",
-    targetSelector: '[data-tour="servicecalls-filters"]',
-    placement: "bottom",
-    route: "/dashboard/service-calls",
+    title: "Service calls",
+    description: "Log call-outs and emergencies, filter by urgency, and track compliance tags like Gas CoCs and pressure tests.",
+    targetSelector: '[data-tour="nav-service-calls"]',
+    placement: "right",
   },
   {
     id: "maintenance",
-    title: "Maintenance schedules",
-    description:
-      "Recurring maintenance plans prevent failures and smooth workload. Watch overdue and due-soon items.",
-    targetSelector: '[data-tour="maintenance-stats"]',
-    placement: "bottom",
-    route: "/dashboard/maintenance-schedules",
+    title: "Maintenance",
+    description: "Set up recurring maintenance plans and prevent missed services with due/overdue tracking.",
+    targetSelector: '[data-tour="nav-maintenance-schedules"]',
+    placement: "right",
   },
   {
-    id: "reports",
-    title: "Deep insights",
-    description:
-      "Jump into full reports: service calls, maintenance, job cards, technicians, inventory, customers, and sites.",
-    targetSelector: '[data-tour="plumber-reports-links"]',
-    placement: "top",
-    route: "/dashboard",
+    id: "customers",
+    title: "Customers",
+    description: "Store billing details, contacts, and job history so quotes/invoices are consistent.",
+    targetSelector: '[data-tour="nav-customers"]',
+    placement: "right",
+  },
+  {
+    id: "sites",
+    title: "Sites",
+    description: "Manage addresses, site contacts, team assignments, and site-level job profitability.",
+    targetSelector: '[data-tour="nav-sites"]',
+    placement: "right",
+  },
+  {
+    id: "technicians",
+    title: "Technicians",
+    description: "Add technicians, set rates, and (optionally) create technician portal access for mobile job execution.",
+    targetSelector: '[data-tour="nav-technicians"]',
+    placement: "right",
+  },
+  {
+    id: "inventory",
+    title: "Inventory",
+    description: "Track fittings/consumables, costs per job, low-stock alerts, and usage.",
+    targetSelector: '[data-tour="nav-inventory"]',
+    placement: "right",
   },
 ];
-

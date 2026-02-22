@@ -59,6 +59,7 @@ async function ensureRow(args: { userId: string; companyId: string; tutorialKey:
 
 export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): OnboardingController {
   const queryClient = useQueryClient();
+  const errorShownRef = React.useRef<string | null>(null);
 
   const enabled = Boolean(userId && companyId && tutorialKey && steps.length > 0);
   const queryKey = React.useMemo(() => ["user_onboarding", userId, companyId, tutorialKey], [userId, companyId, tutorialKey]);
@@ -68,7 +69,24 @@ export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): 
     enabled,
     queryFn: () => ensureRow({ userId: userId!, companyId: companyId!, tutorialKey: tutorialKey! }),
     staleTime: 30_000,
+    retry: 1,
   });
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    if (!rowQuery.error) return;
+    const msg = String((rowQuery.error as any)?.message ?? rowQuery.error);
+    if (!msg) return;
+    if (errorShownRef.current === msg) return;
+    errorShownRef.current = msg;
+    toast({
+      title: "Onboarding unavailable",
+      description: msg.toLowerCase().includes("user_onboarding")
+        ? "Supabase migration missing: apply the `user_onboarding` table migration."
+        : msg,
+      variant: "destructive",
+    });
+  }, [enabled, rowQuery.error, tutorialKey]);
 
   const updateMutation = useMutation({
     mutationFn: async (patch: Partial<Pick<UserOnboardingRow, "current_step" | "is_completed" | "completed_at">>) => {
@@ -155,4 +173,3 @@ export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): 
     actions: { next, back, skip, finish, replay },
   };
 }
-

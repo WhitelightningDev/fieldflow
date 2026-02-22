@@ -116,7 +116,7 @@ export default function CreateSiteDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="secondary">
+        <Button size="sm" variant="secondary" data-tour="sites-add">
           Create site
         </Button>
       </DialogTrigger>
@@ -137,7 +137,7 @@ export default function CreateSiteDialog() {
                 <FormItem>
                   <FormLabel>Site name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Main office - DB board" {...field} />
+                    <Input placeholder="e.g. Main office - DB board" data-tour="site-name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -152,7 +152,7 @@ export default function CreateSiteDialog() {
                   <FormLabel>Customer (optional)</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger data-tour="site-customer">
                         <SelectValue placeholder="No customer" />
                       </SelectTrigger>
                     </FormControl>
@@ -320,7 +320,7 @@ export default function CreateSiteDialog() {
             />
 
             <DialogFooter>
-              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow">
+              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" data-tour="site-submit">
                 Create site
               </Button>
             </DialogFooter>

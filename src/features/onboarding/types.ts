@@ -7,6 +7,11 @@ export type TutorialStep = {
   targetSelector: string;
   placement: TutorialPlacement;
   route?: string;
+  /**
+   * Optional helper for multi-step flows that require opening UI (e.g. a modal).
+   * If the step's target isn't found, the overlay will attempt to click this selector once.
+   */
+  autoClickSelector?: string;
 };
 
 export type UserOnboardingRow = {
@@ -39,3 +44,9 @@ export type OnboardingController = {
   };
 };
 
+export type OnboardingManager = {
+  active: OnboardingController | null;
+  controllers: Record<string, OnboardingController>;
+  setActiveTutorialKey: (tutorialKey: string | null) => void;
+  replay: (tutorialKey: string) => void;
+};

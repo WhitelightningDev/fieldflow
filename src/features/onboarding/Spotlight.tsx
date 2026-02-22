@@ -4,13 +4,14 @@ type Props = {
   rect: DOMRect | null;
   padding?: number;
   radius?: number;
+  mode?: "spotlight" | "outline";
 };
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-export function Spotlight({ rect, padding = 10, radius = 10 }: Props) {
+export function Spotlight({ rect, padding = 10, radius = 10, mode = "outline" }: Props) {
   const style = React.useMemo(() => {
     if (!rect) return null;
     const vw = window.innerWidth;
@@ -28,24 +29,24 @@ export function Spotlight({ rect, padding = 10, radius = 10 }: Props) {
     const width = clamp(rawWidth, 0, Math.max(0, vw - left - 8));
     const height = clamp(rawHeight, 0, Math.max(0, vh - top - 8));
 
-    return {
+    const out: React.CSSProperties = {
       left,
       top,
       width,
       height,
       borderRadius: radius,
-      boxShadow: "0 0 0 9999px rgba(0,0,0,0.6)",
-    } as React.CSSProperties;
-  }, [rect, padding, radius]);
+    };
+    if (mode === "spotlight") out.boxShadow = "0 0 0 9999px rgba(0,0,0,0.6)";
+    return out;
+  }, [rect, padding, radius, mode]);
 
   if (!style) return null;
 
   return (
     <div
       aria-hidden="true"
-      className="fixed z-[9999] ring-2 ring-primary/60 transition-[left,top,width,height] duration-150 ease-out pointer-events-none"
+      className="fixed z-[9999] ring-2 ring-primary/70 bg-transparent transition-[left,top,width,height] duration-150 ease-out pointer-events-none"
       style={style}
     />
   );
 }
-

@@ -71,7 +71,7 @@ export default function CreateCustomerDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gradient-bg hover:opacity-90 shadow-glow">
+        <Button size="sm" className="gradient-bg hover:opacity-90 shadow-glow" data-tour="customers-add">
           Add customer
         </Button>
       </DialogTrigger>
@@ -92,7 +92,7 @@ export default function CreateCustomerDialog() {
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Acme Properties" autoComplete="organization" {...field} />
+                    <Input placeholder="e.g. Acme Properties" autoComplete="organization" data-tour="customer-name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -163,14 +163,14 @@ export default function CreateCustomerDialog() {
                   name="billingEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Billing email (optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="accounts@company.com" autoComplete="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormLabel>Billing email (optional)</FormLabel>
+                  <FormControl>
+                        <Input placeholder="accounts@company.com" autoComplete="email" data-tour="customer-billing-email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -246,7 +246,7 @@ export default function CreateCustomerDialog() {
             />
 
             <DialogFooter>
-              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting} data-tour="customer-submit">
                 Add customer
               </Button>
             </DialogFooter>
