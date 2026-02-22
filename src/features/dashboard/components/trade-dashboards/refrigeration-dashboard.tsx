@@ -7,6 +7,7 @@ import {
   computeBaseMetrics,
   computeTechMetrics,
   isToday,
+  isLast30Days,
   KpiCard,
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
@@ -14,16 +15,16 @@ import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapsh
 import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
-  Briefcase,
   Clock,
   DollarSign,
-  FileWarning,
-  Flame,
+  FileCheck,
   Percent,
   Refrigerator,
-  RefreshCcw,
-  ShieldCheck,
+  Repeat,
+  ShieldAlert,
+  Snowflake,
   Thermometer,
+  Timer,
   TrendingUp,
 } from "lucide-react";
 
@@ -36,17 +37,29 @@ export default function RefrigerationDashboard({ data, allJobs }: Props) {
   const jobsToday = allJobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
   const emergencyToday = jobsToday.filter((j) => j.priority === "urgent" || j.priority === "emergency");
 
-  // Refrigeration-specific
-  const compressorJobs = base.monthJobs.filter((j: any) => j.title?.toLowerCase().includes("compressor"));
-  const gasRecharges = base.monthJobs.filter((j: any) =>
-    j.title?.toLowerCase().includes("recharge") || j.title?.toLowerCase().includes("regas") || j.title?.toLowerCase().includes("gas"),
-  );
-  const maintenanceContracts = allJobs.filter((j: any) =>
-    j.title?.toLowerCase().includes("maintenance") || j.title?.toLowerCase().includes("service contract"),
-  );
-  const complianceDue = allJobs.filter((j: any) =>
-    j.notes?.toLowerCase().includes("compliance") || j.notes?.toLowerCase().includes("overdue"),
-  );
+  /* ── Refrigeration-specific metrics ── */
+  const compressorJobs = base.monthJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+    return hay.includes("compressor") || hay.includes("condensing unit");
+  });
+  const compressorRevenue = compressorJobs.reduce((s: number, j: any) => s + (j.revenue_cents ?? 0), 0);
+
+  const gasRecharges = base.monthJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+    return hay.includes("recharge") || hay.includes("regas") || hay.includes("refrigerant") || hay.includes("gas top");
+  });
+
+  const complianceDue = allJobs.filter((j: any) => {
+    const notes = String(j.notes ?? "").toLowerCase();
+    return notes.includes("compliance") || notes.includes("overdue") || notes.includes("inspection due");
+  });
+
+  const maintenanceContracts = allJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+    return hay.includes("maintenance contract") || hay.includes("service agreement") || hay.includes("sla");
+  });
+  const maintenanceRevenue = maintenanceContracts.reduce((s: number, j: any) => s + (j.revenue_cents ?? 0), 0);
+
   const breakdownRepeatSites = (() => {
     const siteCounts: Record<string, number> = {};
     allJobs.filter((j: any) => j.site_id && (j.priority === "urgent" || j.priority === "emergency")).forEach((j: any) => {
@@ -55,19 +68,35 @@ export default function RefrigerationDashboard({ data, allJobs }: Props) {
     return Object.values(siteCounts).filter((c) => c >= 2).length;
   })();
 
+  const coldChainJobs = base.monthJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""} ${j.notes ?? ""}`.toLowerCase();
+    return hay.includes("cold room") || hay.includes("cold chain") || hay.includes("walk-in") || hay.includes("freezer room");
+  });
+
+  const avgBreakdownResponse = (() => {
+    const urgents = allJobs.filter((j: any) =>
+      (j.priority === "urgent" || j.priority === "emergency") && j.scheduled_at && j.created_at,
+    );
+    if (urgents.length === 0) return "—";
+    const hrs = urgents.map((j: any) =>
+      (new Date(j.scheduled_at).getTime() - new Date(j.created_at).getTime()) / 3_600_000,
+    );
+    return (hrs.reduce((a: number, b: number) => a + b, 0) / hrs.length).toFixed(1);
+  })();
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Refrigeration Dashboard" subtitle={`${data.company?.name} — Owner Overview`} />
+      <PageHeader title="Refrigeration Dashboard" subtitle={`${data.company?.name} — Cold chain, compliance, and service contracts`} />
 
-      {/* ACT TODAY */}
+      {/* COLD CHAIN & COMPLIANCE */}
       <div>
-        <SectionHeader title="Act Today" question="Where do I need to act today?" />
+        <SectionHeader title="Cold Chain & Compliance" question="Are critical units and compliance under control?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={Flame} label="Emergency Breakdowns" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
-          <KpiCard icon={Briefcase} label="Jobs Today" value={jobsToday.length} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatZarFromCents(base.unbilledRevenue) + " at risk"} />
-          <KpiCard icon={ShieldCheck} label="Compliance Due" value={complianceDue.length} accent={complianceDue.length > 0 ? "destructive" : undefined} />
-          <KpiCard icon={Clock} label="Avg Response" value={`${base.avgResponseHrs}h`} sub="cold chain = urgency" />
+          <KpiCard icon={Snowflake} label="Emergency Breakdowns Today" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} sub="cold chain at risk" />
+          <KpiCard icon={ShieldAlert} label="Compliance Overdue" value={complianceDue.length} accent={complianceDue.length > 0 ? "destructive" : undefined} sub="inspection / certification" />
+          <KpiCard icon={Repeat} label="Repeat Breakdown Sites" value={breakdownRepeatSites} accent={breakdownRepeatSites > 0 ? "warning" : undefined} sub="sites with 2+ emergencies" />
+          <KpiCard icon={Timer} label="Breakdown Response" value={`${avgBreakdownResponse}h`} sub="avg emergency response" />
+          <KpiCard icon={Refrigerator} label="Cold Room / Walk-in Jobs" value={coldChainJobs.length} sub="this month" />
         </div>
       </div>
 
@@ -82,42 +111,42 @@ export default function RefrigerationDashboard({ data, allJobs }: Props) {
         siteMaterialUsage={data.siteMaterialUsage}
       />
 
-      {/* LOSING MONEY */}
+      {/* SERVICE CONTRACTS & REVENUE */}
       <div>
-        <SectionHeader title="Financial" question="Where am I losing money?" />
+        <SectionHeader title="Service Contracts & Revenue" question="Is recurring revenue growing?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
-          <KpiCard icon={Refrigerator} label="Compressor Jobs" value={compressorJobs.length} sub="high-value this month" />
-          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
+          <KpiCard icon={FileCheck} label="Maintenance Contracts" value={maintenanceContracts.length} sub={formatZarFromCents(maintenanceRevenue) + " revenue"} />
+          <KpiCard icon={Refrigerator} label="Compressor Jobs (Month)" value={compressorJobs.length} sub={formatZarFromCents(compressorRevenue) + " high-value"} />
+          <KpiCard icon={Thermometer} label="Gas Recharges (Month)" value={gasRecharges.length} sub="track refrigerant costs" />
+          <KpiCard icon={DollarSign} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
-          <KpiCard icon={Thermometer} label="Gas Recharges" value={gasRecharges.length} sub="track refrigerant costs" />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Repeat breakdowns are expensive</AlertTitle>
+            <AlertTitle>Repeat breakdowns = spoiled stock claims</AlertTitle>
             <AlertDescription>
-              {base.callbackJobs.length} callback{base.callbackJobs.length > 1 ? "s" : ""} in 30 days. Refrigeration callbacks = spoiled stock claims + liability.
+              {base.callbackJobs.length} callback{base.callbackJobs.length > 1 ? "s" : ""} in 30 days. Refrigeration failures can lead to stock loss claims and liability.
             </AlertDescription>
           </Alert>
         )}
       </div>
 
-      {/* RISK */}
+      {/* TODAY */}
       <div>
-        <SectionHeader title="Risk / Compliance" question="Where is risk building?" />
+        <SectionHeader title="Today" question="What's on the schedule?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="breakdown = stock loss claim" />
-          <KpiCard icon={Refrigerator} label="Repeat Breakdown Sites" value={breakdownRepeatSites} accent={breakdownRepeatSites > 0 ? "warning" : undefined} sub="sites with 2+ emergencies" />
-          <KpiCard icon={Briefcase} label="Maintenance Contracts" value={maintenanceContracts.length} sub="recurring revenue base" />
+          <KpiCard icon={Clock} label="Scheduled Today" value={jobsToday.length} />
+          <KpiCard icon={TrendingUp} label="In Progress" value={allJobs.filter((j) => j.status === "in-progress").length} />
+          <KpiCard icon={Snowflake} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
         </div>
       </div>
 
-      {/* TECH METRICS */}
+      {/* TECHNICIAN METRICS */}
       <div>
-        <SectionHeader title="Technician Metrics" question="Who's making money and who's costing you?" />
+        <SectionHeader title="Technician Performance" question="Who's keeping cold chains running?" />
         <TechTable techMetrics={techMetrics} />
       </div>
     </div>

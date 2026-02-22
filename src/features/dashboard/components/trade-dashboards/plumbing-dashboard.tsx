@@ -102,9 +102,9 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
     return Number.isFinite(n) ? clamp(n, 0, 100) : 0;
   })();
 
-  const techById = new Map((data.technicians ?? []).map((t: any) => [t.id, t]));
-  const siteById = new Map((data.sites ?? []).map((s: any) => [s.id, s]));
-  const customerById = new Map((data.customers ?? []).map((c: any) => [c.id, c]));
+  const techById = new Map<string, any>((data.technicians ?? []).map((t: any) => [t.id, t]));
+  const siteById = new Map<string, any>((data.sites ?? []).map((s: any) => [s.id, s]));
+  const customerById = new Map<string, any>((data.customers ?? []).map((c: any) => [c.id, c]));
   const locByTechId = React.useMemo(() => {
     const m = new Map<string, any>();
     for (const l of (data.technicianLocations as any[]) ?? []) {

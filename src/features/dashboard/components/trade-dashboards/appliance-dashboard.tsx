@@ -15,15 +15,15 @@ import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapsh
 import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
-  Briefcase,
+  CheckSquare,
   Clock,
   DollarSign,
-  FileWarning,
-  Flame,
   Package,
   Percent,
-  RefreshCcw,
+  PhoneForwarded,
+  RotateCcw,
   ShieldCheck,
+  Tag,
   TrendingUp,
   WashingMachine,
 } from "lucide-react";
@@ -35,40 +35,71 @@ export default function ApplianceRepairDashboard({ data, allJobs }: Props) {
   const techMetrics = computeTechMetrics(allJobs, data.technicians);
 
   const jobsToday = allJobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
-  const emergencyToday = jobsToday.filter((j) => j.priority === "urgent" || j.priority === "emergency");
 
-  // Appliance-specific
-  const warrantyJobs = allJobs.filter((j: any) =>
-    j.title?.toLowerCase().includes("warranty") || j.notes?.toLowerCase().includes("warranty"),
-  );
+  /* ── Appliance-specific metrics ── */
+  const warrantyJobs = allJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""} ${j.notes ?? ""}`.toLowerCase();
+    return hay.includes("warranty");
+  });
   const warrantyJobsMonth = warrantyJobs.filter((j: any) => isLast30Days(j.created_at));
-  const partsWaiting = allJobs.filter((j: any) => j.notes?.toLowerCase().includes("awaiting parts") || j.notes?.toLowerCase().includes("back order"));
+  const warrantyRevenue = warrantyJobs.reduce((s: number, j: any) => s + (j.revenue_cents ?? 0), 0);
+
+  const partsWaiting = allJobs.filter((j: any) => {
+    const notes = String(j.notes ?? "").toLowerCase();
+    return notes.includes("awaiting parts") || notes.includes("back order") || notes.includes("backorder");
+  });
+
+  const firstVisitFix = (() => {
+    const completed = allJobs.filter((j: any) => j.status === "completed" || j.status === "invoiced");
+    if (completed.length === 0) return 0;
+    const callbacks = completed.filter((j: any) => {
+      const notes = String(j.notes ?? "").toLowerCase();
+      return notes.includes("callback") || notes.includes("return") || notes.includes("rework");
+    }).length;
+    return Math.round(((completed.length - callbacks) / completed.length) * 100);
+  })();
+
+  const followUpsDue = allJobs.filter((j: any) => {
+    const notes = String(j.notes ?? "").toLowerCase();
+    return notes.includes("follow up") || notes.includes("follow-up") || notes.includes("followup");
+  });
+
+  const applianceTypes = (() => {
+    const keywords = ["washing machine", "dishwasher", "fridge", "oven", "stove", "dryer", "tumble", "microwave"];
+    const counts: Record<string, number> = {};
+    for (const j of base.monthJobs) {
+      const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+      for (const kw of keywords) {
+        if (hay.includes(kw)) {
+          counts[kw] = (counts[kw] ?? 0) + 1;
+          break;
+        }
+      }
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  })();
+
   const repeatCustomers = (() => {
     const custCounts: Record<string, number> = {};
-    allJobs.filter((j: any) => j.customer_id).forEach((j: any) => {
+    allJobs.filter((j: any) => j.customer_id && isLast30Days(j.created_at)).forEach((j: any) => {
       custCounts[j.customer_id] = (custCounts[j.customer_id] ?? 0) + 1;
     });
     return Object.values(custCounts).filter((c) => c >= 2).length;
   })();
-  const avgPartsPerJob = (() => {
-    // estimate from material usage or notes
-    const jobsWithParts = allJobs.filter((j: any) => j.notes?.toLowerCase().includes("parts"));
-    return base.completedMonthJobs.length > 0 ? (jobsWithParts.length / base.completedMonthJobs.length * 100).toFixed(0) : "0";
-  })();
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Appliance Repair Dashboard" subtitle={`${data.company?.name} — Owner Overview`} />
+      <PageHeader title="Appliance Repair Dashboard" subtitle={`${data.company?.name} — Warranty, parts, and first-visit performance`} />
 
-      {/* ACT TODAY */}
+      {/* WARRANTY & PARTS */}
       <div>
-        <SectionHeader title="Act Today" question="Where do I need to act today?" />
+        <SectionHeader title="Warranty & Parts" question="Are warranty claims and parts delays under control?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={Flame} label="Urgent Today" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
-          <KpiCard icon={Briefcase} label="Jobs Today" value={jobsToday.length} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatZarFromCents(base.unbilledRevenue) + " at risk"} />
-          <KpiCard icon={Package} label="Awaiting Parts" value={partsWaiting.length} accent={partsWaiting.length > 0 ? "warning" : undefined} sub="delayed = lost customer" />
-          <KpiCard icon={ShieldCheck} label="Warranty Claims (30d)" value={warrantyJobsMonth.length} accent={warrantyJobsMonth.length > 3 ? "warning" : undefined} />
+          <KpiCard icon={ShieldCheck} label="Warranty Claims (30d)" value={warrantyJobsMonth.length} accent={warrantyJobsMonth.length > 5 ? "warning" : undefined} sub="often zero-margin work" />
+          <KpiCard icon={Tag} label="Total Warranty Jobs" value={warrantyJobs.length} sub={formatZarFromCents(warrantyRevenue) + " revenue"} />
+          <KpiCard icon={Package} label="Awaiting Parts" value={partsWaiting.length} accent={partsWaiting.length > 0 ? "warning" : undefined} sub="each day = lost revenue" />
+          <KpiCard icon={CheckSquare} label="First-Visit Fix Rate" value={`${firstVisitFix}%`} accent={firstVisitFix < 70 ? "destructive" : undefined} sub="higher = fewer callbacks" />
+          <KpiCard icon={PhoneForwarded} label="Follow-ups Due" value={followUpsDue.length} accent={followUpsDue.length > 0 ? "warning" : undefined} sub="customer retention" />
         </div>
       </div>
 
@@ -83,42 +114,42 @@ export default function ApplianceRepairDashboard({ data, allJobs }: Props) {
         siteMaterialUsage={data.siteMaterialUsage}
       />
 
-      {/* LOSING MONEY */}
+      {/* APPLIANCE TYPES & REVENUE */}
       <div>
-        <SectionHeader title="Financial" question="Where am I losing money?" />
+        <SectionHeader title="Revenue & Appliance Mix" question="Which appliances are driving revenue?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
-          <KpiCard icon={WashingMachine} label="Warranty Jobs" value={warrantyJobs.length} sub="often zero-margin" />
+          <KpiCard icon={DollarSign} label="Avg Revenue / Repair" value={formatZarFromCents(base.avgRevenuePerJob)} />
           <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
-          <KpiCard icon={RefreshCcw} label="Repeat Customers" value={repeatCustomers} sub="upsell opportunity" />
+          <KpiCard icon={RotateCcw} label="Repeat Customers (30d)" value={repeatCustomers} sub="returning for more repairs" />
+          <KpiCard icon={WashingMachine} label="Top Appliance" value={applianceTypes.length > 0 ? applianceTypes[0][0] : "—"} sub={applianceTypes.length > 0 ? `${applianceTypes[0][1]} jobs this month` : "add appliance type to job titles"} />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Rework eating margins</AlertTitle>
+            <AlertTitle>Callbacks eating margins</AlertTitle>
             <AlertDescription>
-              {base.callbackJobs.length} callback{base.callbackJobs.length > 1 ? "s" : ""} in 30 days. Appliance callbacks = parts + labour on your dime. Check if techs are diagnosing correctly first time.
+              {base.callbackJobs.length} callback{base.callbackJobs.length > 1 ? "s" : ""} in 30 days. Wrong diagnosis = double parts + labour cost. Check first-visit fix rate.
             </AlertDescription>
           </Alert>
         )}
       </div>
 
-      {/* RISK */}
+      {/* TODAY */}
       <div>
-        <SectionHeader title="Risk" question="Where is risk building?" />
+        <SectionHeader title="Today" question="What's on the schedule?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="wrong diagnosis = double cost" />
-          <KpiCard icon={Clock} label="Avg Response" value={`${base.avgResponseHrs}h`} sub="speed = repeat business" />
-          <KpiCard icon={Package} label="Parts Back-ordered" value={partsWaiting.length} accent={partsWaiting.length > 0 ? "warning" : undefined} sub="every day = lost revenue" />
+          <KpiCard icon={Clock} label="Repairs Scheduled Today" value={jobsToday.length} />
+          <KpiCard icon={WashingMachine} label="In Progress" value={allJobs.filter((j) => j.status === "in-progress").length} />
+          <KpiCard icon={Clock} label="Avg Turnaround" value={`${base.avgResponseHrs}h`} sub="quote to scheduled" />
         </div>
       </div>
 
-      {/* TECH METRICS */}
+      {/* TECHNICIAN METRICS */}
       <div>
-        <SectionHeader title="Technician Metrics" question="Who's making money and who's costing you?" />
+        <SectionHeader title="Technician Performance" question="Who's fixing right the first time?" />
         <TechTable techMetrics={techMetrics} />
       </div>
     </div>
