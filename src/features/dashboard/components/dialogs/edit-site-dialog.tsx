@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
+import LatLngPickerDialog from "@/components/maps/lat-lng-picker-dialog";
+import ScopeTemplateBuilder, { type ScopeTemplateV1, normalizeScopeTemplate, parseScopeTemplateV1 } from "@/features/dashboard/components/sites/scope-template-builder";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { MapPin } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -55,6 +58,7 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
   const { data, actions } = useDashboardData();
   const site = data.sites.find((s) => s.id === siteId) as any;
   const [open, setOpen] = React.useState(false);
+  const [scopeTemplate, setScopeTemplate] = React.useState<ScopeTemplateV1 | null>(null);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -75,6 +79,13 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
     mode: "onTouched",
   });
 
+  const gpsLatStr = form.watch("gpsLat");
+  const gpsLngStr = form.watch("gpsLng");
+  const initialGps =
+    gpsLatStr && gpsLngStr && Number.isFinite(Number.parseFloat(gpsLatStr)) && Number.isFinite(Number.parseFloat(gpsLngStr))
+      ? { lat: Number.parseFloat(gpsLatStr), lng: Number.parseFloat(gpsLngStr) }
+      : null;
+
   React.useEffect(() => {
     if (!open || !site) return;
     form.reset({
@@ -91,9 +102,15 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
       contactEmail: site.contact_email ?? "",
       notes: site.notes ?? "",
     });
+    setScopeTemplate(parseScopeTemplateV1(site.scope_template) ?? null);
   }, [form, open, site]);
 
   if (!site) return null;
+
+  React.useEffect(() => {
+    if (open) return;
+    setScopeTemplate(null);
+  }, [open]);
 
   const submit = form.handleSubmit(async (values) => {
     const gpsLat = String(values.gpsLat ?? "").trim();
@@ -109,6 +126,7 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
       address: values.address || null,
       gps_lat: typeof gpsLatNum === "number" && Number.isFinite(gpsLatNum) ? gpsLatNum : null,
       gps_lng: typeof gpsLngNum === "number" && Number.isFinite(gpsLngNum) ? gpsLngNum : null,
+      scope_template: normalizeScopeTemplate(scopeTemplate),
       scope_of_work: values.scopeOfWork || null,
       contact_name: values.contactName || null,
       contact_phone: values.contactPhone || null,
@@ -244,6 +262,26 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
                 )}
               />
             </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 -mt-2">
+              <div className="text-xs text-muted-foreground">
+                If you don’t know the exact GPS coords, use the map picker.
+              </div>
+              <LatLngPickerDialog
+                initialQuery={(form.watch("address") || form.watch("name") || "").trim() || undefined}
+                initialCenter={initialGps}
+                onConfirm={({ lat, lng }) => {
+                  form.setValue("gpsLat", lat.toFixed(6), { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+                  form.setValue("gpsLng", lng.toFixed(6), { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+                }}
+                trigger={(
+                  <Button type="button" size="sm" variant="outline" className="gap-1.5 w-full sm:w-auto">
+                    <MapPin className="h-4 w-4" />
+                    Pick on map
+                  </Button>
+                )}
+              />
+            </div>
             <div className="text-xs text-muted-foreground -mt-2">
               If provided, admin can see technician distance + arrival detection for this site.
             </div>
@@ -261,6 +299,8 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
                 </FormItem>
               )}
             />
+
+            <ScopeTemplateBuilder value={scopeTemplate} onChange={setScopeTemplate} />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <FormField
