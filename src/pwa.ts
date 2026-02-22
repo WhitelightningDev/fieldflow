@@ -16,7 +16,7 @@ export function isPwaUpdateAvailable() {
 
 export function subscribePwaUpdate(cb: Listener) {
   listeners.add(cb);
-  return () => listeners.delete(cb);
+  return () => { listeners.delete(cb); };
 }
 
 export async function applyPwaUpdate() {
