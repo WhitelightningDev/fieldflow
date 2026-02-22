@@ -22,11 +22,13 @@ import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapsh
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
 import { extractTags, getNoteLineValue, hasTag } from "@/features/dashboard/lib/service-calls";
 import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-alerts";
+import { isMaintenanceJob } from "@/features/dashboard/lib/maintenance";
 import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
   ArrowUpRight,
+  CalendarClock,
   Clock,
   DollarSign,
   Droplets,
@@ -91,8 +93,10 @@ function getJobTiming(jobId: string, entries: any[]) {
 }
 
 export default function PlumbingDashboard({ data, allJobs }: Props) {
-  const base = computeBaseMetrics(allJobs, data.technicians);
-  const techMetrics = computeTechMetrics(allJobs, data.technicians);
+  // Guard against cross-trade KPI contamination: only compute plumbing KPIs from plumbing jobs.
+  const jobs = React.useMemo(() => allJobs.filter((j: any) => j.trade_id === "plumbing"), [allJobs]);
+  const base = computeBaseMetrics(jobs, data.technicians);
+  const techMetrics = computeTechMetrics(jobs, data.technicians);
 
   const company = data.company as any;
   const overheadPct = (() => {
@@ -125,11 +129,11 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
 
   const timingByJobId = React.useMemo(() => {
     const m = new Map<string, { startedAt: Date | null; endedAt: Date | null }>();
-    for (const j of allJobs) {
+    for (const j of jobs) {
       m.set(j.id, getJobTiming(j.id, timeEntries));
     }
     return m;
-  }, [allJobs, timeEntries]);
+  }, [jobs, timeEntries]);
 
   const materialsByJobId = React.useMemo(() => {
     const m = new Map<string, any[]>();
@@ -143,29 +147,29 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
     return m;
   }, [materials]);
 
-  const openGasCoc = allJobs.filter((j) => {
+  const openGasCoc = jobs.filter((j) => {
     const tags = extractTags(j.notes);
     return hasTag(tags, "gas-coc") && j.status !== "invoiced" && j.status !== "cancelled";
   }).length;
-  const openPirbCoc = allJobs.filter((j) => {
+  const openPirbCoc = jobs.filter((j) => {
     const tags = extractTags(j.notes);
     return hasTag(tags, "pirb-coc") && j.status !== "invoiced" && j.status !== "cancelled";
   }).length;
-  const openPressureTests = allJobs.filter((j) => {
+  const openPressureTests = jobs.filter((j) => {
     const tags = extractTags(j.notes);
     return hasTag(tags, "pressure-test") && j.status !== "invoiced" && j.status !== "cancelled";
   }).length;
 
-  const jobsToday = allJobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
+  const jobsToday = jobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
   const scheduledToday = jobsToday.length;
-  const inProgressNow = allJobs.filter((j) => j.status === "in-progress").length;
-  const completedToday = allJobs.filter((j) => (j.status === "completed" || j.status === "invoiced") && j.updated_at && isToday(j.updated_at)).length;
+  const inProgressNow = jobs.filter((j) => j.status === "in-progress").length;
+  const completedToday = jobs.filter((j) => (j.status === "completed" || j.status === "invoiced") && j.updated_at && isToday(j.updated_at)).length;
   const emergencyToday = jobsToday.filter((j) => j.priority === "urgent" || j.priority === "emergency");
-  const leakCallouts24h = allJobs.filter(
+  const leakCallouts24h = jobs.filter(
     (j) => j.created_at && isLast24h(j.created_at) &&
       (j.title?.toLowerCase().includes("leak") || j.description?.toLowerCase().includes("leak")),
   );
-  const awaitingParts = allJobs.filter((j) => j.notes?.toLowerCase().includes("awaiting parts"));
+  const awaitingParts = jobs.filter((j) => j.notes?.toLowerCase().includes("awaiting parts"));
   const waterHeaterJobs = base.monthJobs.filter(
     (j) => j.title?.toLowerCase().includes("water heater") || j.title?.toLowerCase().includes("geyser"),
   );
@@ -173,12 +177,12 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
     .filter((j) => j.scheduled_at && isAfterHours(j.scheduled_at))
     .reduce((s: number, j: any) => s + (j.revenue_cents ?? 0), 0);
 
-  const backlogUnassigned = allJobs.filter(
+  const backlogUnassigned = jobs.filter(
     (j) => (j.status === "new" || j.status === "scheduled") && !j.technician_id,
   ).length;
 
   const completionRate30d = React.useMemo(() => {
-    const scheduled = allJobs.filter((j) => j.scheduled_at && isLast30Days(j.scheduled_at));
+    const scheduled = jobs.filter((j) => j.scheduled_at && isLast30Days(j.scheduled_at));
     if (scheduled.length === 0) return { onTimePct: 0, onTime: 0, total: 0 };
     const onTime = scheduled.filter((j) => {
       if (!(j.status === "completed" || j.status === "invoiced")) return false;
@@ -188,7 +192,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       return completedAt.getTime() <= scheduledAt.getTime() + 24 * 60 * 60 * 1000;
     }).length;
     return { onTimePct: Math.round((onTime / scheduled.length) * 100), onTime, total: scheduled.length };
-  }, [allJobs, timingByJobId]);
+  }, [jobs, timingByJobId]);
 
   const revenuePerTech = React.useMemo(() => {
     const active = (data.technicians ?? []).filter((t: any) => t.active);
@@ -202,7 +206,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
   }, [base.totalLabourCost, overheadPct]);
 
   const billingAging = React.useMemo(() => {
-    const unbilled = allJobs.filter((j) => j.status === "completed");
+    const unbilled = jobs.filter((j) => j.status === "completed");
     const buckets = { d0_7: 0, d8_30: 0, d31p: 0, total: unbilled.length };
     const now = Date.now();
     for (const j of unbilled) {
@@ -214,10 +218,10 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       else buckets.d31p += 1;
     }
     return buckets;
-  }, [allJobs, timingByJobId]);
+  }, [jobs, timingByJobId]);
 
   const customerHealth = React.useMemo(() => {
-    const periodJobs = allJobs.filter((j) => j.created_at && isLastNDays(j.created_at, 90) && j.customer_id);
+    const periodJobs = jobs.filter((j) => j.created_at && isLastNDays(j.created_at, 90) && j.customer_id);
     const counts = new Map<string, number>();
     for (const j of periodJobs) {
       const cid = String(j.customer_id);
@@ -228,7 +232,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
     const repeatRatio = totalCustomers === 0 ? 0 : Math.round((repeatCustomers / totalCustomers) * 100);
 
     const csatRatings: number[] = [];
-    for (const j of allJobs) {
+    for (const j of jobs) {
       if (!(j.status === "completed" || j.status === "invoiced")) continue;
       if (!j.updated_at || !isLastNDays(j.updated_at, 90)) continue;
       const n = parseCsat(j.notes);
@@ -243,7 +247,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       .map(([customerId, jobs]) => ({ customerId, jobs, name: customerById.get(customerId)?.name ?? "Unknown" }));
 
     return { repeatRatio, totalCustomers, repeatCustomers, csatAvg, csatCoverage, top };
-  }, [allJobs, customerById]);
+  }, [jobs, customerById]);
 
   const dispatchRows = React.useMemo(() => {
     const now = Date.now();
@@ -251,7 +255,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
     startOfToday.setHours(0, 0, 0, 0);
     const startMs = startOfToday.getTime();
     const endMs = startMs + 7 * 86_400_000;
-    const upcoming = allJobs
+    const upcoming = jobs
       .filter((j) => {
         if (!j.scheduled_at) return false;
         const ms = new Date(j.scheduled_at).getTime();
@@ -261,13 +265,13 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
     const today = upcoming.filter((j) => isToday(j.scheduled_at));
     return { today, next7: upcoming };
-  }, [allJobs]);
+  }, [jobs]);
 
   const liveTechRows = React.useMemo(() => {
     const now = Date.now();
     const activeTechs = (data.technicians ?? []).filter((t: any) => t.active);
     const jobsByTech = new Map<string, any[]>();
-    for (const j of allJobs) {
+    for (const j of jobs) {
       if (!j.technician_id) continue;
       const tid = String(j.technician_id);
       const arr = jobsByTech.get(tid) ?? [];
@@ -332,7 +336,20 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
         if (r !== 0) return r;
         return String(a.tech.name ?? "").localeCompare(String(b.tech.name ?? ""));
       });
-  }, [allJobs, data.technicians, locByTechId, siteById]);
+  }, [jobs, data.technicians, locByTechId, siteById]);
+
+  const maintenanceStats = React.useMemo(() => {
+    const now = Date.now();
+    const ms = jobs.filter((j) => isMaintenanceJob(j.notes));
+    const overdue = ms.filter((j) => (j.status === "new" || j.status === "scheduled") && j.scheduled_at && new Date(j.scheduled_at).getTime() < now).length;
+    const due7 = ms.filter((j) => {
+      if (!(j.status === "new" || j.status === "scheduled")) return false;
+      if (!j.scheduled_at) return false;
+      const t = new Date(j.scheduled_at).getTime();
+      return Number.isFinite(t) && t >= now && t <= now + 7 * 86_400_000;
+    }).length;
+    return { overdue, due7, totalOpen: ms.filter((j) => j.status === "new" || j.status === "scheduled" || j.status === "in-progress").length };
+  }, [jobs]);
 
   return (
     <div className="space-y-6">
@@ -579,6 +596,8 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
           <KpiCard icon={Clock} label="Avg Response Time" value={`${base.avgResponseHrs}h`} />
           <KpiCard icon={PackageSearch} label="Awaiting Parts" value={awaitingParts.length} accent={awaitingParts.length > 0 ? "warning" : undefined} />
           <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={base.unbilledJobs.length > 0 ? formatZarFromCents(base.unbilledRevenue) + " at risk" : undefined} />
+          <KpiCard icon={CalendarClock} label="Maintenance Overdue" value={maintenanceStats.overdue} accent={maintenanceStats.overdue > 0 ? "destructive" : undefined} />
+          <KpiCard icon={CalendarClock} label="Maintenance Due (7d)" value={maintenanceStats.due7} accent={maintenanceStats.due7 > 0 ? "warning" : undefined} />
         </div>
       </div>
 
@@ -586,7 +605,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
         title="Operations Snapshot"
         inventoryItems={data.inventoryItems}
         technicians={data.technicians}
-        jobs={allJobs}
+        jobs={jobs}
         sites={data.sites}
         technicianLocations={data.technicianLocations}
         jobTimeEntries={data.jobTimeEntries}
@@ -610,7 +629,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
             </CardHeader>
             <CardContent>
               <WorkHistoryTable
-                jobs={allJobs}
+                jobs={jobs}
                 customerById={customerById}
                 siteById={siteById}
                 timingByJobId={timingByJobId}
@@ -627,7 +646,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
               <CardTitle className="text-sm">Inventory & tools usage (30d)</CardTitle>
             </CardHeader>
             <CardContent>
-              <InventoryUsageTable jobs={allJobs} materials={materials} inventoryItems={data.inventoryItems ?? []} />
+              <InventoryUsageTable jobs={jobs} materials={materials} inventoryItems={data.inventoryItems ?? []} />
               <div className="mt-3 text-[11px] text-muted-foreground">
                 Costs are estimated from item unit costs. Wastage is included when logged.
               </div>
@@ -681,6 +700,9 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
             <Link to="/dashboard/service-calls?q=pirb-coc&scope=service-calls">PIRB CoCs</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
+            <Link to="/dashboard/maintenance-schedules">Maintenance plans</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <Link to="/dashboard/inventory">Inventory alerts</Link>
           </Button>
         </div>
@@ -691,6 +713,7 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
         <SectionHeader title="Reports & Analytics" question="Jump into deeper insights and full records." />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <LinkCard to="/dashboard/service-calls" title="Service calls" subtitle="Dispatch, emergencies, after-hours, and compliance tags." />
+          <LinkCard to="/dashboard/maintenance-schedules" title="Maintenance" subtitle="Recurring schedules, due dates, and maintenance history." />
           <LinkCard to="/dashboard/jobs" title="Job cards" subtitle="Full work history with profitability, photos, materials, and time." />
           <LinkCard to="/dashboard/technicians" title="Technicians" subtitle="Rates, performance, and assignments." />
           <LinkCard to="/dashboard/inventory" title="Inventory" subtitle="Stock levels, costs, wastage, and reorder points." />
