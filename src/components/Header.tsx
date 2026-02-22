@@ -28,6 +28,9 @@ const Header = () => {
             <a href="#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Add-ons
             </a>
+            <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Contact
+            </Link>
           </nav>
 
           {/* Desktop CTA */}
@@ -62,6 +65,9 @@ const Header = () => {
               <a href="#addons" className="text-sm font-medium text-muted-foreground hover:text-foreground">
                 Add-ons
               </a>
+              <Link to="/contact" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                Contact
+              </Link>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
                 <Button asChild variant="ghost" className="w-full justify-start">
                   <Link to="/login">Log in</Link>

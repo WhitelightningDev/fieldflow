@@ -31,12 +31,18 @@ const Footer = () => {
               <ul className="space-y-2">
                 {items.map((item) => (
                   <li key={item}>
-                    <a
-                      href="#"
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      {item}
-                    </a>
+                    {item === "Contact" ? (
+                      <Link to="/contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                        {item}
+                      </Link>
+                    ) : (
+                      <a
+                        href="#"
+                        className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {item}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
