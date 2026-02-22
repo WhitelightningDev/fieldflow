@@ -7,6 +7,8 @@ import { CheckCircle2 } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Login() {
   const { session, user, loading, roles, rolesLoading, rolesError, signOut } = useAuth();
@@ -18,15 +20,45 @@ export default function Login() {
     return qs.get("reason");
   }, [location.search]);
 
-  React.useEffect(() => {
-    if (loading || rolesLoading || !session || !user) return;
-
-    const roleSet = new Set(roles);
-    const isAssociated =
+  const roleSet = React.useMemo(() => new Set(roles), [roles]);
+  const isAssociated = React.useMemo(
+    () =>
       roleSet.has("owner") ||
       roleSet.has("admin") ||
       roleSet.has("office_staff") ||
-      roleSet.has("technician");
+      roleSet.has("technician"),
+    [roleSet],
+  );
+  const isTech = React.useMemo(() => roleSet.has("technician"), [roleSet]);
+
+  const hardReset = React.useCallback(async () => {
+    try {
+      await signOut();
+    } catch {
+      // ignore
+    }
+    // Best-effort: clear PWA caches + unregister service workers so stale bundles don't linger.
+    try {
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.allSettled(keys.map((k) => caches.delete(k)));
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.allSettled(regs.map((r) => r.unregister()));
+      }
+    } catch {
+      // ignore
+    }
+    window.location.replace("/login");
+  }, [signOut]);
+
+  React.useEffect(() => {
+    if (loading || rolesLoading || !session || !user) return;
 
     if (!isAssociated) {
       try {
@@ -45,17 +77,63 @@ export default function Login() {
       void signOut().finally(() => {
         navigate("/login?reason=unauthorized", { replace: true });
       });
-      return;
     }
+  }, [loading, rolesLoading, isAssociated, roles, rolesError, session, user, navigate, signOut]);
 
-    const isTech = roleSet.has("technician");
-    navigate(isTech ? "/tech" : "/dashboard", { replace: true });
-  }, [loading, rolesLoading, roles, session, user, navigate, signOut]);
-
-  if (loading || rolesLoading || session) {
+  if (loading || rolesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
         <Spinner />
+      </div>
+    );
+  }
+
+  // If a session exists, don't auto-redirect: show the user why clicking "Log in" appears to "auto log in".
+  // This also gives a clear escape hatch to fully reset the client (PWA + auth).
+  if (session && user && isAssociated) {
+    const storageKeys = (() => {
+      try {
+        return Object.keys(localStorage).filter((k) => k.startsWith("sb-")).sort();
+      } catch {
+        return [];
+      }
+    })();
+
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center px-4 py-10">
+        <Card className="w-full max-w-xl">
+          <CardHeader>
+            <CardTitle>Already signed in</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              You’re signed in as <span className="font-medium text-foreground">{user.email ?? user.id}</span>. Deleting company rows does not log you out of Supabase Auth.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => navigate(isTech ? "/tech" : "/dashboard")}>
+                Continue
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void signOut().then(() => navigate("/login", { replace: true }))}>
+                Sign out
+              </Button>
+              <Button type="button" variant="destructive" onClick={() => void hardReset()}>
+                Hard reset (auth + cache)
+              </Button>
+            </div>
+
+            <details className="rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+              <summary className="cursor-pointer text-xs text-muted-foreground">Debug details</summary>
+              <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+                <div>Path: {location.pathname}{location.search}{location.hash}</div>
+                <div>Roles: {roles.join(", ") || "—"}</div>
+                <div>LocalStorage `sb-*` keys: {storageKeys.length ? storageKeys.join(", ") : "none"}</div>
+                <div className="text-[11px]">
+                  Tip: if this keeps returning after clearing storage, check for another open tab/PWA window still logged in (it can restore the session).
+                </div>
+              </div>
+            </details>
+          </CardContent>
+        </Card>
       </div>
     );
   }

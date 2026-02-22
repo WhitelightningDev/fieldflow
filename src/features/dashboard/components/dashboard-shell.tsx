@@ -9,11 +9,14 @@ import { useLocation } from "react-router-dom";
 import NoCompanyStateCard from "@/features/dashboard/components/no-company-state-card";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data, companyState, actions } = useDashboardData();
-  const { roles, refreshProfile } = useAuth();
+  const { roles, refreshProfile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const company = data.company as any;
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const canCreateCompany = roles.includes("owner") || roles.includes("admin");
@@ -80,6 +83,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   onRetryLink={() => void retryLink()}
                 />
               )}
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => void signOut().finally(() => navigate("/login"))}
+                >
+                  Sign out
+                </Button>
+              </div>
             </div>
           ) : (
             children
