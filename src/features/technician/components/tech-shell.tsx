@@ -34,13 +34,13 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] bg-background">
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex">
+      <div className="hidden xl:flex">
         <TechSidebar />
       </div>
 
       {/* Mobile topbar + drawer nav */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="lg:hidden sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+        <div className="xl:hidden sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
           <div className="h-14 px-4 flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />
@@ -58,7 +58,7 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div className="lg:hidden">
+        <div className="xl:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetContent side="left" className="p-0 w-[85vw] max-w-72">
               <SheetTitle className="sr-only">Technician menu</SheetTitle>
