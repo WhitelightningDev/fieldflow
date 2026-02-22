@@ -16,7 +16,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt" so the app can show a UI asking the user to reload/close+reopen.
+      // This is especially important for installed iOS PWAs where users rarely hard-refresh.
+      registerType: "prompt",
       includeAssets: [
         "favicon.ico",
         "apple-touch-icon.png",
@@ -59,7 +61,8 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         clientsClaim: true,
-        skipWaiting: true,
+        // Keep the new SW in "waiting" so we can prompt the user before applying the update.
+        skipWaiting: false,
         cleanupOutdatedCaches: true,
         navigateFallbackDenylist: [/^\/rest\/v1\//, /^\/auth\/v1\//, /^\/functions\/v1\//],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
