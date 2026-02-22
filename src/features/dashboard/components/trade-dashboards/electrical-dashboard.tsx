@@ -7,6 +7,7 @@ import {
   computeBaseMetrics,
   computeTechMetrics,
   isLast7Days,
+  isLast30Days,
   isToday,
   KpiCard,
   SectionHeader,
@@ -15,13 +16,12 @@ import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapsh
 import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
-  Briefcase,
-  Clock,
+  CheckCircle,
+  ClipboardCheck,
   DollarSign,
-  FileWarning,
   Flame,
   Percent,
-  RefreshCcw,
+  Search,
   ShieldCheck,
   Sun,
   TrendingUp,
@@ -44,42 +44,54 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
   const jobsToday = allJobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
   const emergencyToday = jobsToday.filter((j) => j.priority === "urgent" || j.priority === "emergency");
 
-  // Electrical-specific
+  /* ── Electrical-specific metrics ── */
   const solarJobs = base.monthJobs.filter(isSolarJob);
+  const solarRevenue = solarJobs.reduce((s: number, j: any) => s + (j.revenue_cents ?? 0), 0);
+
   const cocPending = allJobs.filter((j: any) => {
     if (j.status !== "completed") return false;
     const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
     return hay.includes("coc") || hay.includes("certificate");
   });
+
   const awaitingInspection = allJobs.filter((j: any) => {
     const notes = String(j.notes ?? "").toLowerCase();
-    return (
-      notes.includes("awaiting inspection") ||
-      notes.includes("inspection pending") ||
-      notes.includes("inspection booked")
-    );
+    return notes.includes("awaiting inspection") || notes.includes("inspection pending") || notes.includes("inspection booked");
   });
+
+  const dbBoardJobs = base.monthJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+    return hay.includes("db board") || hay.includes("distribution board") || hay.includes("consumer unit");
+  });
+
   const quotesWindow7d = allJobs.filter((j: any) => j.created_at && isLast7Days(j.created_at) && j.status !== "cancelled");
   const openQuotes7d = quotesWindow7d.filter((j: any) => j.status === "new");
-  const quoteConversion = (() => {
-    if (quotesWindow7d.length === 0) return 0;
-    const converted = quotesWindow7d.filter((j: any) => j.status !== "new");
-    return Math.round((converted.length / quotesWindow7d.length) * 100);
-  })();
+  const quoteConversion = quotesWindow7d.length === 0 ? 0 : Math.round(((quotesWindow7d.length - openQuotes7d.length) / quotesWindow7d.length) * 100);
+
+  const loadSheddingJobs = base.monthJobs.filter((j: any) => {
+    const hay = `${j.title ?? ""} ${j.description ?? ""} ${j.notes ?? ""}`.toLowerCase();
+    return hay.includes("load shedding") || hay.includes("loadshedding") || hay.includes("ups") || hay.includes("backup power");
+  });
+
+  const cocOverdue30d = allJobs.filter((j: any) => {
+    if (j.status === "invoiced" || j.status === "cancelled") return false;
+    const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+    return (hay.includes("coc") || hay.includes("certificate")) && j.created_at && isLast30Days(j.created_at);
+  });
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Electrical Dashboard" subtitle={`${data.company?.name} — Owner Overview`} />
+      <PageHeader title="Electrical Dashboard" subtitle={`${data.company?.name} — Compliance, solar, and job performance`} />
 
-      {/* ACT TODAY */}
+      {/* COMPLIANCE & INSPECTIONS */}
       <div>
-        <SectionHeader title="Act Today" question="Where do I need to act today?" />
+        <SectionHeader title="Compliance & Inspections" question="Are certificates and inspections on track?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={Flame} label="Emergency Today" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
-          <KpiCard icon={Briefcase} label="Jobs Today" value={jobsToday.length} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatZarFromCents(base.unbilledRevenue) + " at risk"} />
-          <KpiCard icon={ShieldCheck} label="COC Certs Pending" value={cocPending.length} accent={cocPending.length > 0 ? "warning" : undefined} />
-          <KpiCard icon={Clock} label="Awaiting Inspection" value={awaitingInspection.length} accent={awaitingInspection.length > 0 ? "warning" : undefined} />
+          <KpiCard icon={ShieldCheck} label="COC Certs Pending" value={cocPending.length} accent={cocPending.length > 0 ? "warning" : undefined} sub="completed jobs awaiting COC" />
+          <KpiCard icon={ClipboardCheck} label="Awaiting Inspection" value={awaitingInspection.length} accent={awaitingInspection.length > 0 ? "warning" : undefined} sub="booked / pending" />
+          <KpiCard icon={AlertTriangle} label="COC Overdue (30d)" value={cocOverdue30d.length} accent={cocOverdue30d.length > 0 ? "destructive" : undefined} sub="non-compliance = fines" />
+          <KpiCard icon={Zap} label="DB Board Upgrades" value={dbBoardJobs.length} sub="this month" />
+          <KpiCard icon={Sun} label="Backup Power Jobs" value={loadSheddingJobs.length} sub="UPS / load shedding" />
         </div>
       </div>
 
@@ -94,42 +106,42 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
         siteMaterialUsage={data.siteMaterialUsage}
       />
 
-      {/* LOSING MONEY */}
+      {/* SOLAR & HIGH-VALUE WORK */}
       <div>
-        <SectionHeader title="Financial" question="Where am I losing money?" />
+        <SectionHeader title="Solar & High-Value" question="How is solar and project work performing?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <KpiCard icon={Sun} label="Solar Installs (Month)" value={solarJobs.length} sub={formatZarFromCents(solarRevenue) + " revenue"} />
           <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
-          <KpiCard icon={Sun} label="Solar Installs" value={solarJobs.length} sub="this month" />
           <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
-          <KpiCard icon={Zap} label="Quote Conversion" value={`${quoteConversion}%`} accent={quoteConversion < 50 ? "warning" : undefined} sub={`${openQuotes7d.length} open quotes (7d)`} />
+          <KpiCard icon={Search} label="Quote Conversion (7d)" value={`${quoteConversion}%`} accent={quoteConversion < 50 ? "warning" : undefined} sub={`${openQuotes7d.length} open quotes`} />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Rework costing you money</AlertTitle>
+            <AlertTitle>Electrical rework alert</AlertTitle>
             <AlertDescription>
-              {base.callbackJobs.length} callback{base.callbackJobs.length > 1 ? "s" : ""} in 30 days. Rework on electrical = double the labour with zero revenue.
+              {base.callbackJobs.length} callback{base.callbackJobs.length > 1 ? "s" : ""} in 30 days. Rework on electrical = double the labour + compliance risk.
             </AlertDescription>
           </Alert>
         )}
       </div>
 
-      {/* RISK */}
+      {/* TODAY'S WORK */}
       <div>
-        <SectionHeader title="Risk / Compliance" question="Where is risk building?" />
+        <SectionHeader title="Today" question="What needs attention right now?" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="electrical rework = liability" />
-          <KpiCard icon={ShieldCheck} label="COC Certs Due" value={cocPending.length} accent={cocPending.length > 0 ? "warning" : undefined} sub="non-compliance = fines" />
-          <KpiCard icon={Clock} label="Avg Response" value={`${base.avgResponseHrs}h`} />
+          <KpiCard icon={Flame} label="Emergency Today" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
+          <KpiCard icon={CheckCircle} label="Jobs Scheduled Today" value={jobsToday.length} />
+          <KpiCard icon={Zap} label="In Progress" value={allJobs.filter((j) => j.status === "in-progress").length} />
         </div>
       </div>
 
-      {/* TECH METRICS */}
+      {/* ELECTRICIAN METRICS */}
       <div>
-        <SectionHeader title="Technician Metrics" question="Who's making money and who's costing you?" />
+        <SectionHeader title="Electrician Performance" question="Who's delivering and who needs support?" />
         <TechTable techMetrics={techMetrics} />
       </div>
     </div>
