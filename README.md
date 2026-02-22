@@ -1,73 +1,66 @@
-# Welcome to your Lovable project
+# FieldFlow Billing
 
-## Project info
+FieldFlow Billing is a Vite + React + Supabase field-service dashboard for trade businesses, with a strong focus on plumbing, electrical, applicance repair and Refrigeration operations (dispatch, service calls, compliance, inventory usage, and billing visibility).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## What you get
 
-## How can I edit this code?
+- **Owner/office dashboard** (`/dashboard`): overview KPIs, dispatch timeline, live technician status (GPS), job cards, customers, sites, inventory, teams, messages.
+- **Technician dashboard** (`/tech`): job flow, time logging, photos, parts used, messaging (feature set varies by route).
+- **Plumbing service calls**: logged as plumbing `job_cards` with searchable `#tags` in notes (e.g. `#service-call`, `#gas-coc`, `#pressure-test`, `#pirb-coc`, `#after-hours`).
 
-There are several ways of editing your application.
+## Tech stack
 
-**Use Lovable**
+- Vite + React + TypeScript
+- shadcn/ui + Tailwind
+- Supabase (Auth, Postgres, Storage, Edge Functions)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Local development
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+1) Install dependencies
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+2) Create `.env` in the project root:
+
+```sh
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_ANON_KEY
+```
+
+3) Run the app
+
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Then open the URL printed by Vite.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts
 
-**Use GitHub Codespaces**
+```sh
+npm run dev      # start dev server
+npm run build    # production build
+npm run preview  # preview production build
+npm test         # run vitest
+npm run lint     # eslint (note: repo may contain legacy lint errors)
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Database / Supabase
 
-## What technologies are used for this project?
+- SQL migrations live in `supabase/migrations`.
+- Supabase client is in `src/integrations/supabase/client.ts` and reads `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- Generated DB types are in `src/integrations/supabase/types.ts`.
 
-This project is built with:
+If the dashboard shows “Workspace unavailable”, it’s usually a Supabase policy/migration mismatch rather than an auth issue.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Plumbing overview notes (how KPIs are computed)
 
-## How can I deploy this project?
+- **Scheduling + dispatch**: uses `job_cards.scheduled_at` + `job_time_entries` (if available) to estimate start/end and detect delays.
+- **Compliance flags**: derived from `#tags` in job notes (e.g. open Gas CoCs / Pressure Tests / PIRB CoCs).
+- **CSAT**: if captured, stored in notes as a line like `CSAT: 5/5` and surfaced on the plumbing overview.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Deploy
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+This is a standard Vite app. Deploy to any static host (Vercel, Netlify, Cloudflare Pages, etc.) and provide the two `VITE_SUPABASE_*` environment variables.
