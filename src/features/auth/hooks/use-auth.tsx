@@ -9,6 +9,22 @@ import { Spinner } from "@/components/ui/spinner";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
+const SESSION_STARTED_AT_KEY = "ff_session_started_at";
+const LAST_ACTIVITY_AT_KEY = "ff_last_activity_at";
+const LOGOUT_REASON_KEY = "ff_logout_reason";
+
+function readNumber(v: string | null) {
+  if (!v) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getEnvNumber(name: string) {
+  const raw = (import.meta as any)?.env?.[name] as string | undefined;
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
@@ -41,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const rolesRef = React.useRef<AppRole[]>([]);
   const profileRef = React.useRef<AuthContextValue["profile"]>(null);
 
+  const maxSessionHours = getEnvNumber("VITE_MAX_SESSION_HOURS");
+  const idleTimeoutMinutes = getEnvNumber("VITE_IDLE_TIMEOUT_MINUTES");
+  const maxSessionMs = maxSessionHours && maxSessionHours > 0 ? Math.round(maxSessionHours * 60 * 60 * 1000) : 0;
+  const idleTimeoutMs = idleTimeoutMinutes && idleTimeoutMinutes > 0 ? Math.round(idleTimeoutMinutes * 60 * 1000) : 0;
+
   React.useEffect(() => {
     rolesRef.current = roles;
   }, [roles]);
@@ -48,6 +69,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     profileRef.current = profile;
   }, [profile]);
+
+  const signOut = React.useCallback(async () => {
+    try {
+      try {
+        await withTimeout(supabase.auth.signOut(), 8000, "Remote sign out timed out.");
+      } catch {}
+      try {
+        await withTimeout(supabase.auth.signOut({ scope: "local" }), 8000, "Local sign out timed out.");
+      } catch {}
+      clearSupabaseAuthStorage();
+      try {
+        localStorage.removeItem(SESSION_STARTED_AT_KEY);
+        localStorage.removeItem(LAST_ACTIVITY_AT_KEY);
+      } catch {}
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    } finally {
+      setSession(null);
+      setProfile(null);
+      setRoles([]);
+      setProfileError(null);
+      setRolesError(null);
+      setLoading(false);
+      setProfileLoading(false);
+      setRolesLoading(false);
+    }
+  }, []);
 
   const fetchProfile = React.useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -167,6 +214,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setRoles([]);
             setProfileError(null);
             setRolesError(null);
+            try {
+              localStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
+              localStorage.setItem(LAST_ACTIVITY_AT_KEY, String(Date.now()));
+            } catch {}
           }
 
           // Dispatch after callback completes to avoid deadlock
@@ -204,6 +255,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfileLoading(false);
           setRoles([]);
           setRolesLoading(false);
+          try {
+            localStorage.removeItem(SESSION_STARTED_AT_KEY);
+            localStorage.removeItem(LAST_ACTIVITY_AT_KEY);
+          } catch {}
         }
       }
     );
@@ -251,6 +306,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, [ensureRoles, fetchProfile, repairAssociationIfNeeded]);
+
+  // Enforce max session duration / idle timeout (optional via env vars).
+  React.useEffect(() => {
+    if (!session?.user) return;
+    if (maxSessionMs <= 0 && idleTimeoutMs <= 0) return;
+
+    let cancelled = false;
+    let lastWriteAt = 0;
+
+    const ensureTimestamps = () => {
+      const now = Date.now();
+      try {
+        const started = readNumber(localStorage.getItem(SESSION_STARTED_AT_KEY));
+        const last = readNumber(localStorage.getItem(LAST_ACTIVITY_AT_KEY));
+        if (!started) localStorage.setItem(SESSION_STARTED_AT_KEY, String(now));
+        if (!last) localStorage.setItem(LAST_ACTIVITY_AT_KEY, String(now));
+      } catch {
+        // ignore
+      }
+    };
+
+    const markActivity = () => {
+      const now = Date.now();
+      if (now - lastWriteAt < 15_000) return;
+      lastWriteAt = now;
+      try {
+        localStorage.setItem(LAST_ACTIVITY_AT_KEY, String(now));
+      } catch {
+        // ignore
+      }
+    };
+
+    const securityLogout = (reason: "session-max-age" | "session-idle") => {
+      if (cancelled) return;
+      cancelled = true;
+      try {
+        sessionStorage.setItem(LOGOUT_REASON_KEY, reason);
+      } catch {}
+      void signOut();
+    };
+
+    const tick = () => {
+      if (cancelled) return;
+      const now = Date.now();
+      let startedAt: number | null = null;
+      let lastActivityAt: number | null = null;
+      try {
+        startedAt = readNumber(localStorage.getItem(SESSION_STARTED_AT_KEY));
+        lastActivityAt = readNumber(localStorage.getItem(LAST_ACTIVITY_AT_KEY));
+      } catch {
+        // ignore
+      }
+      if (maxSessionMs > 0 && startedAt && now - startedAt >= maxSessionMs) {
+        securityLogout("session-max-age");
+        return;
+      }
+      if (idleTimeoutMs > 0 && lastActivityAt && now - lastActivityAt >= idleTimeoutMs) {
+        securityLogout("session-idle");
+      }
+    };
+
+    ensureTimestamps();
+    markActivity();
+
+    const events: Array<keyof WindowEventMap> = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "focus"];
+    for (const e of events) window.addEventListener(e, markActivity, { passive: true } as any);
+    document.addEventListener("visibilitychange", markActivity, { passive: true } as any);
+
+    const id = window.setInterval(tick, 10_000);
+    tick();
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      for (const e of events) window.removeEventListener(e, markActivity as any);
+      document.removeEventListener("visibilitychange", markActivity as any);
+    };
+  }, [idleTimeoutMs, maxSessionMs, session?.user, signOut]);
 
   // iOS PWAs can suspend the page; on resume, re-check the session to avoid a brief "logged out" flash.
   React.useEffect(() => {
@@ -306,28 +439,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("pageshow", onResume as any);
     };
   }, [fetchProfile, ensureRoles, loading, repairAssociationIfNeeded, session]);
-
-  const signOut = React.useCallback(async () => {
-    try {
-      try {
-        await withTimeout(supabase.auth.signOut(), 8000, "Remote sign out timed out.");
-      } catch {}
-      try {
-        await withTimeout(supabase.auth.signOut({ scope: "local" }), 8000, "Local sign out timed out.");
-      } catch {}
-      clearSupabaseAuthStorage();
-      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-    } finally {
-      setSession(null);
-      setProfile(null);
-      setRoles([]);
-      setProfileError(null);
-      setRolesError(null);
-      setLoading(false);
-      setProfileLoading(false);
-      setRolesLoading(false);
-    }
-  }, []);
 
   const refreshProfile = React.useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -401,6 +512,18 @@ export function RequireAuth({
     if (session) {
       setPending(false);
       return;
+    }
+
+    // If we forced logout for security reasons, redirect immediately (no iOS resume delay).
+    try {
+      const reason = sessionStorage.getItem(LOGOUT_REASON_KEY);
+      if (reason) {
+        sessionStorage.removeItem(LOGOUT_REASON_KEY);
+        navigate(`/login?reason=${encodeURIComponent(reason)}`, { replace: true });
+        return;
+      }
+    } catch {
+      // ignore
     }
 
     // Avoid a brief redirect flicker on iOS PWA resume while the session is being restored.
