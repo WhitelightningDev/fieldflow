@@ -30,6 +30,13 @@ import {
 
 type Props = { data: any; allJobs: any[] };
 
+const SOLAR_KEYWORDS = ["solar", "pv", "inverter", "battery", "panel"] as const;
+
+export function isSolarJob(job: any) {
+  const hay = `${job?.title ?? ""} ${job?.description ?? ""}`.toLowerCase();
+  return SOLAR_KEYWORDS.some((k) => hay.includes(k));
+}
+
 export default function ElectricalDashboard({ data, allJobs }: Props) {
   const base = computeBaseMetrics(allJobs, data.technicians);
   const techMetrics = computeTechMetrics(allJobs, data.technicians);
@@ -38,19 +45,26 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
   const emergencyToday = jobsToday.filter((j) => j.priority === "urgent" || j.priority === "emergency");
 
   // Electrical-specific
-  const solarJobs = base.monthJobs.filter((j: any) => j.title?.toLowerCase().includes("solar") || j.trade_id === "electrical-contracting");
-  const cocPending = allJobs.filter((j: any) =>
-    j.status === "completed" &&
-    (j.title?.toLowerCase().includes("coc") || j.description?.toLowerCase().includes("certificate")),
-  );
-  const awaitingInspection = allJobs.filter((j: any) =>
-    j.notes?.toLowerCase().includes("inspection") || j.notes?.toLowerCase().includes("awaiting inspection"),
-  );
-  const quotesSent7d = allJobs.filter((j: any) => j.status === "new" && isLast7Days(j.created_at));
+  const solarJobs = base.monthJobs.filter(isSolarJob);
+  const cocPending = allJobs.filter((j: any) => {
+    if (j.status !== "completed") return false;
+    const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+    return hay.includes("coc") || hay.includes("certificate");
+  });
+  const awaitingInspection = allJobs.filter((j: any) => {
+    const notes = String(j.notes ?? "").toLowerCase();
+    return (
+      notes.includes("awaiting inspection") ||
+      notes.includes("inspection pending") ||
+      notes.includes("inspection booked")
+    );
+  });
+  const quotesWindow7d = allJobs.filter((j: any) => j.created_at && isLast7Days(j.created_at) && j.status !== "cancelled");
+  const openQuotes7d = quotesWindow7d.filter((j: any) => j.status === "new");
   const quoteConversion = (() => {
-    const allQuoted = allJobs.filter((j: any) => j.status !== "cancelled");
-    const converted = allQuoted.filter((j: any) => j.status !== "new");
-    return allQuoted.length > 0 ? Math.round((converted.length / allQuoted.length) * 100) : 0;
+    if (quotesWindow7d.length === 0) return 0;
+    const converted = quotesWindow7d.filter((j: any) => j.status !== "new");
+    return Math.round((converted.length / quotesWindow7d.length) * 100);
   })();
 
   return (
@@ -90,7 +104,7 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
-          <KpiCard icon={Zap} label="Quote Conversion" value={`${quoteConversion}%`} accent={quoteConversion < 50 ? "warning" : undefined} sub={`${quotesSent7d.length} open quotes (7d)`} />
+          <KpiCard icon={Zap} label="Quote Conversion" value={`${quoteConversion}%`} accent={quoteConversion < 50 ? "warning" : undefined} sub={`${openQuotes7d.length} open quotes (7d)`} />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">

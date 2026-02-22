@@ -2,7 +2,7 @@ import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { toast } from "@/components/ui/use-toast";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 type Customer = Tables<"customers">;
 type Technician = Tables<"technicians">;
@@ -16,6 +16,8 @@ type Company = Tables<"companies">;
 type TechnicianLocation = Tables<"technician_locations">;
 type JobTimeEntry = any;
 type SiteMaterialUsage = any;
+
+type JobCardUpdate = Omit<TablesUpdate<"job_cards">, "company_id" | "id" | "created_at" | "updated_at">;
 
 export type DashboardData = {
   company: Company | null;
@@ -40,6 +42,7 @@ type DashboardActions = {
   updateTechnician: (technicianId: string, t: Partial<Omit<TablesInsert<"technicians">, "company_id">>) => Promise<Technician | null>;
   deleteTechnician: (technicianId: string) => Promise<void>;
   addJobCard: (j: Omit<TablesInsert<"job_cards">, "company_id">) => Promise<JobCard | null>;
+  updateJobCard: (id: string, patch: JobCardUpdate) => Promise<JobCard | null>;
   setJobCardStatus: (id: string, status: string) => Promise<void>;
   setJobCardSite: (id: string, siteId: string | null) => Promise<void>;
   setJobCardTechnician: (id: string, technicianId: string | null) => Promise<void>;
@@ -458,6 +461,20 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, jobCards: [row, ...prev.jobCards] }));
+      return row;
+    },
+    updateJobCard: async (id, patch) => {
+      const { data: row, error } = await supabase
+        .from("job_cards")
+        .update(patch as any)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      setData((prev) => ({
+        ...prev,
+        jobCards: prev.jobCards.map((j) => (j.id === id ? row : j)),
+      }));
       return row;
     },
     setJobCardStatus: async (id, status) => {
