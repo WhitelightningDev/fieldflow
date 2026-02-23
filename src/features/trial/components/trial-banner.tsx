@@ -1,9 +1,22 @@
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock, AlertTriangle, X } from "lucide-react";
 import type { TrialStatus } from "../hooks/use-trial-status";
 
-export default function TrialBanner({ status }: { status: TrialStatus }) {
+export default function TrialBanner({
+  status,
+  variant = "bar",
+  className,
+  dismissible = false,
+  onDismiss,
+}: {
+  status: TrialStatus;
+  variant?: "bar" | "card";
+  className?: string;
+  dismissible?: boolean;
+  onDismiss?: () => void;
+}) {
   if (status.state !== "trialing") return null;
 
   const urgent = status.daysLeft <= 3;
@@ -16,10 +29,24 @@ export default function TrialBanner({ status }: { status: TrialStatus }) {
     <div
       role="status"
       className={cn(
-        "border-b px-4 py-3",
+        "relative",
+        variant === "card" ? "rounded-lg border px-4 py-3" : "border-b px-4 py-3",
         urgent ? "border-destructive/20 bg-destructive/5" : "border-border bg-primary/5",
+        className,
       )}
     >
+      {dismissible ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-2 top-2 h-7 w-7 text-muted-foreground hover:text-foreground"
+          onClick={onDismiss}
+          aria-label="Dismiss trial banner"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3 min-w-0">
           <div

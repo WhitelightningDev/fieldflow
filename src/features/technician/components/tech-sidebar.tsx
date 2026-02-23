@@ -8,8 +8,19 @@ import NotificationBell from "@/components/notification-bell";
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
+import TrialDaysIconButton from "@/features/trial/components/trial-days-icon-button";
 
-export default function TechSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export default function TechSidebar({
+  onNavigate,
+  trialDaysLeft,
+  showTrialDaysIcon,
+  onRestoreTrialBanner,
+}: {
+  onNavigate?: () => void;
+  trialDaysLeft?: number;
+  showTrialDaysIcon?: boolean;
+  onRestoreTrialBanner?: () => void;
+}) {
   const { profile, signOut, user } = useAuth();
   const location = useLocation();
   const [industry, setIndustry] = React.useState<string | null>(null);
@@ -36,7 +47,16 @@ export default function TechSidebar({ onNavigate }: { onNavigate?: () => void })
             <BrandIcon size={28} />
             <BrandWordmark className="text-lg" />
           </div>
-          <NotificationBell basePath="/tech" />
+          <div className="flex items-center gap-1">
+            {showTrialDaysIcon && typeof trialDaysLeft === "number" && onRestoreTrialBanner ? (
+              <TrialDaysIconButton
+                daysLeft={trialDaysLeft}
+                urgent={trialDaysLeft <= 3}
+                onClick={onRestoreTrialBanner}
+              />
+            ) : null}
+            <NotificationBell basePath="/tech" />
+          </div>
         </div>
         <div className="text-xs text-muted-foreground truncate">
           {profile?.full_name || user?.email}

@@ -10,12 +10,20 @@ import { Building2, LayoutGrid } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import ComplianceStatusIcon from "@/features/compliance/components/compliance-status-icon";
+import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
+import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
+import TrialDaysIconButton from "@/features/trial/components/trial-days-icon-button";
 
 export default function DashboardTopbar() {
   const { profile, roles, loading: authLoading, profileLoading } = useAuth();
   const { data } = useDashboardData();
   const company = data.company as any;
   const canCreateCompany = roles.includes("owner") || roles.includes("admin");
+  const trialStatus = useTrialStatus(company);
+  const trialDismissal = useTrialBannerDismissal({
+    companyId: company?.id ?? null,
+    endsAt: trialStatus.state === "trialing" ? trialStatus.endsAt : null,
+  });
 
   const allowedTradeIds = React.useMemo<TradeId[] | null>(() => {
     const industry = data.company?.industry ?? null;
@@ -34,6 +42,13 @@ export default function DashboardTopbar() {
             Dashboard
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {trialStatus.state === "trialing" && trialDismissal.dismissed ? (
+              <TrialDaysIconButton
+                daysLeft={trialStatus.daysLeft}
+                urgent={trialStatus.daysLeft <= 3}
+                onClick={trialDismissal.restore}
+              />
+            ) : null}
             <NotificationBell basePath="/dashboard" />
             {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
             {!authLoading && !profileLoading && profile?.company_id ? (

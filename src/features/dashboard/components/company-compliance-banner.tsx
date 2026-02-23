@@ -1,15 +1,20 @@
 import { Button } from "@/components/ui/button";
 import ComplianceStatusIcon from "@/features/compliance/components/compliance-status-icon";
 import { getComplianceState } from "@/features/compliance/compliance-status";
+import { cn } from "@/lib/utils";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import * as React from "react";
 
 export default function CompanyComplianceBanner({
   company,
   onOpen,
+  variant = "bar",
+  className,
 }: {
   company: any;
   onOpen: () => void;
+  variant?: "bar" | "card";
+  className?: string;
 }) {
   const compliance = getComplianceState({
     status: company?.compliance_status,
@@ -25,7 +30,14 @@ export default function CompanyComplianceBanner({
       : "border-amber-500/20 bg-amber-500/10";
 
   return (
-    <div className={`border-b px-4 py-2.5 flex items-start gap-3 ${tone}`}>
+    <div
+      className={cn(
+        variant === "card" ? "rounded-lg border px-4 py-2.5" : "border-b px-4 py-2.5",
+        "flex items-start gap-3",
+        tone,
+        className,
+      )}
+    >
       <div className="mt-0.5 shrink-0">
         <ComplianceStatusIcon company={company} />
       </div>
@@ -47,4 +59,3 @@ export default function CompanyComplianceBanner({
     </div>
   );
 }
-

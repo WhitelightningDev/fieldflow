@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
 import TrialBanner from "@/features/trial/components/trial-banner";
 import TrialPaywall from "@/features/trial/components/trial-paywall";
+import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data, companyState, actions } = useDashboardData();
@@ -51,19 +52,41 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }
   }, [company?.id, company?.profile_complete]);
 
+  const showProfileBanner = Boolean(company?.id && !company.profile_complete);
+  const showComplianceBanner = Boolean(company?.id && company.profile_complete && canCreateCompany);
+  const trialDismissal = useTrialBannerDismissal({
+    companyId: company?.id ?? null,
+    endsAt: trialStatus.state === "trialing" ? trialStatus.endsAt : null,
+  });
+  const showTrialBanner = trialStatus.state === "trialing" && !trialDismissal.dismissed;
+
   return (
     <SidebarProvider>
       <DashboardSidebar />
       <SidebarRail />
       <SidebarInset>
         <DashboardTopbar />
-        {company?.id && !company.profile_complete && (
-          <ProfileCompletionBanner onOpen={() => setDialogOpen(true)} />
+        {showProfileBanner ? <ProfileCompletionBanner onOpen={() => setDialogOpen(true)} /> : null}
+
+        {showComplianceBanner && showTrialBanner ? (
+          <div className="px-4 pt-2">
+            <div className="grid gap-2 lg:grid-cols-2">
+              <CompanyComplianceBanner
+                company={company}
+                onOpen={() => setComplianceOpen(true)}
+                variant="card"
+              />
+              <TrialBanner status={trialStatus} variant="card" dismissible onDismiss={trialDismissal.dismiss} />
+            </div>
+          </div>
+        ) : (
+          <>
+            {showComplianceBanner ? (
+              <CompanyComplianceBanner company={company} onOpen={() => setComplianceOpen(true)} />
+            ) : null}
+            {showTrialBanner ? <TrialBanner status={trialStatus} dismissible onDismiss={trialDismissal.dismiss} /> : null}
+          </>
         )}
-        {company?.id && company.profile_complete && canCreateCompany && (
-          <CompanyComplianceBanner company={company} onOpen={() => setComplianceOpen(true)} />
-        )}
-        {trialStatus.state === "trialing" && <TrialBanner status={trialStatus} />}
         <div className="container mx-auto px-4 py-6">
           {trialStatus.state === "expired" ? (
             <TrialPaywall />

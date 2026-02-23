@@ -9,16 +9,23 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
+import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
 import TrialBanner from "@/features/trial/components/trial-banner";
 import TrialPaywall from "@/features/trial/components/trial-paywall";
+import TrialDaysIconButton from "@/features/trial/components/trial-days-icon-button";
 
 export default function TechShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [industry, setIndustry] = React.useState<string | null>(null);
   const [company, setCompany] = React.useState<any>(null);
   const trialStatus = useTrialStatus(company);
+  const trialDismissal = useTrialBannerDismissal({
+    companyId: profile?.company_id ?? null,
+    endsAt: trialStatus.state === "trialing" ? trialStatus.endsAt : null,
+  });
+  const showTrialBanner = trialStatus.state === "trialing" && !trialDismissal.dismissed;
 
   React.useEffect(() => {
     if (!profile?.company_id) return;
@@ -58,7 +65,11 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-[100dvh] bg-background">
       {/* Desktop sidebar */}
       <div className="hidden xl:flex">
-        <TechSidebar />
+        <TechSidebar
+          trialDaysLeft={trialStatus.state === "trialing" ? trialStatus.daysLeft : undefined}
+          showTrialDaysIcon={trialStatus.state === "trialing" && trialDismissal.dismissed}
+          onRestoreTrialBanner={trialDismissal.restore}
+        />
       </div>
 
       {/* Mobile topbar + drawer nav */}
@@ -76,6 +87,13 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
                 <MessageSquare className="h-5 w-5" />
               </Link>
             </Button>
+            {trialStatus.state === "trialing" && trialDismissal.dismissed ? (
+              <TrialDaysIconButton
+                daysLeft={trialStatus.daysLeft}
+                urgent={trialStatus.daysLeft <= 3}
+                onClick={trialDismissal.restore}
+              />
+            ) : null}
             <NotificationBell basePath="/tech" />
           </div>
         </div>
@@ -84,12 +102,19 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetContent side="left" className="p-0 w-[85vw] max-w-72">
               <SheetTitle className="sr-only">Technician menu</SheetTitle>
-              <TechSidebar onNavigate={() => setMobileOpen(false)} />
+              <TechSidebar
+                onNavigate={() => setMobileOpen(false)}
+                trialDaysLeft={trialStatus.state === "trialing" ? trialStatus.daysLeft : undefined}
+                showTrialDaysIcon={trialStatus.state === "trialing" && trialDismissal.dismissed}
+                onRestoreTrialBanner={trialDismissal.restore}
+              />
             </SheetContent>
           </Sheet>
         </div>
 
-        {trialStatus.state === "trialing" && <TrialBanner status={trialStatus} />}
+        {showTrialBanner ? (
+          <TrialBanner status={trialStatus} dismissible onDismiss={trialDismissal.dismiss} />
+        ) : null}
 
         {/* Main content area — extra bottom padding for bottom nav on mobile */}
         <main className="flex-1 min-h-0 overflow-y-auto px-3 py-3 pb-[calc(4rem+env(safe-area-inset-bottom))] xl:pb-6 sm:px-5 sm:py-4">
