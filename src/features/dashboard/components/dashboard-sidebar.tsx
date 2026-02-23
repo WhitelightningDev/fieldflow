@@ -10,13 +10,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { getIndustryNav } from "@/features/dashboard/constants/industry-nav";
 import { cn } from "@/lib/utils";
-import { LogOut, Building2 } from "lucide-react";
+import { LogOut, Building2, ChevronDown, Folder, Sparkles, MessageSquare, Settings } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
@@ -31,6 +35,23 @@ function tourIdForNavPath(to: string) {
     .replace(/^-|-$/g, "")
     .toLowerCase();
   return `nav-${cleaned}`;
+}
+
+type NavGroupKey = "operations" | "industry" | "communication" | "admin";
+
+function groupForNavItem(to: string): NavGroupKey {
+  if (to === "/dashboard/settings") return "admin";
+  if (to === "/dashboard/messages") return "communication";
+  if (
+    to === "/dashboard/sites" ||
+    to === "/dashboard/customers" ||
+    to === "/dashboard/technicians" ||
+    to === "/dashboard/teams" ||
+    to === "/dashboard/inventory"
+  ) {
+    return "operations";
+  }
+  return "industry";
 }
 
 export default function DashboardSidebar() {
@@ -51,6 +72,29 @@ export default function DashboardSidebar() {
     },
     [location.pathname],
   );
+
+  const { primaryNav, groupedNav } = React.useMemo(() => {
+    const primarySet = new Set(["/dashboard", "/dashboard/jobs", "/dashboard/invoices"]);
+    const primaryNav = navItems.filter((item) => primarySet.has(item.to));
+    const rest = navItems.filter((item) => !primarySet.has(item.to));
+
+    const grouped = rest.reduce<Record<NavGroupKey, typeof navItems>>(
+      (acc, item) => {
+        acc[groupForNavItem(item.to)].push(item);
+        return acc;
+      },
+      { operations: [], industry: [], communication: [], admin: [] },
+    );
+
+    const groupedNav = [
+      { key: "operations" as const, label: "Operations", icon: Folder, items: grouped.operations },
+      { key: "industry" as const, label: "Industry", icon: Sparkles, items: grouped.industry },
+      { key: "communication" as const, label: "Communication", icon: MessageSquare, items: grouped.communication },
+      { key: "admin" as const, label: "Admin", icon: Settings, items: grouped.admin },
+    ].filter((g) => g.items.length > 0);
+
+    return { primaryNav, groupedNav };
+  }, [navItems]);
 
   const handleSignOut = async () => {
     try {
@@ -97,7 +141,7 @@ export default function DashboardSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {primaryNav.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton asChild isActive={isActive(item.to)} tooltip={item.label}>
                     <Link
@@ -111,6 +155,43 @@ export default function DashboardSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {groupedNav.map((group) => {
+                const anyActive = group.items.some((item) => isActive(item.to));
+                const GroupIcon = group.icon;
+
+                return (
+                  <Collapsible key={group.key} asChild defaultOpen={anyActive || group.key === "operations"}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton isActive={anyActive} tooltip={group.label} className="gap-2">
+                          <GroupIcon />
+                          <span>{group.label}</span>
+                          <ChevronDown className="ml-auto size-4 transition-transform data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {group.items.map((item) => (
+                            <SidebarMenuSubItem key={item.to}>
+                              <SidebarMenuSubButton asChild isActive={isActive(item.to)}>
+                                <Link
+                                  to={item.to}
+                                  data-tour={tourIdForNavPath(item.to)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <item.icon />
+                                  <span>{item.label}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
