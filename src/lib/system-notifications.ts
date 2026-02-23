@@ -60,11 +60,23 @@ export async function showSystemNotification(payload: SystemNotificationPayload)
   const title = payload.title;
   const body = payload.body ?? undefined;
   const tag = payload.tag;
+  const icon = "/pwa-192.png";
+  const badge = "/pwa-192.png";
 
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg?.showNotification) {
-      await reg.showNotification(title, { body, tag });
+      await reg.showNotification(title, {
+        body,
+        tag,
+        icon,
+        badge,
+        renotify: Boolean(tag),
+        requireInteraction: false,
+        data: { url: window.location.href },
+        // vibrate is supported on Android but not in all TS typings
+        ...(({ vibrate: [100, 50, 100] }) as any),
+      } as NotificationOptions);
       return true;
     }
   } catch {
@@ -72,10 +84,8 @@ export async function showSystemNotification(payload: SystemNotificationPayload)
   }
 
   try {
-    // Some browsers require a user gesture to construct a Notification.
-    // Prefer service worker notifications when available.
     // eslint-disable-next-line no-new
-    new Notification(title, { body, tag });
+    new Notification(title, { body, tag, icon, badge });
     return true;
   } catch {
     return false;
