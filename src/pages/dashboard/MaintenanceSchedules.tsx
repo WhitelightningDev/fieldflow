@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import PageHeader from "@/features/dashboard/components/page-header";
 import CreateMaintenancePlanDialog from "@/features/dashboard/components/dialogs/create-maintenance-plan-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   computeNextDue,
   formatRepeat,
@@ -318,15 +320,21 @@ export default function MaintenanceSchedules() {
                         <div className="text-xs text-muted-foreground truncate">{tech?.phone ?? "—"}</div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="inline-flex items-center gap-2 justify-end">
-                          {p.nextJob ? <JobSiteControlsDialog jobId={p.nextJob.id} /> : null}
-                          <MaintenanceHistoryDialog msid={p.msid} jobs={p.jobs} />
-                          <Button size="sm" variant="outline" className="gap-1.5" disabled={!p.repeat} onClick={() => void scheduleNext(p)}>
-                            <CalendarClock className="h-4 w-4" /> Schedule next
-                          </Button>
-                          <Button size="sm" className="gap-1.5" disabled={!p.nextJob || !p.repeat} onClick={() => void completeAndScheduleNext(p)}>
-                            Complete + next
-                          </Button>
+                        <div className="flex justify-end">
+                          <RowActionsMenu label="Maintenance actions">
+                            {p.nextJob ? (
+                              <JobSiteControlsDialog jobId={p.nextJob.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                            ) : (
+                              <DropdownMenuItem disabled>Job controls</DropdownMenuItem>
+                            )}
+                            <MaintenanceHistoryDialog msid={p.msid} jobs={p.jobs} trigger={<DropdownMenuItem>History</DropdownMenuItem>} />
+                            <DropdownMenuItem disabled={!p.repeat} onSelect={() => void scheduleNext(p)}>
+                              Schedule next
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={!p.nextJob || !p.repeat} onSelect={() => void completeAndScheduleNext(p)}>
+                              Complete + next
+                            </DropdownMenuItem>
+                          </RowActionsMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -363,13 +371,22 @@ export default function MaintenanceSchedules() {
                     <div><span className="font-medium text-foreground">Next:</span> {p.nextJob?.scheduled_at ? format(new Date(p.nextJob.scheduled_at), "PPp") : "Not scheduled"}</div>
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1">
-                    <div className="flex items-center gap-2">
-                      {p.nextJob ? <JobSiteControlsDialog jobId={p.nextJob.id} /> : null}
-                      <MaintenanceHistoryDialog msid={p.msid} jobs={p.jobs} />
+                    <div className="flex justify-end w-full">
+                      <RowActionsMenu label="Maintenance actions">
+                        {p.nextJob ? (
+                          <JobSiteControlsDialog jobId={p.nextJob.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                        ) : (
+                          <DropdownMenuItem disabled>Job controls</DropdownMenuItem>
+                        )}
+                        <MaintenanceHistoryDialog msid={p.msid} jobs={p.jobs} trigger={<DropdownMenuItem>History</DropdownMenuItem>} />
+                        <DropdownMenuItem disabled={!p.repeat} onSelect={() => void scheduleNext(p)}>
+                          Schedule next
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled={!p.nextJob || !p.repeat} onSelect={() => void completeAndScheduleNext(p)}>
+                          Complete + next
+                        </DropdownMenuItem>
+                      </RowActionsMenu>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => void scheduleNext(p)} disabled={!p.repeat}>
-                      Schedule next
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -381,7 +398,7 @@ export default function MaintenanceSchedules() {
   );
 }
 
-function MaintenanceHistoryDialog({ msid, jobs }: { msid: string; jobs: any[] }) {
+function MaintenanceHistoryDialog({ msid, jobs, trigger }: { msid: string; jobs: any[]; trigger?: React.ReactNode }) {
   const rows = React.useMemo(() => {
     return jobs
       .slice()
@@ -392,9 +409,11 @@ function MaintenanceHistoryDialog({ msid, jobs }: { msid: string; jobs: any[] })
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          History
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            History
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>

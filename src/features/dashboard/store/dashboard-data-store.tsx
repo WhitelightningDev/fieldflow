@@ -40,9 +40,12 @@ export type DashboardData = {
 
 type DashboardActions = {
   addCustomer: (c: Omit<TablesInsert<"customers">, "company_id">) => Promise<Customer | null>;
+  addCustomersBulk: (customers: Array<Omit<TablesInsert<"customers">, "company_id">>) => Promise<Customer[]>;
   updateCustomer: (customerId: string, c: Partial<Omit<TablesInsert<"customers">, "company_id">>) => Promise<Customer | null>;
   deleteCustomer: (customerId: string) => Promise<void>;
+  deleteCustomersBulk: (customerIds: string[]) => Promise<void>;
   addTechnician: (t: Omit<TablesInsert<"technicians">, "company_id">) => Promise<Technician | null>;
+  addTechniciansBulk: (technicians: Array<Omit<TablesInsert<"technicians">, "company_id">>) => Promise<Technician[]>;
   updateTechnician: (technicianId: string, t: Partial<Omit<TablesInsert<"technicians">, "company_id">>) => Promise<Technician | null>;
   deleteTechnician: (technicianId: string) => Promise<void>;
   addJobCard: (j: Omit<TablesInsert<"job_cards">, "company_id">) => Promise<JobCard | null>;
@@ -426,6 +429,32 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setData((prev) => ({ ...prev, customers: [row, ...prev.customers] }));
       return row;
     },
+    addCustomersBulk: async (customers) => {
+      if (!companyId) return [];
+      const rows = customers.filter((c) => (c as any)?.name);
+      if (rows.length === 0) return [];
+
+      const inserted: Customer[] = [];
+      const chunkSize = 200;
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+        const { data: created, error } = await supabase
+          .from("customers")
+          .insert(chunk.map((c) => ({ ...c, company_id: companyId })) as any)
+          .select();
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return inserted;
+        }
+        inserted.push(...((created ?? []) as Customer[]));
+      }
+
+      if (inserted.length) {
+        setData((prev) => ({ ...prev, customers: [...inserted, ...prev.customers] }));
+      }
+      toast({ title: "Customers imported", description: `${inserted.length} customer${inserted.length === 1 ? "" : "s"} added.` });
+      return inserted;
+    },
     updateCustomer: async (customerId, c) => {
       const { data: row, error } = await supabase
         .from("customers")
@@ -457,6 +486,31 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       }));
       toast({ title: "Customer deleted" });
     },
+    deleteCustomersBulk: async (customerIds) => {
+      if (!companyId) return;
+      const ids = Array.from(new Set(customerIds)).filter(Boolean);
+      if (ids.length === 0) return;
+
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("company_id", companyId)
+        .in("id", ids);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+
+      const idSet = new Set(ids);
+      setData((prev) => ({
+        ...prev,
+        customers: prev.customers.filter((c) => !idSet.has(c.id)),
+        sites: prev.sites.map((s: any) => (idSet.has((s as any).customer_id) ? { ...s, customer_id: null } : s)),
+        jobCards: prev.jobCards.map((j: any) => (idSet.has((j as any).customer_id) ? { ...j, customer_id: null } : j)),
+      }));
+
+      toast({ title: "Customers deleted", description: `${ids.length} customer${ids.length === 1 ? "" : "s"} removed.` });
+    },
     addTechnician: async (t) => {
       if (!companyId) return null;
       const { data: row, error } = await supabase
@@ -467,6 +521,32 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, technicians: [row, ...prev.technicians] }));
       return row;
+    },
+    addTechniciansBulk: async (technicians) => {
+      if (!companyId) return [];
+      const rows = technicians.filter((t) => (t as any)?.name);
+      if (rows.length === 0) return [];
+
+      const inserted: Technician[] = [];
+      const chunkSize = 200;
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+        const { data: created, error } = await supabase
+          .from("technicians")
+          .insert(chunk.map((t) => ({ ...t, company_id: companyId })) as any)
+          .select();
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return inserted;
+        }
+        inserted.push(...((created ?? []) as Technician[]));
+      }
+
+      if (inserted.length) {
+        setData((prev) => ({ ...prev, technicians: [...inserted, ...prev.technicians] }));
+      }
+      toast({ title: "Technicians imported", description: `${inserted.length} technician${inserted.length === 1 ? "" : "s"} added.` });
+      return inserted;
     },
     updateTechnician: async (technicianId, t) => {
       const { data: row, error } = await supabase

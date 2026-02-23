@@ -32,7 +32,7 @@ const urgencyOptions: { value: ServiceCallUrgency; label: string }[] = [
   { value: "emergency", label: "Emergency" },
 ];
 
-export default function ServiceCallDispatchDialog({ job }: { job: JobCard }) {
+export default function ServiceCallDispatchDialog({ job, trigger }: { job: JobCard; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -178,9 +178,11 @@ export default function ServiceCallDispatchDialog({ job }: { job: JobCard }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <Pencil className="h-3.5 w-3.5" /> Dispatch
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline" className="gap-1.5">
+            <Pencil className="h-3.5 w-3.5" /> Dispatch
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>

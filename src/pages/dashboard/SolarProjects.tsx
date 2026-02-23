@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { supabase as _supabase } from "@/integrations/supabase/client";
@@ -582,16 +584,27 @@ function ManageSolarProjectDialog({ project, onChanged }: { project: SolarProjec
                         <TableCell className="font-medium">{b?.serial ?? "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{b?.model ?? "—"}</TableCell>
                         <TableCell className="capitalize">{pb.status.replace("_", " ")}</TableCell>
-                        <TableCell className="space-x-2">
-                          <Button size="sm" variant="outline" onClick={() => setBatteryStatus(pb, "installed")} disabled={pb.status === "installed"}>
-                            Mark installed
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setBatteryStatus(pb, "removed")} disabled={pb.status === "removed"}>
-                            Mark removed
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => removeBatteryFromProject(pb.id)}>
-                            Remove
-                          </Button>
+                        <TableCell>
+                          <RowActionsMenu label="Battery actions">
+                            <DropdownMenuItem
+                              disabled={pb.status === "installed"}
+                              onSelect={() => void setBatteryStatus(pb, "installed")}
+                            >
+                              Mark installed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={pb.status === "removed"}
+                              onSelect={() => void setBatteryStatus(pb, "removed")}
+                            >
+                              Mark removed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => void removeBatteryFromProject(pb.id)}
+                            >
+                              Remove
+                            </DropdownMenuItem>
+                          </RowActionsMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -818,21 +831,22 @@ function ManageSolarProjectDialog({ project, onChanged }: { project: SolarProjec
                       <TableCell className="font-medium">{stepLabel(s.step)}</TableCell>
                       <TableCell className="capitalize">{s.status}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{s.signed_at ? new Date(s.signed_at).toLocaleString() : "—"}</TableCell>
-                      <TableCell className="space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => sign(s.step)} disabled={loading}>
-                          Sign
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            const notes = window.prompt("Rejection notes (optional)") ?? "";
-                            reject(s.step, notes);
-                          }}
-                          disabled={loading}
-                        >
-                          Reject
-                        </Button>
+                      <TableCell>
+                        <RowActionsMenu label="Sign-off actions">
+                          <DropdownMenuItem disabled={loading} onSelect={() => void sign(s.step)}>
+                            Sign
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            disabled={loading}
+                            onSelect={() => {
+                              const notes = window.prompt("Rejection notes (optional)") ?? "";
+                              void reject(s.step, notes);
+                            }}
+                          >
+                            Reject
+                          </DropdownMenuItem>
+                        </RowActionsMenu>
                       </TableCell>
                     </TableRow>
                   ))}

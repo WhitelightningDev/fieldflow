@@ -14,7 +14,7 @@ function parseMoneyToCents(value: string) {
   return Math.round(Number.parseFloat(v) * 100);
 }
 
-export default function EditTechnicianRatesDialog({ technicianId }: { technicianId: string }) {
+export default function EditTechnicianRatesDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const technician: any = data.technicians.find((t) => t.id === technicianId) ?? null;
 
@@ -51,7 +51,7 @@ export default function EditTechnicianRatesDialog({ technicianId }: { technician
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Rates</Button>
+        {trigger ?? <Button size="sm" variant="outline">Rates</Button>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

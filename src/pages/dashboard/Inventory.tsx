@@ -17,9 +17,11 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import type { Tables } from "@/integrations/supabase/types";
 import { formatZarFromCents } from "@/lib/money";
 import { toast } from "@/components/ui/use-toast";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 import { format } from "date-fns";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 export default function Inventory() {
   const { data, actions } = useDashboardData();
@@ -217,21 +219,17 @@ export default function Inventory() {
                     {i.expiry_date ? format(new Date(i.expiry_date), "PP") : "—"}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <EditInventoryCostDialog itemId={i.id} />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => {
+                    <RowActionsMenu label="Inventory actions">
+                      <EditInventoryCostDialog itemId={i.id} trigger={<DropdownMenuItem>Unit cost</DropdownMenuItem>} />
+                      <DropdownMenuItem
+                        onSelect={() => {
                           setAdjustItemId(i.id);
                           setAdjustOpen(true);
                         }}
                       >
-                        <Plus className="h-4 w-4" />
-                        Adjust
-                      </Button>
-                    </div>
+                        Adjust quantity
+                      </DropdownMenuItem>
+                    </RowActionsMenu>
                   </TableCell>
                 </TableRow>
               );

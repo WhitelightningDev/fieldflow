@@ -7,6 +7,7 @@ import CreateTechnicianDialog from "@/features/dashboard/components/dialogs/crea
 import DeleteTechnicianAlertDialog from "@/features/dashboard/components/dialogs/delete-technician-alert-dialog";
 import EditTechnicianDialog from "@/features/dashboard/components/dialogs/edit-technician-dialog";
 import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
+import ImportTechniciansCsvDialog from "@/features/dashboard/components/dialogs/import-technicians-csv-dialog";
 import SetTechnicianAccessDialog from "@/features/dashboard/components/dialogs/set-technician-access-dialog";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import PageHeader from "@/features/dashboard/components/page-header";
@@ -15,6 +16,8 @@ import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/l
 import { formatZarFromCents } from "@/lib/money";
 import { formatDistanceToNowStrict } from "date-fns";
 import { MapPin } from "lucide-react";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 function getTechWhere(data: any, technicianId: string) {
   const jobs = ((data.jobCards as any[]) ?? []).filter((j: any) => j.technician_id === technicianId);
@@ -83,7 +86,12 @@ export default function Technicians() {
       <PageHeader
         title="Technicians"
         subtitle="Add technicians and assign trades for dispatching."
-        actions={<CreateTechnicianDialog />}
+        actions={
+          <>
+            <ImportTechniciansCsvDialog />
+            <CreateTechnicianDialog />
+          </>
+        }
       />
 
       {/* Mobile cards */}
@@ -169,11 +177,17 @@ export default function Technicians() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap justify-end gap-2">
-                  <EditTechnicianDialog technicianId={t.id} />
-                  <EditTechnicianRatesDialog technicianId={t.id} />
-                  <SetTechnicianAccessDialog technicianId={t.id} />
-                  <DeleteTechnicianAlertDialog technicianId={t.id} />
+                <div className="flex justify-end">
+                  <RowActionsMenu label="Technician actions">
+                    <EditTechnicianDialog technicianId={t.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
+                    <EditTechnicianRatesDialog technicianId={t.id} trigger={<DropdownMenuItem>Rates</DropdownMenuItem>} />
+                    <SetTechnicianAccessDialog technicianId={t.id} trigger={<DropdownMenuItem>Set access</DropdownMenuItem>} />
+                    <DropdownMenuSeparator />
+                    <DeleteTechnicianAlertDialog
+                      technicianId={t.id}
+                      trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
+                    />
+                  </RowActionsMenu>
                 </div>
 
                 <div className="text-xs text-muted-foreground text-right">
@@ -189,16 +203,16 @@ export default function Technicians() {
 
       {/* Desktop table */}
       <div className="hidden sm:block rounded-xl border bg-card/70 backdrop-blur-sm overflow-x-auto">
-        <div className="min-w-[1100px]">
+        <div className="min-w-[760px] lg:min-w-[980px] xl:min-w-[1100px]">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="hidden md:table-cell">Phone</TableHead>
+                <TableHead className="hidden lg:table-cell">Email</TableHead>
                 <TableHead>Trades</TableHead>
-                <TableHead>Where</TableHead>
-                <TableHead>Cost/hr</TableHead>
+                <TableHead className="hidden xl:table-cell">Where</TableHead>
+                <TableHead className="hidden lg:table-cell">Cost/hr</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[140px] text-right">Actions</TableHead>
               </TableRow>
@@ -217,8 +231,8 @@ export default function Technicians() {
                 return (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">{t.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{t.phone || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{t.email || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{t.phone || "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{t.email || "—"}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
                         {t.trades.map((tradeId) => (
@@ -228,7 +242,7 @@ export default function Technicians() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell">
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className={`h-2 w-2 rounded-full ${where.dotClass}`} />
@@ -282,18 +296,24 @@ export default function Technicians() {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                       {typeof (t as any).hourly_cost_cents === "number"
                         ? `${formatZarFromCents((t as any).hourly_cost_cents)}/hr`
                         : "—"}
                     </TableCell>
                     <TableCell>{t.active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}</TableCell>
                     <TableCell className="text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <EditTechnicianDialog technicianId={t.id} />
-                        <EditTechnicianRatesDialog technicianId={t.id} />
-                        <SetTechnicianAccessDialog technicianId={t.id} />
-                        <DeleteTechnicianAlertDialog technicianId={t.id} />
+                      <div className="flex justify-end">
+                        <RowActionsMenu label="Technician actions">
+                          <EditTechnicianDialog technicianId={t.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
+                          <EditTechnicianRatesDialog technicianId={t.id} trigger={<DropdownMenuItem>Rates</DropdownMenuItem>} />
+                          <SetTechnicianAccessDialog technicianId={t.id} trigger={<DropdownMenuItem>Set access</DropdownMenuItem>} />
+                          <DropdownMenuSeparator />
+                          <DeleteTechnicianAlertDialog
+                            technicianId={t.id}
+                            trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
+                          />
+                        </RowActionsMenu>
                       </div>
                     </TableCell>
                   </TableRow>

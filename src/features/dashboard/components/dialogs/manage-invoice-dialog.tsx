@@ -44,7 +44,7 @@ function parseLineItems(v: unknown): Array<{ description: string; amount_cents: 
   return out;
 }
 
-export default function ManageInvoiceDialog({ invoiceId }: { invoiceId: string }) {
+export default function ManageInvoiceDialog({ invoiceId, trigger }: { invoiceId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
 
@@ -197,9 +197,11 @@ export default function ManageInvoiceDialog({ invoiceId }: { invoiceId: string }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          View
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            View
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -415,4 +417,3 @@ export default function ManageInvoiceDialog({ invoiceId }: { invoiceId: string }
     </Dialog>
   );
 }
-

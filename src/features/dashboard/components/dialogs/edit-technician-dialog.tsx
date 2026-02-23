@@ -23,7 +23,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function EditTechnicianDialog({ technicianId }: { technicianId: string }) {
+export default function EditTechnicianDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const technician = data.technicians.find((t) => t.id === technicianId) as any;
 
@@ -72,7 +72,7 @@ export default function EditTechnicianDialog({ technicianId }: { technicianId: s
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Edit</Button>
+        {trigger ?? <Button size="sm" variant="outline">Edit</Button>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

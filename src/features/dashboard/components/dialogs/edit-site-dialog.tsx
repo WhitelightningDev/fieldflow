@@ -54,7 +54,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function EditSiteDialog({ siteId }: { siteId: string }) {
+export default function EditSiteDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const site = data.sites.find((s) => s.id === siteId) as any;
   const [open, setOpen] = React.useState(false);
@@ -141,7 +141,7 @@ export default function EditSiteDialog({ siteId }: { siteId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Edit</Button>
+        {trigger ?? <Button size="sm" variant="outline">Edit</Button>}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>

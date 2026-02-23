@@ -22,7 +22,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function AssignTeamToSiteDialog({ siteId }: { siteId: string }) {
+export default function AssignTeamToSiteDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
 
@@ -62,9 +62,11 @@ export default function AssignTeamToSiteDialog({ siteId }: { siteId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Assign team
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            Assign team
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>

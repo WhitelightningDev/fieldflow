@@ -14,7 +14,7 @@ function parseMoneyToCents(value: string) {
   return Math.round(Number.parseFloat(v) * 100);
 }
 
-export default function EditInventoryCostDialog({ itemId }: { itemId: string }) {
+export default function EditInventoryCostDialog({ itemId, trigger }: { itemId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const item: any = data.inventoryItems.find((i) => i.id === itemId) ?? null;
 
@@ -45,7 +45,7 @@ export default function EditInventoryCostDialog({ itemId }: { itemId: string }) 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Cost</Button>
+        {trigger ?? <Button size="sm" variant="outline">Cost</Button>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

@@ -14,7 +14,7 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import { Trash2 } from "lucide-react";
 import * as React from "react";
 
-export default function DeleteSiteAlertDialog({ siteId }: { siteId: string }) {
+export default function DeleteSiteAlertDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const site = data.sites.find((s) => s.id === siteId) as any;
   const [open, setOpen] = React.useState(false);
@@ -24,9 +24,11 @@ export default function DeleteSiteAlertDialog({ siteId }: { siteId: string }) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="sm" variant="ghost" aria-label="Delete site">
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="ghost" aria-label="Delete site">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

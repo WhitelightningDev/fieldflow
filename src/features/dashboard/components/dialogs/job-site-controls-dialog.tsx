@@ -39,7 +39,7 @@ async function openSignedUrl(bucket: string, path: string) {
   window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
-export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
+export default function JobSiteControlsDialog({ jobId, trigger }: { jobId: string; trigger?: React.ReactNode }) {
   const { profile } = useAuth();
   const { data, actions } = useDashboardData();
   const companyId = profile?.company_id ?? null;
@@ -338,9 +338,11 @@ export default function JobSiteControlsDialog({ jobId }: { jobId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Site controls
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            Site controls
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>

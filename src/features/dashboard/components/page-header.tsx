@@ -15,8 +15,7 @@ export default function PageHeader({ title, subtitle, actions, className }: Prop
         <div className="text-2xl font-bold tracking-tight">{title}</div>
         {subtitle ? <div className="text-sm text-muted-foreground mt-1">{subtitle}</div> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
-

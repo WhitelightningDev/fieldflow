@@ -23,7 +23,7 @@ function centsOrZero(v: unknown) {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
-export default function ManageCustomerDialog({ customerId }: { customerId: string }) {
+export default function ManageCustomerDialog({ customerId, trigger }: { customerId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
 
@@ -75,9 +75,11 @@ export default function ManageCustomerDialog({ customerId }: { customerId: strin
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Manage
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            Manage
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
@@ -284,4 +286,3 @@ export default function ManageCustomerDialog({ customerId }: { customerId: strin
     </Dialog>
   );
 }
-

@@ -26,7 +26,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function EditCustomerDialog({ customerId }: { customerId: string }) {
+export default function EditCustomerDialog({ customerId, trigger }: { customerId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const customer = data.customers.find((c) => c.id === customerId) as any;
   const [open, setOpen] = React.useState(false);
@@ -90,7 +90,7 @@ export default function EditCustomerDialog({ customerId }: { customerId: string 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Edit</Button>
+        {trigger ?? <Button size="sm" variant="outline">Edit</Button>}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -271,4 +271,3 @@ export default function EditCustomerDialog({ customerId }: { customerId: string 
     </Dialog>
   );
 }
-

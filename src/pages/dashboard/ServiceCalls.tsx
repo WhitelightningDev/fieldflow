@@ -9,6 +9,8 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import CreateServiceCallDialog from "@/features/dashboard/components/dialogs/create-service-call-dialog";
 import ServiceCallDispatchDialog from "@/features/dashboard/components/dialogs/service-call-dispatch-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { extractTags, hasTag } from "@/features/dashboard/lib/service-calls";
 import { isAfterHours, isLast24h, isThisMonth } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -354,8 +356,10 @@ export default function ServiceCalls() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <ServiceCallDispatchDialog job={job as any} />
-                          <JobSiteControlsDialog jobId={job.id} />
+                          <RowActionsMenu label="Service call actions">
+                            <ServiceCallDispatchDialog job={job as any} trigger={<DropdownMenuItem>Dispatch</DropdownMenuItem>} />
+                            <JobSiteControlsDialog jobId={job.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                          </RowActionsMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -410,10 +414,10 @@ export default function ServiceCalls() {
 
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <JobStatusBadge status={job.status} />
-                    <div className="flex items-center gap-2">
-                      <ServiceCallDispatchDialog job={job as any} />
-                      <JobSiteControlsDialog jobId={job.id} />
-                    </div>
+                    <RowActionsMenu label="Service call actions">
+                      <ServiceCallDispatchDialog job={job as any} trigger={<DropdownMenuItem>Dispatch</DropdownMenuItem>} />
+                      <JobSiteControlsDialog jobId={job.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                    </RowActionsMenu>
                   </div>
                 </CardContent>
               </Card>

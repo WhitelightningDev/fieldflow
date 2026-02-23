@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ManageInvoiceDialog from "@/features/dashboard/components/dialogs/manage-invoice-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -270,15 +272,19 @@ export default function WarrantyTracker() {
                       <span className="text-emerald-600 dark:text-emerald-400 font-medium">{formatZarFromCents(0)}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <JobSiteControlsDialog jobId={j.id} />
-                    {inv ? (
-                      <ManageInvoiceDialog invoiceId={inv.id} />
-                    ) : (
-                      <Button size="sm" variant="outline" disabled title="Invoice is created from the technician job flow (Invoice step).">
-                        Invoice
-                      </Button>
-                    )}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end">
+                      <RowActionsMenu label="Warranty actions">
+                        <JobSiteControlsDialog jobId={j.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                        {inv ? (
+                          <ManageInvoiceDialog invoiceId={inv.id} trigger={<DropdownMenuItem>Invoice</DropdownMenuItem>} />
+                        ) : (
+                          <DropdownMenuItem disabled title="Invoice is created from the technician job flow (Invoice step).">
+                            Invoice
+                          </DropdownMenuItem>
+                        )}
+                      </RowActionsMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

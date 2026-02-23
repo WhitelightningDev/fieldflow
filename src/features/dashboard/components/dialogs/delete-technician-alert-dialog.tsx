@@ -14,7 +14,7 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import { Trash2 } from "lucide-react";
 import * as React from "react";
 
-export default function DeleteTechnicianAlertDialog({ technicianId }: { technicianId: string }) {
+export default function DeleteTechnicianAlertDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const technician = data.technicians.find((t) => t.id === technicianId) as any;
 
@@ -25,9 +25,11 @@ export default function DeleteTechnicianAlertDialog({ technicianId }: { technici
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size="sm" variant="ghost" aria-label="Delete technician">
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="ghost" aria-label="Delete technician">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -52,4 +54,3 @@ export default function DeleteTechnicianAlertDialog({ technicianId }: { technici
     </AlertDialog>
   );
 }
-

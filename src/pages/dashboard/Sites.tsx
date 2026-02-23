@@ -8,6 +8,8 @@ import { computeSiteProfitability } from "@/features/dashboard/lib/profitability
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { Button } from "@/components/ui/button";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -143,20 +145,24 @@ export default function Sites() {
                   <TableCell>
                     <ProfitabilityPill value={profitability} />
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <ManageSiteDialog siteId={site.id} />
-                    <EditSiteDialog siteId={site.id} />
-                    <AssignTeamToSiteDialog siteId={site.id} />
-                    <DeleteSiteAlertDialog siteId={site.id} />
-                    {current ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => actions.endSiteAssignment(current.id, new Date().toISOString())}
-                      >
-                        End now
-                      </Button>
-                    ) : null}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end">
+                      <RowActionsMenu label="Site actions">
+                        <ManageSiteDialog siteId={site.id} trigger={<DropdownMenuItem>Manage</DropdownMenuItem>} />
+                        <EditSiteDialog siteId={site.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
+                        <AssignTeamToSiteDialog siteId={site.id} trigger={<DropdownMenuItem>Assign team</DropdownMenuItem>} />
+                        {current ? (
+                          <DropdownMenuItem onSelect={() => void actions.endSiteAssignment(current.id, new Date().toISOString())}>
+                            End now
+                          </DropdownMenuItem>
+                        ) : null}
+                        <DropdownMenuSeparator />
+                        <DeleteSiteAlertDialog
+                          siteId={site.id}
+                          trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
+                        />
+                      </RowActionsMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

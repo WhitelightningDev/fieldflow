@@ -79,7 +79,7 @@ function getCurrentAssignment(assignments: SiteTeamAssignment[]) {
   return active[0] ?? null;
 }
 
-export default function ManageSiteDialog({ siteId }: { siteId: string }) {
+export default function ManageSiteDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
   const [docs, setDocs] = React.useState<SiteDocument[]>([]);
@@ -252,9 +252,11 @@ export default function ManageSiteDialog({ siteId }: { siteId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Manage
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            Manage
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>

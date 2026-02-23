@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ManageInvoiceDialog from "@/features/dashboard/components/dialogs/manage-invoice-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
+import RowActionsMenu from "@/components/row-actions-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { isLast30Days, isLast7Days } from "@/features/dashboard/components/dashboard-kpi-utils";
@@ -253,9 +255,17 @@ export default function RepairHistory() {
                   <TableCell className="text-right">
                     {revenue != null ? formatZarFromCents(revenue) : inv ? formatZarFromCents(inv.amount_paid_cents ?? 0) : "—"}
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <JobSiteControlsDialog jobId={j.id} />
-                    {inv ? <ManageInvoiceDialog invoiceId={inv.id} /> : null}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end">
+                      <RowActionsMenu label="Job actions">
+                        <JobSiteControlsDialog jobId={j.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                        {inv ? (
+                          <ManageInvoiceDialog invoiceId={inv.id} trigger={<DropdownMenuItem>Invoice</DropdownMenuItem>} />
+                        ) : (
+                          <DropdownMenuItem disabled>Invoice</DropdownMenuItem>
+                        )}
+                      </RowActionsMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

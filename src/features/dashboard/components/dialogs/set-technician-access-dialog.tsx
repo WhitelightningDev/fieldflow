@@ -28,7 +28,7 @@ function generatePassword(length = 14) {
   return out;
 }
 
-export default function SetTechnicianAccessDialog({ technicianId }: { technicianId: string }) {
+export default function SetTechnicianAccessDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
   const { data } = useDashboardData();
   const { profile } = useAuth();
   const [open, setOpen] = React.useState(false);
@@ -95,9 +95,11 @@ export default function SetTechnicianAccessDialog({ technicianId }: { technician
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Set access
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            Set access
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
@@ -163,4 +165,3 @@ export default function SetTechnicianAccessDialog({ technicianId }: { technician
     </Dialog>
   );
 }
-
