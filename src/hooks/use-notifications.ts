@@ -2,6 +2,7 @@ import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSystemNotificationsEnabled, showSystemNotification } from "@/lib/system-notifications";
+import { toast } from "@/components/ui/use-toast";
 
 export type Notification = {
   id: string;
@@ -14,6 +15,32 @@ export type Notification = {
   read: boolean;
   created_at: string;
 };
+
+const typeEmoji: Record<string, string> = {
+  job_assigned: "🔧",
+  job_status_changed: "📋",
+  chat_message: "💬",
+  info: "ℹ️",
+};
+
+/** Vibrate the device if supported (mobile haptic feedback) */
+function vibrateDevice(pattern: number | number[] = 200) {
+  try {
+    navigator?.vibrate?.(pattern);
+  } catch {
+    // ignore — not all browsers support vibrate
+  }
+}
+
+/** Show an in-app toast when the app is visible */
+function showInAppToast(n: Notification) {
+  const emoji = typeEmoji[n.type] ?? "🔔";
+  toast({
+    title: `${emoji} ${n.title}`,
+    description: n.body ?? undefined,
+    duration: 5000,
+  });
+}
 
 export function useNotifications() {
   const { user } = useAuth();
@@ -54,18 +81,24 @@ export function useNotifications() {
           const n = payload.new as Notification;
           setNotifications((prev) => [n, ...prev]);
 
-          // PWA/system notification (best-effort). Only fire when the app isn't visible to avoid noise.
-          try {
-            if (document.visibilityState === "visible") return;
-          } catch {
-            // ignore
-          }
-          if (!getSystemNotificationsEnabled()) return;
+          // Haptic feedback on mobile
+          vibrateDevice([100, 50, 100]);
 
-          const tag = `n:${n.id}`;
-          if (lastSystemTagRef.current === tag) return;
-          lastSystemTagRef.current = tag;
-          void showSystemNotification({ title: n.title, body: n.body, tag });
+          const isVisible = (() => {
+            try { return document.visibilityState === "visible"; } catch { return false; }
+          })();
+
+          if (isVisible) {
+            // App is in foreground — show in-app toast so the user sees it immediately
+            showInAppToast(n);
+          } else {
+            // App is backgrounded — show system/PWA notification
+            if (!getSystemNotificationsEnabled()) return;
+            const tag = `n:${n.id}`;
+            if (lastSystemTagRef.current === tag) return;
+            lastSystemTagRef.current = tag;
+            void showSystemNotification({ title: n.title, body: n.body, tag });
+          }
         },
       )
       .subscribe();

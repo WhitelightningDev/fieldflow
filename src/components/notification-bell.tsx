@@ -161,15 +161,15 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
         <div className="px-3 py-2 border-b border-border space-y-2">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-medium">Device alerts (PWA)</div>
+              <div className="text-xs font-medium">Push notifications</div>
               <div className="text-[11px] text-muted-foreground truncate">
                 {permission === "unsupported"
-                  ? "Not supported on this device/browser."
+                  ? "Not supported — install this app to your home screen first."
                   : permission === "granted"
-                    ? "Allowed"
+                    ? "Enabled — you'll get alerts when the app is in the background."
                     : permission === "denied"
-                      ? "Blocked"
-                      : "Not enabled"}
+                      ? "Blocked — enable in your device Settings → Safari/Chrome → Notifications."
+                      : "Tap Enable to receive job and message alerts."}
               </div>
             </div>
             <Switch
