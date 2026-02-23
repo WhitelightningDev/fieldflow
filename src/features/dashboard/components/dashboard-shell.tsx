@@ -3,6 +3,8 @@ import DashboardSidebar from "@/features/dashboard/components/dashboard-sidebar"
 import DashboardTopbar from "@/features/dashboard/components/dashboard-topbar";
 import CompleteProfileDialog from "@/features/dashboard/components/complete-profile-dialog";
 import ProfileCompletionBanner from "@/features/dashboard/components/profile-completion-banner";
+import CompanyComplianceBanner from "@/features/dashboard/components/company-compliance-banner";
+import CompanyComplianceWizardDialog from "@/features/dashboard/components/company-compliance-wizard-dialog";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import * as React from "react";
 import { useLocation } from "react-router-dom";
@@ -22,6 +24,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const navigate = useNavigate();
   const company = data.company as any;
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [complianceOpen, setComplianceOpen] = React.useState(false);
   const canCreateCompany = roles.includes("owner") || roles.includes("admin");
   const trialStatus = useTrialStatus(company);
 
@@ -56,6 +59,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         <DashboardTopbar />
         {company?.id && !company.profile_complete && (
           <ProfileCompletionBanner onOpen={() => setDialogOpen(true)} />
+        )}
+        {company?.id && company.profile_complete && canCreateCompany && (
+          <CompanyComplianceBanner company={company} onOpen={() => setComplianceOpen(true)} />
         )}
         {trialStatus.state === "trialing" && <TrialBanner status={trialStatus} />}
         <div className="container mx-auto px-4 py-6">
@@ -108,6 +114,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
       </SidebarInset>
       <CompleteProfileDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      <CompanyComplianceWizardDialog
+        open={complianceOpen}
+        onOpenChange={setComplianceOpen}
+        company={company}
+        canEdit={canCreateCompany}
+      />
     </SidebarProvider>
   );
 }

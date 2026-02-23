@@ -9,6 +9,7 @@ import NotificationBell from "@/components/notification-bell";
 import { Building2, LayoutGrid } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
+import ComplianceStatusIcon from "@/features/compliance/components/compliance-status-icon";
 
 export default function DashboardTopbar() {
   const { profile, roles, loading: authLoading, profileLoading } = useAuth();
@@ -47,6 +48,7 @@ export default function DashboardTopbar() {
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className="text-sm text-muted-foreground">{company?.name ?? "Company"}</span>
+                {company?.id ? <ComplianceStatusIcon company={company} /> : null}
               </div>
             ) : !authLoading && !profileLoading && canCreateCompany ? (
               <Button asChild variant="outline" size="sm">
