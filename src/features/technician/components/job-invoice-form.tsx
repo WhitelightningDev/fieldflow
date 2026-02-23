@@ -24,7 +24,8 @@ type Props = {
   timeEntries: any[];
   usedParts: any[];
   companyId: string;
-  technicianRate: number; // internal hourly cost (cents per hour)
+  technicianCostRateCents: number; // internal hourly cost (cents per hour)
+  technicianBillRateCents: number; // customer-facing hourly bill rate (cents per hour)
   onInvoiceCreated?: () => void;
 };
 
@@ -41,7 +42,8 @@ export default function JobInvoiceForm({
   timeEntries,
   usedParts,
   companyId,
-  technicianRate,
+  technicianCostRateCents,
+  technicianBillRateCents,
   onInvoiceCreated,
 }: Props) {
   const [invoice, setInvoice] = React.useState<any>(null);
@@ -63,16 +65,27 @@ export default function JobInvoiceForm({
   const [showInternal, setShowInternal] = React.useState(false);
   const proofRef = React.useRef<HTMLInputElement>(null);
 
+  const minutesForEntry = React.useCallback((e: any) => {
+    if (typeof e?.minutes === "number") return Math.max(0, e.minutes);
+    if (e?.started_at && e?.ended_at) {
+      const ms = new Date(e.ended_at).getTime() - new Date(e.started_at).getTime();
+      return Math.max(0, Math.round(ms / 60000));
+    }
+    return 0;
+  }, []);
+
   // Calculate totals
-  const totalMinutes = timeEntries.filter((e) => e.minutes != null).reduce((s, e) => s + e.minutes, 0);
-  const labourBaseCents = Math.round((totalMinutes / 60) * technicianRate);
+  const totalMinutes = timeEntries.reduce((s, e) => s + minutesForEntry(e), 0);
+  const labourBaseCents = Math.round((totalMinutes / 60) * technicianCostRateCents);
   const labourOverheadCents = Math.round(labourBaseCents * (labourOverheadPct / 100));
   const labourCostToCompanyCents = labourBaseCents + labourOverheadCents;
+  const labourChargeRateCents = technicianBillRateCents > 0 ? technicianBillRateCents : technicianCostRateCents;
+  const labourChargeCents = Math.round((totalMinutes / 60) * labourChargeRateCents);
   const partsCents = usedParts.reduce((s, p) => {
     const unitCost = p.inventory_items?.unit_cost_cents ?? 0;
     return s + unitCost * (p.quantity_used ?? 1);
   }, 0);
-  const subtotal = calloutFeeCents + partsCents;
+  const subtotal = calloutFeeCents + labourChargeCents + partsCents;
   const vatPct = 15;
   const vatCents = Math.round(subtotal * (vatPct / 100));
   const totalCents = subtotal + vatCents;
@@ -102,9 +115,14 @@ export default function JobInvoiceForm({
       .maybeSingle()
       .then(({ data, error }) => {
         if (error || !data) return;
-        const fee = typeof (data as any).callout_fee_cents === "number" ? (data as any).callout_fee_cents : 0;
-        const km = typeof (data as any).callout_radius_km === "number" ? (data as any).callout_radius_km : 50;
-        const pct = typeof (data as any).labour_overhead_percent === "number" ? (data as any).labour_overhead_percent : 15;
+        const feeRaw = (data as any).callout_fee_cents;
+        const kmRaw = (data as any).callout_radius_km;
+        const pctRaw = (data as any).labour_overhead_percent;
+
+        const fee = Math.max(0, Number.parseInt(String(feeRaw ?? "0"), 10) || 0);
+        const km = Math.max(0, Number.parseFloat(String(kmRaw ?? "50")) || 50);
+        const pct = Math.max(0, Number.parseFloat(String(pctRaw ?? "15")) || 15);
+
         setCalloutFeeCents(fee);
         setCalloutRadiusKm(km);
         setLabourOverheadPct(pct);
@@ -134,6 +152,12 @@ export default function JobInvoiceForm({
       ...(calloutFeeCents > 0
         ? [{ description: `Call-out fee (includes travel up to ${calloutRadiusKm}km)`, amount_cents: calloutFeeCents }]
         : []),
+      ...(labourChargeCents > 0
+        ? [{
+            description: `Labour (${(totalMinutes / 60).toFixed(1)} hrs @ R${(labourChargeRateCents / 100).toFixed(2)}/hr)`,
+            amount_cents: labourChargeCents,
+          }]
+        : []),
       ...usedParts.map((p) => ({
         description: `${p.inventory_items?.name ?? "Part"} x${p.quantity_used}`,
         amount_cents: (p.inventory_items?.unit_cost_cents ?? 0) * (p.quantity_used ?? 1),
@@ -147,8 +171,8 @@ export default function JobInvoiceForm({
       invoice_number: invoiceNumber,
       status: "draft",
       labour_minutes: totalMinutes,
-      labour_rate_cents: technicianRate, // internal cost (not customer-facing)
-      labour_total_cents: labourCostToCompanyCents, // internal cost-to-company
+      labour_rate_cents: labourChargeRateCents,
+      labour_total_cents: labourChargeCents,
       parts_total_cents: partsCents,
       subtotal_cents: subtotal,
       vat_percent: vatPct,
@@ -170,6 +194,11 @@ export default function JobInvoiceForm({
       return;
     }
     setInvoice(data);
+    // Update job status + revenue so dashboards reflect invoicing immediately.
+    await supabase
+      .from("job_cards")
+      .update({ status: "invoiced", revenue_cents: data.total_cents } as any)
+      .eq("id", job.id);
     toast({ title: "Invoice created", description: `${invoiceNumber}` });
     onInvoiceCreated?.();
   };
@@ -275,6 +304,12 @@ export default function JobInvoiceForm({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Call-out fee</span>
               <span className="font-medium">{formatZarFromCents(calloutFeeCents)}</span>
+            </div>
+          ) : null}
+          {labourChargeCents > 0 ? (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Labour</span>
+              <span className="font-medium">{formatZarFromCents(labourChargeCents)}</span>
             </div>
           ) : null}
           {usedParts.map((p, i) => (

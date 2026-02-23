@@ -144,7 +144,7 @@ export default function Inventory() {
                               name: r.name,
                               sku: r.sku ?? null,
                               unit: r.unit,
-                              unit_cost_cents: null,
+                              unit_cost_cents: 0,
                               quantity_on_hand: 0,
                               reorder_point: r.reorderPoint,
                               perishable: r.perishable,

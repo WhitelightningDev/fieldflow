@@ -10,9 +10,11 @@ import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { TRADE_JOB_CHECKLISTS } from "@/features/dashboard/constants/job-checklists";
 import { fromDatetimeLocal } from "@/features/dashboard/lib/datetime";
+import { getJobSuggestions, suggestAssignee } from "@/features/dashboard/lib/job-suggestions";
 import { parseScopeTemplateV1 } from "@/features/dashboard/components/sites/scope-template-builder";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Database } from "@/integrations/supabase/types";
+import { formatDistance } from "@/lib/geo";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -91,6 +93,7 @@ export default function CreateJobCardDialog({
   const tradeId = form.watch("tradeId") as TradeId;
   const customerId = form.watch("customerId");
   const siteId = form.watch("siteId");
+  const technicianId = form.watch("technicianId");
   const sitesForCustomer = React.useMemo(
     () => data.sites.filter((s) => (s as any).customer_id === customerId),
     [customerId, data.sites],
@@ -101,6 +104,43 @@ export default function CreateJobCardDialog({
     if (!siteId || siteId === NONE) return null;
     return data.sites.find((s) => s.id === siteId) ?? null;
   }, [data.sites, siteId]);
+
+  const assigneeSuggestion = React.useMemo(() => {
+    const custId = customerId && customerId !== NONE ? customerId : null;
+    const sid = siteId && siteId !== NONE ? siteId : null;
+    const lat = selectedSite ? ((selectedSite as any).gps_lat as number | null | undefined) : null;
+    const lng = selectedSite ? ((selectedSite as any).gps_lng as number | null | undefined) : null;
+    const siteLatLng = typeof lat === "number" && Number.isFinite(lat) && typeof lng === "number" && Number.isFinite(lng)
+      ? { lat, lng }
+      : null;
+
+    return suggestAssignee({
+      tradeId,
+      customerId: custId,
+      siteId: sid,
+      siteLatLng,
+      jobCards: data.jobCards as any,
+      technicians: data.technicians as any,
+      technicianLocations: data.technicianLocations as any,
+    });
+  }, [customerId, data.jobCards, data.technicianLocations, data.technicians, selectedSite, siteId, tradeId]);
+
+  const suggestedTechnician = React.useMemo(() => {
+    if (!assigneeSuggestion) return null;
+    return data.technicians.find((t) => t.id === assigneeSuggestion.technicianId) ?? null;
+  }, [assigneeSuggestion, data.technicians]);
+
+  const smartJobSuggestions = React.useMemo(() => {
+    const custId = customerId && customerId !== NONE ? customerId : null;
+    const sid = siteId && siteId !== NONE ? siteId : null;
+    return getJobSuggestions({
+      tradeId,
+      customerId: custId,
+      siteId: sid,
+      jobCards: data.jobCards as any,
+      max: 6,
+    });
+  }, [customerId, data.jobCards, siteId, tradeId]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -204,6 +244,18 @@ export default function CreateJobCardDialog({
       setCreatingSuggested(null);
     }
   }, [actions, form, selectedSite]);
+
+  const applySuggestion = React.useCallback((s: { title: string; reason?: string }) => {
+    form.setValue("title", s.title, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+    const currentNotes = String(form.getValues("notes") ?? "").trim();
+    if (!currentNotes && s.reason) {
+      form.setValue("notes", `Suggested: ${s.reason}`, { shouldDirty: true });
+    }
+    const techValue = form.getValues("technicianId");
+    if ((techValue === NONE || !techValue) && assigneeSuggestion?.technicianId) {
+      form.setValue("technicianId", assigneeSuggestion.technicianId, { shouldDirty: true, shouldTouch: true });
+    }
+  }, [assigneeSuggestion?.technicianId, form]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -388,11 +440,70 @@ export default function CreateJobCardDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    {suggestedTechnician && (technicianId === NONE || !technicianId) ? (
+                      <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate">
+                          Suggested: <span className="font-medium text-foreground">{suggestedTechnician.name}</span>
+                          {" "}
+                          <span className="text-muted-foreground">
+                            — {assigneeSuggestion?.reason}
+                            {typeof assigneeSuggestion?.distanceMeters === "number"
+                              ? ` (${formatDistance(assigneeSuggestion.distanceMeters)})`
+                              : ""}
+                          </span>
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="link"
+                          className="h-auto p-0 shrink-0"
+                          onClick={() => form.setValue("technicianId", suggestedTechnician.id, { shouldDirty: true, shouldTouch: true })}
+                        >
+                          Assign
+                        </Button>
+                      </div>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            {smartJobSuggestions.length > 0 ? (
+              <Card className="bg-card/70 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Smart suggestions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    Based on your existing customers, sites, and past job cards.
+                  </div>
+                  <div className="space-y-2">
+                    {smartJobSuggestions.map((s) => (
+                      <div key={s.title} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{s.title}</div>
+                          <div className="mt-1">
+                            <Badge variant="secondary" className="text-[10px]">
+                              {s.reason}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => applySuggestion(s)}
+                        >
+                          Use
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {selectedSite && suggestedJobs.length > 0 ? (
               <Card className="bg-card/70 backdrop-blur-sm">

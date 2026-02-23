@@ -14,8 +14,30 @@ export default function ManageTeamMembersDialog({ teamId }: { teamId: string }) 
 
   const team = data.teams.find((t) => t.id === teamId);
   const members = data.teamMembers.filter((m) => m.team_id === teamId);
-  const memberTechIds = new Set(members.map((m) => (m as any).technician_id));
-  const availableTechs = data.technicians.filter((t) => !memberTechIds.has(t.id));
+
+  const fallbackKey = (args: { fullName?: string | null; phone?: string | null }) => {
+    const fullName = (args.fullName ?? "").trim().toLowerCase();
+    const phone = (args.phone ?? "").trim();
+    return fullName || phone ? `${fullName}|${phone}` : "";
+  };
+
+  const memberEmails = new Set<string>();
+  const memberFallbackKeys = new Set<string>();
+  for (const m of members) {
+    const email = (m.email ?? "").trim().toLowerCase();
+    if (email) memberEmails.add(email);
+    else {
+      const key = fallbackKey({ fullName: m.full_name, phone: m.phone });
+      if (key) memberFallbackKeys.add(key);
+    }
+  }
+
+  const availableTechs = data.technicians.filter((t) => {
+    const email = (t.email ?? "").trim().toLowerCase();
+    if (email) return !memberEmails.has(email);
+    const key = fallbackKey({ fullName: t.name, phone: t.phone });
+    return key ? !memberFallbackKeys.has(key) : true;
+  });
 
   React.useEffect(() => {
     if (!open) setTechnicianId("");
@@ -78,10 +100,14 @@ export default function ManageTeamMembersDialog({ teamId }: { teamId: string }) 
                 </TableRow>
               ) : null}
               {members.map((m) => {
-                const tech = data.technicians.find((t) => t.id === (m as any).technician_id);
                 return (
                   <TableRow key={m.id}>
-                    <TableCell>{tech?.name ?? "—"}</TableCell>
+                    <TableCell>
+                      <div className="leading-tight">
+                        <div className="font-medium">{m.full_name || "—"}</div>
+                        {m.email ? <div className="text-xs text-muted-foreground">{m.email}</div> : null}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button size="icon" variant="ghost" onClick={() => actions.removeTeamMember(m.id)} aria-label="Remove member">
                         <Trash2 className="h-4 w-4" />
@@ -103,4 +129,3 @@ export default function ManageTeamMembersDialog({ teamId }: { teamId: string }) 
     </Dialog>
   );
 }
-

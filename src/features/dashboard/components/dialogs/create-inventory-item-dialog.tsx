@@ -121,43 +121,67 @@ export default function CreateInventoryItemDialog({
     async (r: InventoryRecommendation) => {
       setAddingRecommendation(true);
       try {
+        const current = form.getValues();
+        const dirty = form.formState.dirtyFields;
+        const sku = (current.sku ?? "").trim() ? current.sku : (r.sku ?? "");
+        const location = (current.location ?? "").trim() ? current.location : (r.location ?? "");
+        const unit = dirty.unit ? current.unit : r.unit;
+        const reorderPoint = dirty.reorderPoint ? current.reorderPoint : r.reorderPoint;
+        const quantityOnHand = dirty.quantityOnHand ? current.quantityOnHand : 0;
+        const unitCostCents = moneyToCents(current.unitCost);
+
         const row = await actions.addInventoryItem({
-          trade_id: tradeId,
+          trade_id: current.tradeId,
           name: r.name,
-          sku: r.sku ?? null,
-          unit: r.unit,
-          unit_cost_cents: null,
-          quantity_on_hand: 0,
-          reorder_point: r.reorderPoint,
+          sku: sku || null,
+          unit,
+          unit_cost_cents: unitCostCents,
+          quantity_on_hand: quantityOnHand,
+          reorder_point: reorderPoint,
           perishable: r.perishable,
-          expiry_date: null,
-          location: r.location ?? null,
+          expiry_date: r.perishable && current.expiryDate ? new Date(current.expiryDate).toISOString() : null,
+          location: location || null,
         });
         if (row) toast({ title: "Added recommended item", description: r.name });
       } finally {
         setAddingRecommendation(false);
       }
     },
-    [actions, tradeId],
+    [actions, form],
   );
 
   const addAllRecommendations = React.useCallback(async () => {
     if (recommendations.length === 0) return;
     setAddingRecommendation(true);
     try {
+      const current = form.getValues();
+      const dirty = form.formState.dirtyFields;
+      const baseSku = (current.sku ?? "").trim() ? current.sku : "";
+      const baseLocation = (current.location ?? "").trim() ? current.location : "";
+      const baseUnit = dirty.unit ? current.unit : null;
+      const baseReorderPoint = dirty.reorderPoint ? current.reorderPoint : null;
+      const baseQuantityOnHand = dirty.quantityOnHand ? current.quantityOnHand : 0;
+      const baseUnitCostCents = moneyToCents(current.unitCost);
+      const baseExpiryDate = current.expiryDate ? new Date(current.expiryDate).toISOString() : null;
+
       let added = 0;
       for (const r of recommendations) {
+        const sku = baseSku || (r.sku ?? "");
+        const location = baseLocation || (r.location ?? "");
+        const unit = baseUnit ?? r.unit;
+        const reorderPoint = baseReorderPoint ?? r.reorderPoint;
+
         const row = await actions.addInventoryItem({
-          trade_id: tradeId,
+          trade_id: current.tradeId,
           name: r.name,
-          sku: r.sku ?? null,
-          unit: r.unit,
-          unit_cost_cents: null,
-          quantity_on_hand: 0,
-          reorder_point: r.reorderPoint,
+          sku: sku || null,
+          unit,
+          unit_cost_cents: baseUnitCostCents,
+          quantity_on_hand: baseQuantityOnHand,
+          reorder_point: reorderPoint,
           perishable: r.perishable,
-          expiry_date: null,
-          location: r.location ?? null,
+          expiry_date: r.perishable ? baseExpiryDate : null,
+          location: location || null,
         });
         if (row) added += 1;
       }
@@ -165,7 +189,7 @@ export default function CreateInventoryItemDialog({
     } finally {
       setAddingRecommendation(false);
     }
-  }, [actions, recommendations, tradeId]);
+  }, [actions, form, recommendations]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

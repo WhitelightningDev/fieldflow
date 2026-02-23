@@ -114,7 +114,7 @@ export default function TechJobDetail() {
   const { user, profile } = useAuth();
   const [job, setJob] = React.useState<any>(null);
   const [techId, setTechId] = React.useState<string | null>(null);
-  const [techRate, setTechRate] = React.useState(0);
+  const [techRate, setTechRate] = React.useState<{ costCents: number; billCents: number }>({ costCents: 0, billCents: 0 });
   const [timeEntries, setTimeEntries] = React.useState<any[]>([]);
   const [usedParts, setUsedParts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -206,12 +206,15 @@ export default function TechJobDetail() {
     if (!user) return;
     supabase
       .from("technicians")
-      .select("id, hourly_cost_cents")
+      .select("id, hourly_cost_cents, hourly_bill_rate_cents")
       .eq("user_id", user.id)
       .single()
       .then(({ data: tech }) => {
         setTechId(tech?.id ?? null);
-        setTechRate(tech?.hourly_cost_cents ?? 0);
+        setTechRate({
+          costCents: tech?.hourly_cost_cents ?? 0,
+          billCents: tech?.hourly_bill_rate_cents ?? 0,
+        });
       });
   }, [user]);
 
@@ -684,7 +687,8 @@ export default function TechJobDetail() {
               timeEntries={timeEntries}
               usedParts={usedParts}
               companyId={profile.company_id}
-              technicianRate={techRate}
+              technicianCostRateCents={techRate.costCents}
+              technicianBillRateCents={techRate.billCents}
               onInvoiceCreated={() => {
                 setHasInvoice(true);
                 setStep("invoice");

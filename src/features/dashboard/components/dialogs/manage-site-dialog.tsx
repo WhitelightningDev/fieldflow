@@ -119,10 +119,10 @@ export default function ManageSiteDialog({ siteId }: { siteId: string }) {
     return (data.teams as Team[]).find((t) => t.id === currentAssignment.team_id) ?? null;
   }, [currentAssignment, data.teams]);
 
-  const currentTeamTechIds = React.useMemo(() => {
+  const currentTeamNames = React.useMemo(() => {
     if (!currentAssignment) return [];
     const members = (data.teamMembers as TeamMember[]).filter((m) => m.team_id === currentAssignment.team_id);
-    return members.map((m) => (m as any).technician_id).filter(Boolean) as string[];
+    return members.map((m) => m.full_name).filter(Boolean) as string[];
   }, [currentAssignment, data.teamMembers]);
 
   const metrics = React.useMemo(() => {
@@ -199,7 +199,6 @@ export default function ManageSiteDialog({ siteId }: { siteId: string }) {
   const onSiteNames = metrics.onSiteTechIds
     .map((id) => techniciansById.get(id)?.name)
     .filter(Boolean) as string[];
-  const currentTeamNames = currentTeamTechIds.map((id) => techniciansById.get(id)?.name).filter(Boolean) as string[];
 
   const scope = (site as any).scope_of_work as string | null | undefined;
   const billingReference = (site as any).billing_reference as string | null | undefined;
