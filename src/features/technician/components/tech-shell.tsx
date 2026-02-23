@@ -8,22 +8,30 @@ import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
+import TrialBanner from "@/features/trial/components/trial-banner";
+import TrialPaywall from "@/features/trial/components/trial-paywall";
 
 export default function TechShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { profile, user } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [industry, setIndustry] = React.useState<string | null>(null);
+  const [company, setCompany] = React.useState<any>(null);
+  const trialStatus = useTrialStatus(company);
 
   React.useEffect(() => {
     if (!profile?.company_id) return;
     supabase
       .from("companies")
-      .select("industry")
+      .select("industry, trial_ends_at, subscription_status")
       .eq("id", profile.company_id)
       .single()
       .then(({ data }) => {
-        if (data) setIndustry(data.industry);
+        if (data) {
+          setIndustry(data.industry);
+          setCompany(data);
+        }
       });
   }, [profile?.company_id]);
 
@@ -81,9 +89,15 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
           </Sheet>
         </div>
 
+        {trialStatus.state === "trialing" && (
+          <div className="px-3 pt-1">
+            <TrialBanner status={trialStatus} />
+          </div>
+        )}
+
         {/* Main content area — extra bottom padding for bottom nav on mobile */}
         <main className="flex-1 min-h-0 overflow-y-auto px-3 py-3 pb-[calc(4rem+env(safe-area-inset-bottom))] xl:pb-6 sm:px-5 sm:py-4">
-          {children}
+          {trialStatus.state === "expired" ? <TrialPaywall /> : children}
         </main>
 
         {/* Mobile bottom tab bar */}
