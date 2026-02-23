@@ -11,6 +11,9 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
+import TrialBanner from "@/features/trial/components/trial-banner";
+import TrialPaywall from "@/features/trial/components/trial-paywall";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data, companyState, actions } = useDashboardData();
@@ -20,6 +23,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const company = data.company as any;
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const canCreateCompany = roles.includes("owner") || roles.includes("admin");
+  const trialStatus = useTrialStatus(company);
 
   const retryLink = React.useCallback(async () => {
     await refreshProfile();
@@ -53,8 +57,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         {company?.id && !company.profile_complete && (
           <ProfileCompletionBanner onOpen={() => setDialogOpen(true)} />
         )}
+        {trialStatus.state === "trialing" && <TrialBanner status={trialStatus} />}
         <div className="container mx-auto px-4 py-6">
-          {shouldGate ? (
+          {trialStatus.state === "expired" ? (
+            <TrialPaywall />
+          ) : shouldGate ? (
             <div className="space-y-6">
               <PageHeader title="Workspace" subtitle="This page requires an active company workspace." />
               {companyState.kind === "error" ? (
@@ -77,7 +84,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   description={
                     canCreateCompany
                       ? "Create your company to unlock job cards, inventory, teams, and sites."
-                      : "This account isn’t linked to a company yet. Ask an admin/owner to link you, then retry."
+                      : "This account isn't linked to a company yet. Ask an admin/owner to link you, then retry."
                   }
                   canCreateCompany={canCreateCompany}
                   onRetryLink={() => void retryLink()}

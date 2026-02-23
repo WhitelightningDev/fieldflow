@@ -194,7 +194,10 @@ export type Database = {
           name: string
           phone: string | null
           profile_complete: boolean
+          subscription_status: string
           team_size: string | null
+          trial_ends_at: string
+          trial_started_at: string
           updated_at: string
           vat_number: string | null
           website: string | null
@@ -211,7 +214,10 @@ export type Database = {
           name: string
           phone?: string | null
           profile_complete?: boolean
+          subscription_status?: string
           team_size?: string | null
+          trial_ends_at?: string
+          trial_started_at?: string
           updated_at?: string
           vat_number?: string | null
           website?: string | null
@@ -228,7 +234,10 @@ export type Database = {
           name?: string
           phone?: string | null
           profile_complete?: boolean
+          subscription_status?: string
           team_size?: string | null
+          trial_ends_at?: string
+          trial_started_at?: string
           updated_at?: string
           vat_number?: string | null
           website?: string | null
