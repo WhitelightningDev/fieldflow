@@ -89,11 +89,7 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
           </Sheet>
         </div>
 
-        {trialStatus.state === "trialing" && (
-          <div className="px-3 pt-1">
-            <TrialBanner status={trialStatus} />
-          </div>
-        )}
+        {trialStatus.state === "trialing" && <TrialBanner status={trialStatus} />}
 
         {/* Main content area — extra bottom padding for bottom nav on mobile */}
         <main className="flex-1 min-h-0 overflow-y-auto px-3 py-3 pb-[calc(4rem+env(safe-area-inset-bottom))] xl:pb-6 sm:px-5 sm:py-4">
