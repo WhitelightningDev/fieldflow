@@ -336,59 +336,40 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return next;
     };
 
+    const makeHandler = <T extends { id: string }>(
+      dataKey: keyof DashboardData,
+      idKey: keyof T = "id" as keyof T,
+    ) => (payload: any) => {
+      const type = payload?.eventType as string;
+      if (type === "DELETE") {
+        const id = payload?.old?.[idKey as string] as string | undefined;
+        if (!id) return;
+        setData((prev) => ({
+          ...prev,
+          [dataKey]: (prev[dataKey] as any[]).filter((x: any) => x[idKey as string] !== id),
+        }));
+        return;
+      }
+      const row = payload?.new as T | undefined;
+      if (!(row as any)?.[idKey as string]) return;
+      setData((prev) => ({ ...prev, [dataKey]: upsertByKey(prev[dataKey] as T[], row!, idKey) }));
+    };
+
+    const companyFilter = `company_id=eq.${companyId}`;
+
     const channel = supabase
       .channel(`dashboard-live:${companyId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "job_cards", filter: `company_id=eq.${companyId}` },
-        (payload: any) => {
-          const type = payload?.eventType as string;
-          if (type === "DELETE") {
-            const id = payload?.old?.id as string | undefined;
-            if (!id) return;
-            setData((prev) => ({ ...prev, jobCards: prev.jobCards.filter((j) => j.id !== id) }));
-            return;
-          }
-          const row = payload?.new as JobCard | undefined;
-          if (!row?.id) return;
-          setData((prev) => ({ ...prev, jobCards: upsertByKey(prev.jobCards, row, "id") }));
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "invoices", filter: `company_id=eq.${companyId}` },
-        (payload: any) => {
-          const type = payload?.eventType as string;
-          if (type === "DELETE") {
-            const id = payload?.old?.id as string | undefined;
-            if (!id) return;
-            setData((prev) => ({ ...prev, invoices: prev.invoices.filter((i) => i.id !== id) }));
-            return;
-          }
-          const row = payload?.new as Invoice | undefined;
-          if (!row?.id) return;
-          setData((prev) => ({ ...prev, invoices: upsertByKey(prev.invoices, row, "id") }));
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "invoice_payments", filter: `company_id=eq.${companyId}` },
-        (payload: any) => {
-          const type = payload?.eventType as string;
-          if (type === "DELETE") {
-            const id = payload?.old?.id as string | undefined;
-            if (!id) return;
-            setData((prev) => ({ ...prev, invoicePayments: prev.invoicePayments.filter((p) => p.id !== id) }));
-            return;
-          }
-          const row = payload?.new as InvoicePayment | undefined;
-          if (!row?.id) return;
-          setData((prev) => ({ ...prev, invoicePayments: upsertByKey(prev.invoicePayments, row, "id") }));
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "technician_locations", filter: `company_id=eq.${companyId}` },
+      .on("postgres_changes", { event: "*", schema: "public", table: "job_cards", filter: companyFilter }, makeHandler<JobCard>("jobCards"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "invoices", filter: companyFilter }, makeHandler<Invoice>("invoices"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "invoice_payments", filter: companyFilter }, makeHandler<InvoicePayment>("invoicePayments"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "customers", filter: companyFilter }, makeHandler<Customer>("customers"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "technicians", filter: companyFilter }, makeHandler<Technician>("technicians"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items", filter: companyFilter }, makeHandler<InventoryItem>("inventoryItems"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "sites", filter: companyFilter }, makeHandler<Site>("sites"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "teams", filter: companyFilter }, makeHandler<Team>("teams"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_members" }, makeHandler<TeamMember>("teamMembers"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "site_team_assignments" }, makeHandler<SiteTeamAssignment>("siteTeamAssignments"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "technician_locations", filter: companyFilter },
         (payload: any) => {
           const type = payload?.eventType as string;
           if (type === "DELETE") {
@@ -396,14 +377,20 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
             if (!technicianId) return;
             setData((prev) => ({
               ...prev,
-              technicianLocations: prev.technicianLocations.filter((l: any) => (l as any).technician_id !== technicianId),
+              technicianLocations: prev.technicianLocations.filter((l: any) => l.technician_id !== technicianId),
             }));
             return;
           }
           const row = payload?.new as TechnicianLocation | undefined;
-          const technicianId = (row as any)?.technician_id as string | undefined;
-          if (!technicianId) return;
-          setData((prev) => ({ ...prev, technicianLocations: upsertByKey(prev.technicianLocations, row, "technician_id") }));
+          if (!row) return;
+          setData((prev) => ({ ...prev, technicianLocations: upsertByKey(prev.technicianLocations, row, "technician_id" as any) }));
+        },
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "companies", filter: `id=eq.${companyId}` },
+        (payload: any) => {
+          if (payload?.eventType === "UPDATE" || payload?.eventType === "INSERT") {
+            setData((prev) => ({ ...prev, company: (payload.new as Company) ?? prev.company }));
+          }
         },
       )
       .subscribe((status) => {

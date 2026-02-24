@@ -78,7 +78,7 @@ export default function CompanyComplianceWizardDialog({
     if (!companyId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("company_compliance_documents")
         .select("*")
         .eq("company_id", companyId)
@@ -136,7 +136,7 @@ export default function CompanyComplianceWizardDialog({
         .upload(path, file, { upsert: true });
       if (upErr) throw upErr;
 
-      const { data: row, error } = await supabase
+      const { data: row, error } = await (supabase as any)
         .from("company_compliance_documents")
         .upsert(
           {
@@ -188,7 +188,7 @@ export default function CompanyComplianceWizardDialog({
     setRemovingKind(req.kind);
     try {
       await supabase.storage.from("compliance-docs").remove([doc.storage_path]);
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("company_compliance_documents")
         .delete()
         .eq("company_id", companyId)
