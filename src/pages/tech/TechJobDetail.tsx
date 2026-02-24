@@ -16,6 +16,7 @@ import JobFlowPrompts from "@/features/technician/components/job-flow-prompts";
 import JobQuickActions from "@/features/technician/components/job-quick-actions";
 import JobInteractiveChecklist from "@/features/technician/components/job-interactive-checklist";
 import JobInvoiceForm from "@/features/technician/components/job-invoice-form";
+import { isCocComplianceJob } from "@/features/coc/lib/is-coc-job";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -25,6 +26,7 @@ import {
   Phone,
   Mail,
   Play,
+  ShieldCheck,
   User,
 } from "lucide-react";
 import * as React from "react";
@@ -408,6 +410,13 @@ export default function TechJobDetail() {
             </div>
           </div>
           <div className="flex gap-2">
+            {isCocComplianceJob(job) ? (
+              <Button size="sm" variant="outline" asChild className="gap-1.5">
+                <Link to={`/tech/coc?jobId=${job.id}`}>
+                  <ShieldCheck className="h-3.5 w-3.5" /> CoC
+                </Link>
+              </Button>
+            ) : null}
             {(job.status === "new" || job.status === "scheduled") && (
               <Button size="sm" onClick={() => void updateStatus("in-progress")} className="gradient-bg hover:opacity-90 shadow-glow gap-1.5">
                 <Play className="h-3.5 w-3.5" /> Start Job
