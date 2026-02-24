@@ -15,6 +15,11 @@ function toCents(v: string) {
   return Math.max(0, Math.round(n * 100));
 }
 
+function numOr(v: unknown, fallback: number) {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export default function DashboardSettings() {
   const { data, actions } = useDashboardData();
   const company = data.company as any;
@@ -37,9 +42,10 @@ export default function DashboardSettings() {
 
   React.useEffect(() => {
     if (!company) return;
-    const fee = typeof company.callout_fee_cents === "number" ? company.callout_fee_cents : 0;
-    const radius = typeof company.callout_radius_km === "number" ? company.callout_radius_km : 50;
-    const overhead = typeof company.labour_overhead_percent === "number" ? company.labour_overhead_percent : 15;
+    // Supabase returns Postgres `numeric` fields as strings.
+    const fee = numOr(company.callout_fee_cents, 0);
+    const radius = numOr(company.callout_radius_km, 50);
+    const overhead = numOr(company.labour_overhead_percent, 15);
     setCalloutFee((fee / 100).toFixed(2));
     setCalloutRadiusKm(String(radius));
     setLabourOverheadPercent(String(overhead));
@@ -48,7 +54,17 @@ export default function DashboardSettings() {
     setAddress(company.address ?? "");
     setVatNumber(company.vat_number ?? "");
     setLogoPreview(company.logo_url ?? null);
-  }, [company?.id]);
+  }, [
+    company?.id,
+    company?.callout_fee_cents,
+    company?.callout_radius_km,
+    company?.labour_overhead_percent,
+    company?.phone,
+    company?.website,
+    company?.address,
+    company?.vat_number,
+    company?.logo_url,
+  ]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,7 +97,11 @@ export default function DashboardSettings() {
     setSavingFinance(true);
     const { error } = await supabase
       .from("companies")
-      .update({ callout_fee_cents: feeCents, callout_radius_km: radius, labour_overhead_percent: overhead } as any)
+      .update({
+        callout_fee_cents: String(feeCents),
+        callout_radius_km: String(radius),
+        labour_overhead_percent: String(overhead),
+      } as any)
       .eq("id", company.id);
     setSavingFinance(false);
 
