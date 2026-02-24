@@ -124,6 +124,7 @@ export default function TechJobDetail() {
   const [beforePhotoCount, setBeforePhotoCount] = React.useState(0);
   const [afterPhotoCount, setAfterPhotoCount] = React.useState(0);
   const [signatureCount, setSignatureCount] = React.useState(0);
+  const [nowMs, setNowMs] = React.useState(() => Date.now());
 
   const initialStepSetRef = React.useRef(false);
 
@@ -311,8 +312,25 @@ export default function TechJobDetail() {
   };
 
   const totalMinutes = timeEntries
-    .filter((e) => e.minutes != null)
-    .reduce((sum, e) => sum + e.minutes, 0);
+    .reduce((sum, e) => {
+      if (typeof e?.minutes === "number") return sum + Math.max(0, e.minutes);
+      if (e?.started_at && e?.ended_at) {
+        const ms = new Date(e.ended_at).getTime() - new Date(e.started_at).getTime();
+        return sum + Math.max(0, Math.round(ms / 60000));
+      }
+      if (e?.started_at && !e?.ended_at) {
+        const ms = nowMs - new Date(e.started_at).getTime();
+        return sum + Math.max(0, Math.round(ms / 60000));
+      }
+      return sum;
+    }, 0);
+
+  React.useEffect(() => {
+    const hasRunning = timeEntries.some((e) => e?.started_at && !e?.ended_at && typeof e?.minutes !== "number");
+    if (!hasRunning) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 10_000);
+    return () => clearInterval(interval);
+  }, [timeEntries]);
 
   const canGoNext = React.useMemo(() => {
     if (!job) return false;

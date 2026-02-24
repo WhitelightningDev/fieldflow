@@ -28,13 +28,26 @@ function generatePassword(length = 14) {
   return out;
 }
 
-export default function SetTechnicianAccessDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
+export default function SetTechnicianAccessDialog({
+  technicianId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  technicianId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data } = useDashboardData();
   const { profile } = useAuth();
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
   const [loginLink, setLoginLink] = React.useState<string>("");
 
-  const technician = data.technicians.find((t) => t.id === technicianId) as any;
+  const technician = technicianId ? (data.technicians.find((t) => t.id === technicianId) as any) : null;
   const email = (technician?.email as string | null | undefined) ?? "";
   const name = (technician?.name as string | null | undefined) ?? "Technician";
 
@@ -55,6 +68,7 @@ export default function SetTechnicianAccessDialog({ technicianId, trigger }: { t
       toast({ title: "Not ready", description: "No company found on your profile. Please re-login.", variant: "destructive" });
       return;
     }
+    if (!technicianId) return;
     if (!email) {
       toast({ title: "Missing email", description: "Add an email address to this technician before creating access.", variant: "destructive" });
       return;
@@ -94,13 +108,15 @@ export default function SetTechnicianAccessDialog({ technicianId, trigger }: { t
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
           <Button size="sm" variant="outline">
             Set access
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Set technician access</DialogTitle>

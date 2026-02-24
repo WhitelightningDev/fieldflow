@@ -14,23 +14,38 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import { Trash2 } from "lucide-react";
 import * as React from "react";
 
-export default function DeleteTechnicianAlertDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
+export default function DeleteTechnicianAlertDialog({
+  technicianId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  technicianId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const technician = data.technicians.find((t) => t.id === technicianId) as any;
+  const technician = technicianId ? (data.technicians.find((t) => t.id === technicianId) as any) : null;
 
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
 
   if (!technician) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      ) : openProp == null ? (
+        <AlertDialogTrigger asChild>
           <Button size="sm" variant="ghost" aria-label="Delete technician">
             <Trash2 className="h-4 w-4" />
           </Button>
-        )}
-      </AlertDialogTrigger>
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete technician?</AlertDialogTitle>
@@ -43,6 +58,7 @@ export default function DeleteTechnicianAlertDialog({ technicianId, trigger }: {
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={async () => {
+              if (!technicianId) return;
               await actions.deleteTechnician(technicianId);
               setOpen(false);
             }}

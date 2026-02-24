@@ -14,11 +14,24 @@ function parseMoneyToCents(value: string) {
   return Math.round(Number.parseFloat(v) * 100);
 }
 
-export default function EditTechnicianRatesDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
+export default function EditTechnicianRatesDialog({
+  technicianId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  technicianId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const technician: any = data.technicians.find((t) => t.id === technicianId) ?? null;
+  const technician: any = technicianId ? data.technicians.find((t) => t.id === technicianId) ?? null : null;
 
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
   const [hourlyCost, setHourlyCost] = React.useState("");
   const [hourlyBill, setHourlyBill] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -32,6 +45,7 @@ export default function EditTechnicianRatesDialog({ technicianId, trigger }: { t
   if (!technician) return null;
 
   const save = async () => {
+    if (!technicianId) return;
     const hourlyCostCents = parseMoneyToCents(hourlyCost);
     const hourlyBillRateCents = parseMoneyToCents(hourlyBill);
     if (Number.isNaN(hourlyCostCents) || Number.isNaN(hourlyBillRateCents)) {
@@ -50,9 +64,15 @@ export default function EditTechnicianRatesDialog({ technicianId, trigger }: { t
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button size="sm" variant="outline">Rates</Button>}
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">
+            Rates
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Technician rates</DialogTitle>

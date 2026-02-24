@@ -14,22 +14,37 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import { Trash2 } from "lucide-react";
 import * as React from "react";
 
-export default function DeleteSiteAlertDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
+export default function DeleteSiteAlertDialog({
+  siteId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  siteId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const site = data.sites.find((s) => s.id === siteId) as any;
-  const [open, setOpen] = React.useState(false);
+  const site = siteId ? (data.sites.find((s) => s.id === siteId) as any) : null;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
 
   if (!site) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      ) : openProp == null ? (
+        <AlertDialogTrigger asChild>
           <Button size="sm" variant="ghost" aria-label="Delete site">
             <Trash2 className="h-4 w-4" />
           </Button>
-        )}
-      </AlertDialogTrigger>
+        </AlertDialogTrigger>
+      ) : null}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete site?</AlertDialogTitle>
@@ -42,6 +57,7 @@ export default function DeleteSiteAlertDialog({ siteId, trigger }: { siteId: str
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={async () => {
+              if (!siteId) return;
               await actions.deleteSite(siteId);
               setOpen(false);
             }}

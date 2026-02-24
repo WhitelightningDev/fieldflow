@@ -23,16 +23,33 @@ function centsOrZero(v: unknown) {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
-export default function ManageCustomerDialog({ customerId, trigger }: { customerId: string; trigger?: React.ReactNode }) {
+export default function ManageCustomerDialog({
+  customerId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  customerId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
 
-  const customer = data.customers.find((c) => c.id === customerId) as Customer | undefined;
-  const sites = React.useMemo(() => data.sites.filter((s) => (s as any).customer_id === customerId) as Site[], [customerId, data.sites]);
+  const customer = customerId ? (data.customers.find((c) => c.id === customerId) as Customer | undefined) : undefined;
+  const sites = React.useMemo(() => {
+    if (!customerId) return [] as Site[];
+    return data.sites.filter((s) => (s as any).customer_id === customerId) as Site[];
+  }, [customerId, data.sites]);
   const siteById = React.useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites]);
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
 
   const jobs = React.useMemo(() => {
+    if (!customerId) return [] as JobCard[];
     return data.jobCards
       .filter((j) => (j as any).customer_id === customerId)
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) as JobCard[];
@@ -74,13 +91,15 @@ export default function ManageCustomerDialog({ customerId, trigger }: { customer
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
           <Button size="sm" variant="outline">
             Manage
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3">

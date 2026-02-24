@@ -15,6 +15,12 @@ import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdow
 export default function Customers() {
   const { data } = useDashboardData();
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [manageCustomerId, setManageCustomerId] = React.useState<string | null>(null);
+  const [manageOpen, setManageOpen] = React.useState(false);
+  const [editCustomerId, setEditCustomerId] = React.useState<string | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [deleteCustomerId, setDeleteCustomerId] = React.useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const allIds = React.useMemo(() => data.customers.map((c) => c.id), [data.customers]);
   const allIdSet = React.useMemo(() => new Set(allIds), [allIds]);
@@ -45,6 +51,30 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
+      <ManageCustomerDialog
+        customerId={manageCustomerId}
+        open={manageOpen}
+        onOpenChange={(open) => {
+          setManageOpen(open);
+          if (!open) setManageCustomerId(null);
+        }}
+      />
+      <EditCustomerDialog
+        customerId={editCustomerId}
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditCustomerId(null);
+        }}
+      />
+      <DeleteCustomerAlertDialog
+        customerId={deleteCustomerId}
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteCustomerId(null);
+        }}
+      />
       <PageHeader
         title="Customers"
         subtitle="Keep customer details and job history organized."
@@ -104,13 +134,32 @@ export default function Customers() {
                 <TableCell className="text-right">
                   <div className="flex justify-end">
                     <RowActionsMenu label="Customer actions">
-                      <ManageCustomerDialog customerId={c.id} trigger={<DropdownMenuItem>Manage</DropdownMenuItem>} />
-                      <EditCustomerDialog customerId={c.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          setManageCustomerId(c.id);
+                          setManageOpen(true);
+                        }}
+                      >
+                        Manage
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          setEditCustomerId(c.id);
+                          setEditOpen(true);
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DeleteCustomerAlertDialog
-                        customerId={c.id}
-                        trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
-                      />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={() => {
+                          setDeleteCustomerId(c.id);
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
                     </RowActionsMenu>
                   </div>
                 </TableCell>

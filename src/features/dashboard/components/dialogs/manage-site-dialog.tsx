@@ -79,14 +79,27 @@ function getCurrentAssignment(assignments: SiteTeamAssignment[]) {
   return active[0] ?? null;
 }
 
-export default function ManageSiteDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
+export default function ManageSiteDialog({
+  siteId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  siteId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
   const [docs, setDocs] = React.useState<SiteDocument[]>([]);
   const [photos, setPhotos] = React.useState<JobPhoto[]>([]);
   const [loading, setLoading] = React.useState(false);
 
-  const site = data.sites.find((s) => s.id === siteId) as Site | undefined;
+  const site = siteId ? (data.sites.find((s) => s.id === siteId) as Site | undefined) : undefined;
   const customer = site && (site as any).customer_id ? data.customers.find((c) => c.id === (site as any).customer_id) : null;
 
   const jobs = React.useMemo(() => {
@@ -251,13 +264,15 @@ export default function ManageSiteDialog({ siteId, trigger }: { siteId: string; 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
           <Button size="sm" variant="outline">
             Manage
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3">

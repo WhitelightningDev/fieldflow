@@ -54,10 +54,23 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function EditSiteDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
+export default function EditSiteDialog({
+  siteId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  siteId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const site = data.sites.find((s) => s.id === siteId) as any;
-  const [open, setOpen] = React.useState(false);
+  const site = siteId ? (data.sites.find((s) => s.id === siteId) as any) : null;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
   const [scopeTemplate, setScopeTemplate] = React.useState<ScopeTemplateV1 | null>(null);
 
   const form = useForm<Values>({
@@ -113,6 +126,7 @@ export default function EditSiteDialog({ siteId, trigger }: { siteId: string; tr
   }, [open]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (!siteId) return;
     const gpsLat = String(values.gpsLat ?? "").trim();
     const gpsLng = String(values.gpsLng ?? "").trim();
     const gpsLatNum = gpsLat ? Number.parseFloat(gpsLat) : null;
@@ -140,9 +154,15 @@ export default function EditSiteDialog({ siteId, trigger }: { siteId: string; tr
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button size="sm" variant="outline">Edit</Button>}
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">
+            Edit
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit site</DialogTitle>

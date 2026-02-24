@@ -6,6 +6,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Capacitor loads the built app from the filesystem. Vite's default base (`/`)
+  // breaks asset URLs in that context, so use a relative base for the "capacitor" mode.
+  base: mode === "capacitor" ? "./" : "/",
   server: {
     host: "::",
     port: 8000,

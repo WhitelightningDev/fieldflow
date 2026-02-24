@@ -22,9 +22,22 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function AssignTeamToSiteDialog({ siteId, trigger }: { siteId: string; trigger?: React.ReactNode }) {
+export default function AssignTeamToSiteDialog({
+  siteId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  siteId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -46,6 +59,7 @@ export default function AssignTeamToSiteDialog({ siteId, trigger }: { siteId: st
   }, [form, open]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (!siteId) return;
     const created = await actions.assignTeamToSite({
       siteId,
       teamId: values.teamId,
@@ -61,13 +75,15 @@ export default function AssignTeamToSiteDialog({ siteId, trigger }: { siteId: st
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
           <Button size="sm" variant="outline">
             Assign team
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Assign team</DialogTitle>

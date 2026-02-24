@@ -64,6 +64,14 @@ export default function JobInvoiceForm({
   const [sending, setSending] = React.useState(false);
   const [showInternal, setShowInternal] = React.useState(false);
   const proofRef = React.useRef<HTMLInputElement>(null);
+  const [nowMs, setNowMs] = React.useState(() => Date.now());
+
+  React.useEffect(() => {
+    const hasRunning = timeEntries.some((e) => e?.started_at && !e?.ended_at && typeof e?.minutes !== "number");
+    if (!hasRunning) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 10_000);
+    return () => clearInterval(interval);
+  }, [timeEntries]);
 
   const minutesForEntry = React.useCallback((e: any) => {
     if (typeof e?.minutes === "number") return Math.max(0, e.minutes);
@@ -71,8 +79,12 @@ export default function JobInvoiceForm({
       const ms = new Date(e.ended_at).getTime() - new Date(e.started_at).getTime();
       return Math.max(0, Math.round(ms / 60000));
     }
+    if (e?.started_at && !e?.ended_at) {
+      const ms = nowMs - new Date(e.started_at).getTime();
+      return Math.max(0, Math.round(ms / 60000));
+    }
     return 0;
-  }, []);
+  }, [nowMs]);
 
   // Calculate totals
   const totalMinutes = timeEntries.reduce((s, e) => s + minutesForEntry(e), 0);
@@ -293,6 +305,7 @@ export default function JobInvoiceForm({
 
   // If no invoice yet — show preview & create button
   if (!invoice) {
+    const shouldShowLabour = totalMinutes > 0;
     return (
       <div className="space-y-4">
         <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -306,9 +319,11 @@ export default function JobInvoiceForm({
               <span className="font-medium">{formatZarFromCents(calloutFeeCents)}</span>
             </div>
           ) : null}
-          {labourChargeCents > 0 ? (
+          {shouldShowLabour ? (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Labour</span>
+              <span className="text-muted-foreground">
+                Labour ({(totalMinutes / 60).toFixed(1)} hrs @ R{(labourChargeRateCents / 100).toFixed(2)}/hr)
+              </span>
               <span className="font-medium">{formatZarFromCents(labourChargeCents)}</span>
             </div>
           ) : null}

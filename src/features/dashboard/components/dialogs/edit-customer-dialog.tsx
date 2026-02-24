@@ -26,10 +26,23 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function EditCustomerDialog({ customerId, trigger }: { customerId: string; trigger?: React.ReactNode }) {
+export default function EditCustomerDialog({
+  customerId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  customerId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const customer = data.customers.find((c) => c.id === customerId) as any;
-  const [open, setOpen] = React.useState(false);
+  const customer = customerId ? (data.customers.find((c) => c.id === customerId) as any) : null;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -69,6 +82,7 @@ export default function EditCustomerDialog({ customerId, trigger }: { customerId
   if (!customer) return null;
 
   const submit = form.handleSubmit(async (values) => {
+    if (!customerId) return;
     const updated = await actions.updateCustomer(customerId, {
       name: values.name,
       code: values.code || null,
@@ -89,9 +103,15 @@ export default function EditCustomerDialog({ customerId, trigger }: { customerId
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button size="sm" variant="outline">Edit</Button>}
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">
+            Edit
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit customer</DialogTitle>

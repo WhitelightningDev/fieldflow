@@ -18,6 +18,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { MapPin } from "lucide-react";
 import RowActionsMenu from "@/components/row-actions-menu";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import * as React from "react";
 
 function getTechWhere(data: any, technicianId: string) {
   const jobs = ((data.jobCards as any[]) ?? []).filter((j: any) => j.technician_id === technicianId);
@@ -80,9 +81,49 @@ function getTechWhere(data: any, technicianId: string) {
 
 export default function Technicians() {
   const { data } = useDashboardData();
+  const [editTechnicianId, setEditTechnicianId] = React.useState<string | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [ratesTechnicianId, setRatesTechnicianId] = React.useState<string | null>(null);
+  const [ratesOpen, setRatesOpen] = React.useState(false);
+  const [accessTechnicianId, setAccessTechnicianId] = React.useState<string | null>(null);
+  const [accessOpen, setAccessOpen] = React.useState(false);
+  const [deleteTechnicianId, setDeleteTechnicianId] = React.useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   return (
     <div className="space-y-6">
+      <EditTechnicianDialog
+        technicianId={editTechnicianId}
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditTechnicianId(null);
+        }}
+      />
+      <EditTechnicianRatesDialog
+        technicianId={ratesTechnicianId}
+        open={ratesOpen}
+        onOpenChange={(open) => {
+          setRatesOpen(open);
+          if (!open) setRatesTechnicianId(null);
+        }}
+      />
+      <SetTechnicianAccessDialog
+        technicianId={accessTechnicianId}
+        open={accessOpen}
+        onOpenChange={(open) => {
+          setAccessOpen(open);
+          if (!open) setAccessTechnicianId(null);
+        }}
+      />
+      <DeleteTechnicianAlertDialog
+        technicianId={deleteTechnicianId}
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteTechnicianId(null);
+        }}
+      />
       <PageHeader
         title="Technicians"
         subtitle="Add technicians and assign trades for dispatching."
@@ -179,14 +220,40 @@ export default function Technicians() {
 
                 <div className="flex justify-end">
                   <RowActionsMenu label="Technician actions">
-                    <EditTechnicianDialog technicianId={t.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
-                    <EditTechnicianRatesDialog technicianId={t.id} trigger={<DropdownMenuItem>Rates</DropdownMenuItem>} />
-                    <SetTechnicianAccessDialog technicianId={t.id} trigger={<DropdownMenuItem>Set access</DropdownMenuItem>} />
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setEditTechnicianId(t.id);
+                        setEditOpen(true);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setRatesTechnicianId(t.id);
+                        setRatesOpen(true);
+                      }}
+                    >
+                      Rates
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setAccessTechnicianId(t.id);
+                        setAccessOpen(true);
+                      }}
+                    >
+                      Set access
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DeleteTechnicianAlertDialog
-                      technicianId={t.id}
-                      trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
-                    />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onSelect={() => {
+                        setDeleteTechnicianId(t.id);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
                   </RowActionsMenu>
                 </div>
 
@@ -305,14 +372,40 @@ export default function Technicians() {
                     <TableCell className="text-right">
                       <div className="flex justify-end">
                         <RowActionsMenu label="Technician actions">
-                          <EditTechnicianDialog technicianId={t.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
-                          <EditTechnicianRatesDialog technicianId={t.id} trigger={<DropdownMenuItem>Rates</DropdownMenuItem>} />
-                          <SetTechnicianAccessDialog technicianId={t.id} trigger={<DropdownMenuItem>Set access</DropdownMenuItem>} />
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setEditTechnicianId(t.id);
+                              setEditOpen(true);
+                            }}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setRatesTechnicianId(t.id);
+                              setRatesOpen(true);
+                            }}
+                          >
+                            Rates
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setAccessTechnicianId(t.id);
+                              setAccessOpen(true);
+                            }}
+                          >
+                            Set access
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DeleteTechnicianAlertDialog
-                            technicianId={t.id}
-                            trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
-                          />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => {
+                              setDeleteTechnicianId(t.id);
+                              setDeleteOpen(true);
+                            }}
+                          >
+                            Delete
+                          </DropdownMenuItem>
                         </RowActionsMenu>
                       </div>
                     </TableCell>

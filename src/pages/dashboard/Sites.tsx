@@ -31,6 +31,14 @@ function getCurrentAssignment(assignments: SiteTeamAssignment[]) {
 
 export default function Sites() {
   const { data, actions } = useDashboardData();
+  const [manageSiteId, setManageSiteId] = React.useState<string | null>(null);
+  const [manageOpen, setManageOpen] = React.useState(false);
+  const [editSiteId, setEditSiteId] = React.useState<string | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [assignSiteId, setAssignSiteId] = React.useState<string | null>(null);
+  const [assignOpen, setAssignOpen] = React.useState(false);
+  const [deleteSiteId, setDeleteSiteId] = React.useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const customersById = new Map(data.customers.map((c) => [c.id, c]));
   const teamsById = new Map(data.teams.map((t) => [t.id, t]));
@@ -73,6 +81,38 @@ export default function Sites() {
 
   return (
     <div className="space-y-6">
+      <ManageSiteDialog
+        siteId={manageSiteId}
+        open={manageOpen}
+        onOpenChange={(open) => {
+          setManageOpen(open);
+          if (!open) setManageSiteId(null);
+        }}
+      />
+      <EditSiteDialog
+        siteId={editSiteId}
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditSiteId(null);
+        }}
+      />
+      <AssignTeamToSiteDialog
+        siteId={assignSiteId}
+        open={assignOpen}
+        onOpenChange={(open) => {
+          setAssignOpen(open);
+          if (!open) setAssignSiteId(null);
+        }}
+      />
+      <DeleteSiteAlertDialog
+        siteId={deleteSiteId}
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          setDeleteOpen(open);
+          if (!open) setDeleteSiteId(null);
+        }}
+      />
       <PageHeader
         title="Sites"
         subtitle="Site-level control: team assignments, time tracking, photos, materials, and COC documentation."
@@ -148,19 +188,45 @@ export default function Sites() {
                   <TableCell className="text-right">
                     <div className="flex justify-end">
                       <RowActionsMenu label="Site actions">
-                        <ManageSiteDialog siteId={site.id} trigger={<DropdownMenuItem>Manage</DropdownMenuItem>} />
-                        <EditSiteDialog siteId={site.id} trigger={<DropdownMenuItem>Edit</DropdownMenuItem>} />
-                        <AssignTeamToSiteDialog siteId={site.id} trigger={<DropdownMenuItem>Assign team</DropdownMenuItem>} />
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setManageSiteId(site.id);
+                            setManageOpen(true);
+                          }}
+                        >
+                          Manage
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setEditSiteId(site.id);
+                            setEditOpen(true);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setAssignSiteId(site.id);
+                            setAssignOpen(true);
+                          }}
+                        >
+                          Assign team
+                        </DropdownMenuItem>
                         {current ? (
                           <DropdownMenuItem onSelect={() => void actions.endSiteAssignment(current.id, new Date().toISOString())}>
                             End now
                           </DropdownMenuItem>
                         ) : null}
                         <DropdownMenuSeparator />
-                        <DeleteSiteAlertDialog
-                          siteId={site.id}
-                          trigger={<DropdownMenuItem className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>}
-                        />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => {
+                            setDeleteSiteId(site.id);
+                            setDeleteOpen(true);
+                          }}
+                        >
+                          Delete
+                        </DropdownMenuItem>
                       </RowActionsMenu>
                     </div>
                   </TableCell>

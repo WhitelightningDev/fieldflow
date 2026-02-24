@@ -23,14 +23,27 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function EditTechnicianDialog({ technicianId, trigger }: { technicianId: string; trigger?: React.ReactNode }) {
+export default function EditTechnicianDialog({
+  technicianId,
+  trigger,
+  open: openProp,
+  onOpenChange,
+}: {
+  technicianId: string | null;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { data, actions } = useDashboardData();
-  const technician = data.technicians.find((t) => t.id === technicianId) as any;
+  const technician = technicianId ? (data.technicians.find((t) => t.id === technicianId) as any) : null;
 
   const lockedTradeId: TradeId | null =
     data.company?.industry && isTradeId(data.company.industry) ? data.company.industry : null;
 
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = typeof openProp === "boolean" ? openProp : uncontrolledOpen;
+  const setOpen =
+    typeof openProp === "boolean" ? (onOpenChange ?? (() => {})) : onOpenChange ?? setUncontrolledOpen;
   const form = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { name: "", phone: "", email: "", active: true, trades: [lockedTradeId ?? TRADES[0].id] },
@@ -55,6 +68,7 @@ export default function EditTechnicianDialog({ technicianId, trigger }: { techni
   if (!technician) return null;
 
   const submit = form.handleSubmit(async (values) => {
+    if (!technicianId) return;
     const updated = await actions.updateTechnician(technicianId, {
       name: values.name,
       phone: values.phone || null,
@@ -71,9 +85,15 @@ export default function EditTechnicianDialog({ technicianId, trigger }: { techni
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button size="sm" variant="outline">Edit</Button>}
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : openProp == null ? (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">
+            Edit
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit technician</DialogTitle>
