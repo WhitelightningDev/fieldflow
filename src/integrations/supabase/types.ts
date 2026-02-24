@@ -186,6 +186,9 @@ export type Database = {
           address: string | null
           callout_fee_cents: string | null
           callout_radius_km: string | null
+          compliance_progress: number
+          compliance_status: string
+          compliance_updated_at: string
           created_at: string
           id: string
           industry: string
@@ -206,6 +209,9 @@ export type Database = {
           address?: string | null
           callout_fee_cents?: string | null
           callout_radius_km?: string | null
+          compliance_progress?: number
+          compliance_status?: string
+          compliance_updated_at?: string
           created_at?: string
           id?: string
           industry: string
@@ -226,6 +232,9 @@ export type Database = {
           address?: string | null
           callout_fee_cents?: string | null
           callout_radius_km?: string | null
+          compliance_progress?: number
+          compliance_status?: string
+          compliance_updated_at?: string
           created_at?: string
           id?: string
           industry?: string
@@ -243,6 +252,47 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      company_compliance_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          industry: string | null
+          kind: string
+          label: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          industry?: string | null
+          kind: string
+          label: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          industry?: string | null
+          kind?: string
+          label?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_compliance_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
