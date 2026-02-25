@@ -29,3 +29,8 @@ export function useTrialStatus(company: any): TrialStatus {
     return { state: "trialing", daysLeft, endsAt };
   }, [company?.subscription_status, company?.trial_ends_at]);
 }
+
+/** Show the trial banner when 5 or fewer days remain */
+export function shouldShowTrialWarning(status: TrialStatus): boolean {
+  return status.state === "trialing" && status.daysLeft <= 5;
+}

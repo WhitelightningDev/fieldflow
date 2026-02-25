@@ -194,13 +194,16 @@ export type Database = {
           compliance_updated_at: string
           created_at: string
           id: string
+          included_techs: number
           industry: string
           labour_overhead_percent: string | null
           logo_url: string | null
           name: string
+          per_tech_price_cents: number
           phone: string | null
           profile_complete: boolean
           subscription_status: string
+          subscription_tier: string
           team_size: string | null
           trial_ends_at: string
           trial_started_at: string
@@ -217,13 +220,16 @@ export type Database = {
           compliance_updated_at?: string
           created_at?: string
           id?: string
+          included_techs?: number
           industry: string
           labour_overhead_percent?: string | null
           logo_url?: string | null
           name: string
+          per_tech_price_cents?: number
           phone?: string | null
           profile_complete?: boolean
           subscription_status?: string
+          subscription_tier?: string
           team_size?: string | null
           trial_ends_at?: string
           trial_started_at?: string
@@ -240,13 +246,16 @@ export type Database = {
           compliance_updated_at?: string
           created_at?: string
           id?: string
+          included_techs?: number
           industry?: string
           labour_overhead_percent?: string | null
           logo_url?: string | null
           name?: string
+          per_tech_price_cents?: number
           phone?: string | null
           profile_complete?: boolean
           subscription_status?: string
+          subscription_tier?: string
           team_size?: string | null
           trial_ends_at?: string
           trial_started_at?: string

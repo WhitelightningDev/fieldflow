@@ -46,6 +46,7 @@ import TechSettings from "./pages/tech/TechSettings";
 import TechMessages from "./pages/tech/TechMessages";
 import TechNotFound from "./pages/tech/TechNotFound";
 import NotFound from "./pages/NotFound";
+import Subscribe from "./pages/Subscribe";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/company-signup" element={<CompanySignup />} />
+            <Route path="/subscribe" element={<Subscribe />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
 	            <Route path="/dashboard" element={<Dashboard />}>
 	              <Route index element={<DashboardHome />} />

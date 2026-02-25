@@ -10,6 +10,8 @@ import type { Tables } from "@/integrations/supabase/types";
 import { formatZarFromCents } from "@/lib/money";
 import { FileText } from "lucide-react";
 import * as React from "react";
+import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
+import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
 
 type Invoice = Tables<"invoices">;
 
@@ -26,6 +28,8 @@ type StatusFilter = (typeof STATUS_OPTIONS)[number];
 
 export default function Invoices() {
   const { data } = useDashboardData();
+  const company = data.company as any;
+  const gate = useFeatureGate(company?.subscription_tier);
   const [query, setQuery] = React.useState("");
   const [status, setStatus] = React.useState<StatusFilter>("all");
 
@@ -34,6 +38,7 @@ export default function Invoices() {
   const sitesById = React.useMemo(() => new Map(data.sites.map((s) => [s.id, s] as const)), [data.sites]);
 
   const filtered = React.useMemo(() => {
+    if (!gate.hasFeature("invoicing")) return [];
     const q = norm(query);
     const rows = (data.invoices ?? []) as Invoice[];
     return rows.filter((inv) => {
@@ -55,7 +60,7 @@ export default function Invoices() {
         .join(" ");
       return blob.includes(q);
     });
-  }, [customersById, data.invoices, jobsById, query, sitesById, status]);
+  }, [customersById, data.invoices, gate, jobsById, query, sitesById, status]);
 
   const stats = React.useMemo(() => {
     const rows = filtered;
@@ -67,6 +72,10 @@ export default function Invoices() {
     const collectedCents = rows.reduce((sum, i) => sum + centsOrZero(i.amount_paid_cents), 0);
     return { draft, sent, partial, paid, outstandingCents, collectedCents };
   }, [filtered]);
+
+  if (!gate.hasFeature("invoicing")) {
+    return <UpgradePrompt feature="Invoicing" requiredTier="pro" currentTier={gate.tier} />;
+  }
 
   return (
     <div className="space-y-6">
