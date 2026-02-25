@@ -155,7 +155,8 @@ export default function CreateCocCertificateDialog({
 
       const { data, error } = await supabase
         .from("coc_certificates")
-        .insert(payload)
+        // Important: allow DB defaults to apply for omitted columns (e.g. auto-generated certificate numbers).
+        .insert(payload, { defaultToNull: false })
         .select("*")
         .single();
 

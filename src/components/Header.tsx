@@ -3,10 +3,32 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+function initialsFromName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  const first = parts[0]?.[0] ?? "U";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toUpperCase();
+}
+
+function homePathForRoles(roles: string[]) {
+  if (roles.includes("owner") || roles.includes("admin") || roles.includes("office_staff")) return "/dashboard";
+  if (roles.includes("technician")) return "/tech";
+  return "/dashboard";
+}
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const closeMobileMenu = () => setMobileMenuOpen(false);
+  const { user, profile, roles, loading } = useAuth();
+
+  const isAuthed = !loading && Boolean(user);
+  const homePath = homePathForRoles(roles as any);
+  const displayName = (profile?.full_name ?? user?.email ?? "Account").toString();
+  const initials = initialsFromName(displayName);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -39,12 +61,30 @@ const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/login">Log in</Link>
-            </Button>
-            <Button asChild size="sm" className="gradient-bg hover:opacity-90 transition-opacity shadow-glow">
-              <Link to="/company-signup">Start Free Trial</Link>
-            </Button>
+            {isAuthed ? (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground gap-2"
+              >
+                <Link to={homePath}>
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="max-w-[180px] truncate">{displayName}</span>
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                  <Link to="/login">Log in</Link>
+                </Button>
+                <Button asChild size="sm" className="gradient-bg hover:opacity-90 transition-opacity shadow-glow">
+                  <Link to="/company-signup">Start Free Trial</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -76,12 +116,25 @@ const Header = () => {
                 Contact
               </Link>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                <Button asChild variant="ghost" className="w-full justify-start">
-                  <Link to="/login" onClick={closeMobileMenu}>Log in</Link>
-                </Button>
-                <Button asChild className="w-full gradient-bg">
-                  <Link to="/company-signup" onClick={closeMobileMenu}>Start Free Trial</Link>
-                </Button>
+                {isAuthed ? (
+                  <Button asChild variant="ghost" className="w-full justify-start gap-2">
+                    <Link to={homePath} onClick={closeMobileMenu}>
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate">{displayName}</span>
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild variant="ghost" className="w-full justify-start">
+                      <Link to="/login" onClick={closeMobileMenu}>Log in</Link>
+                    </Button>
+                    <Button asChild className="w-full gradient-bg">
+                      <Link to="/company-signup" onClick={closeMobileMenu}>Start Free Trial</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>

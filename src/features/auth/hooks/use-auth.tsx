@@ -25,6 +25,21 @@ function getEnvNumber(name: string) {
   return Number.isFinite(n) ? n : null;
 }
 
+function isAuthInvalidError(error: unknown) {
+  const e: any = error ?? null;
+  const status = typeof e?.status === "number" ? e.status : typeof e?.code === "number" ? e.code : null;
+  const msg = String(e?.message ?? e?.error_description ?? e ?? "").toLowerCase();
+  if (status === 400 || status === 401 || status === 403) return true;
+  return (
+    msg.includes("jwt expired") ||
+    msg.includes("invalid jwt") ||
+    msg.includes("refresh token") ||
+    msg.includes("invalid refresh token") ||
+    msg.includes("token is expired") ||
+    msg.includes("session not found")
+  );
+}
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
@@ -273,15 +288,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         if (!isMounted) return;
 
-        setSession(s);
-        if (s?.user) {
+        let nextSession = s;
+
+        // IMPORTANT: `getSession()` can return a stale session from storage.
+        // Validate it against Supabase; if it's invalid/expired and can't be refreshed, clear it.
+        if (nextSession?.user) {
+          const expiresAtSec = typeof nextSession.expires_at === "number" ? nextSession.expires_at : null;
+          const expiresAtMs = expiresAtSec ? expiresAtSec * 1000 : null;
+          const isExpired = expiresAtMs != null && expiresAtMs <= Date.now() + 5_000;
+
+          if (isExpired) {
+            try {
+              const refreshed = await withTimeout(supabase.auth.refreshSession(), 8000, "Session refresh timed out.");
+              if (refreshed.data?.session) nextSession = refreshed.data.session;
+              if (refreshed.error && isAuthInvalidError(refreshed.error)) nextSession = null;
+            } catch (e) {
+              // If we can't refresh due to an auth error, clear; otherwise keep best-effort.
+              if (isAuthInvalidError(e)) nextSession = null;
+            }
+          }
+
+          if (nextSession?.user) {
+            try {
+              const userRes = await withTimeout(supabase.auth.getUser(), 8000, "Token validation timed out.");
+              if (userRes.error && isAuthInvalidError(userRes.error)) nextSession = null;
+              if (!userRes.data?.user) nextSession = null;
+            } catch (e) {
+              // Only clear on explicit auth-invalid signals; don't nuke sessions on transient network errors.
+              if (isAuthInvalidError(e)) nextSession = null;
+            }
+          }
+        }
+
+        setSession(nextSession);
+        if (nextSession?.user) {
           setProfileLoading(true);
           setRolesLoading(true);
-          await ensureRoles(s.user.id);
-          const p = await fetchProfile(s.user.id);
-          await repairAssociationIfNeeded(s.user.id, p);
+          await ensureRoles(nextSession.user.id);
+          const p = await fetchProfile(nextSession.user.id);
+          await repairAssociationIfNeeded(nextSession.user.id, p);
           if (isMounted) setProfileLoading(false);
           if (isMounted) setRolesLoading(false);
+        } else {
+          // Ensure we fully clear any stale auth storage (prevents "ghost logins").
+          clearSupabaseAuthStorage();
+          setProfile(null);
+          setRoles([]);
+          setProfileError(null);
+          setRolesError(null);
+          setProfileLoading(false);
+          setRolesLoading(false);
         }
       } catch (e) {
         console.error("getSession error", e);

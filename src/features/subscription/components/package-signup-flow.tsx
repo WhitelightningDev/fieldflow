@@ -11,6 +11,7 @@ import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
+import { withTimeout } from "@/lib/with-timeout";
 
 type Step = "plan" | "info" | "technicians" | "payment";
 
@@ -79,35 +80,101 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
       const needsEmailConfirm = !authData?.session;
 
       if (authData?.session) {
+        const userId = authData.session.user.id;
+
+        // Ensure the DB-side profile/company/roles are created/linked before we insert technicians.
+        // Without this, `profiles.company_id` is often still null immediately after signup, so tech inserts are skipped.
+        try {
+          const res: any = await withTimeout(
+            Promise.resolve(supabase.rpc("ensure_user_role" as any)),
+            8000,
+            "Account setup timed out.",
+          );
+          if (res?.error) {
+            // Non-fatal: we can still attempt to resolve the company below, but inserts may fail under RLS.
+            console.warn("ensure_user_role RPC error", res.error);
+          }
+        } catch (e) {
+          console.warn("ensure_user_role RPC call failed", e);
+        }
+
+        const resolveCompanyId = async () => {
+          let lastErr: any = null;
+          for (let attempt = 0; attempt < 12; attempt++) {
+            const { data: profile, error } = await supabase
+              .from("profiles")
+              .select("company_id")
+              .eq("user_id", userId)
+              .maybeSingle();
+            if (error) lastErr = error;
+            if (profile?.company_id) return profile.company_id as string;
+            await new Promise((r) => window.setTimeout(r, 350));
+          }
+
+          // Fallback: create company directly if metadata provisioning didn't happen for some reason.
+          const { data: companyId, error } = await supabase.rpc("create_company_for_current_user" as any, {
+            _name: companyName,
+            _industry: industry,
+            _team_size: `${Math.max(validTechs.length, 1)}`,
+          });
+          if (error) {
+            throw new Error(error.message ?? lastErr?.message ?? "Could not resolve company");
+          }
+          return companyId as string;
+        };
+
+        let companyId: string | null = null;
+        try {
+          companyId = await resolveCompanyId();
+        } catch (e: any) {
+          toastError(
+            "Account created, but setup failed",
+            e?.message ?? "We couldn't link your account to a company yet. Please try logging in again.",
+          );
+          return;
+        }
+
+        // Best-effort: clear stale signup metadata and store the resolved company_id in auth metadata
+        // so `ensure_user_role()` won't ever resurrect a ghost company from old JWT metadata.
+        try {
+          await supabase.auth.updateUser({
+            data: { company_id: companyId, company_name: null, industry: null, team_size: null },
+          });
+          await supabase.auth.refreshSession();
+        } catch {}
+
         // Update company with subscription info
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("company_id")
-          .eq("user_id", authData.session.user.id)
-          .maybeSingle();
+        const { error: subErr } = await supabase
+          .from("companies")
+          .update({
+            subscription_status: "active",
+            subscription_tier: tier,
+            per_tech_price_cents: plan.perTechPriceCents,
+            included_techs: plan.includedTechs,
+          } as any)
+          .eq("id", companyId);
+        if (subErr) {
+          toastError("Could not activate subscription", subErr.message);
+          return;
+        }
 
-        if (profile?.company_id) {
-          await supabase
-            .from("companies")
-            .update({
-              subscription_status: "active",
-              subscription_tier: tier,
-              per_tech_price_cents: plan.perTechPriceCents,
-              included_techs: plan.includedTechs,
-            } as any)
-            .eq("id", profile.company_id);
+        // Add technicians (single insert for atomicity)
+        const techRows = validTechs
+          .map((t) => ({
+            company_id: companyId,
+            name: t.name.trim(),
+            email: t.email.trim() || null,
+            phone: t.phone.trim() || null,
+            trades: [industry],
+            active: true,
+          }))
+          .filter((t) => t.name.length > 0);
 
-          // Add technicians
-          for (const tech of validTechs) {
-            if (tech.name.trim()) {
-              await supabase.from("technicians").insert({
-                company_id: profile.company_id,
-                name: tech.name.trim(),
-                email: tech.email.trim() || null,
-                phone: tech.phone.trim() || null,
-                trades: [industry],
-              });
-            }
+        if (techRows.length > 0) {
+          const { error: techErr } = await supabase.from("technicians").insert(techRows as any);
+          if (techErr) {
+            toastError("Could not add technicians", techErr.message);
+            return;
           }
         }
       }

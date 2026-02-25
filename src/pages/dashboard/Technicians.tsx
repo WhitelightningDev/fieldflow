@@ -19,6 +19,7 @@ import { MapPin } from "lucide-react";
 import RowActionsMenu from "@/components/row-actions-menu";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import * as React from "react";
+import { getPlan, type PlanTier } from "@/features/subscription/plans";
 
 function getTechWhere(data: any, technicianId: string) {
   const jobs = ((data.jobCards as any[]) ?? []).filter((j: any) => j.technician_id === technicianId);
@@ -81,6 +82,7 @@ function getTechWhere(data: any, technicianId: string) {
 
 export default function Technicians() {
   const { data } = useDashboardData();
+  const company = data.company as any;
   const [editTechnicianId, setEditTechnicianId] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [ratesTechnicianId, setRatesTechnicianId] = React.useState<string | null>(null);
@@ -89,6 +91,35 @@ export default function Technicians() {
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [deleteTechnicianId, setDeleteTechnicianId] = React.useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  const includedTechLimit = React.useMemo(() => {
+    const v = company?.included_techs;
+    if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, Math.floor(v));
+    const t = company?.subscription_tier as PlanTier | undefined;
+    if (t === "starter" || t === "pro" || t === "business") return getPlan(t).includedTechs;
+    return 0;
+  }, [company?.included_techs, company?.subscription_tier]);
+
+  const includedTechIds = React.useMemo(() => {
+    const limit = includedTechLimit;
+    if (!limit) return new Set<string>();
+    const active = (data.technicians ?? []).filter((t) => Boolean((t as any)?.active));
+    active.sort((a: any, b: any) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      if (ta !== tb) return ta - tb;
+      return String(a.id).localeCompare(String(b.id));
+    });
+    return new Set(active.slice(0, limit).map((t: any) => t.id));
+  }, [data.technicians, includedTechLimit]);
+
+  const includedTechNames = React.useMemo(() => {
+    if (!includedTechIds.size) return [];
+    return (data.technicians ?? [])
+      .filter((t) => includedTechIds.has(t.id))
+      .map((t) => t.name)
+      .filter(Boolean);
+  }, [data.technicians, includedTechIds]);
 
   return (
     <div className="space-y-6">
@@ -135,6 +166,17 @@ export default function Technicians() {
         }
       />
 
+      {includedTechLimit > 0 ? (
+        <div className="rounded-xl border bg-card/70 backdrop-blur-sm p-4 text-sm">
+          <div className="font-medium">Included in your plan</div>
+          <div className="text-muted-foreground mt-1">
+            {includedTechNames.length > 0
+              ? `${includedTechNames.join(", ")} (${Math.min(includedTechNames.length, includedTechLimit)}/${includedTechLimit})`
+              : `No active technicians yet (${0}/${includedTechLimit})`}
+          </div>
+        </div>
+      ) : null}
+
       {/* Mobile cards */}
       <div className="grid gap-3 sm:hidden">
         {data.technicians.length === 0 ? (
@@ -145,6 +187,7 @@ export default function Technicians() {
 
         {data.technicians.map((t) => {
           const where = getTechWhere(data, t.id);
+          const isIncluded = includedTechIds.has(t.id);
           return (
             <Card key={t.id} className="bg-card/70 backdrop-blur-sm">
               <CardContent className="p-4 space-y-3">
@@ -155,7 +198,10 @@ export default function Technicians() {
                       {t.phone || "—"} • {t.email || "—"}
                     </div>
                   </div>
-                  {t.active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isIncluded ? <Badge variant="secondary">Included</Badge> : null}
+                    {t.active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
@@ -295,9 +341,15 @@ export default function Technicians() {
 
               {data.technicians.map((t) => {
                 const where = getTechWhere(data, t.id);
+                const isIncluded = includedTechIds.has(t.id);
                 return (
                   <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="truncate">{t.name}</span>
+                        {isIncluded ? <Badge variant="secondary" className="text-[11px]">Included</Badge> : null}
+                      </div>
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{t.phone || "—"}</TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{t.email || "—"}</TableCell>
                     <TableCell>

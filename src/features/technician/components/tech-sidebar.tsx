@@ -1,6 +1,6 @@
 import { getTechIndustryNav } from "@/features/technician/constants/tech-industry-nav";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,10 @@ export default function TechSidebar({
     <aside className="flex flex-col h-full w-64 border-r border-border bg-card">
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+          <Link to="/" className="flex items-center gap-2 min-w-0" onClick={() => onNavigate?.()}>
             <BrandIcon size={28} />
             <BrandWordmark className="text-lg" />
-          </div>
+          </Link>
           <div className="flex items-center gap-1">
             {showTrialDaysIcon && typeof trialDaysLeft === "number" && onRestoreTrialBanner ? (
               <TrialDaysIconButton
