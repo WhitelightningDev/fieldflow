@@ -12,6 +12,9 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 const SESSION_STARTED_AT_KEY = "ff_session_started_at";
 const LAST_ACTIVITY_AT_KEY = "ff_last_activity_at";
 const LOGOUT_REASON_KEY = "ff_logout_reason";
+const PENDING_SUBSCRIPTION_TIER_KEY = "ff_pending_subscription_tier";
+const PENDING_SUBSCRIPTION_EMAIL_KEY = "ff_pending_subscription_email";
+const PENDING_SUBSCRIPTION_AT_KEY = "ff_pending_subscription_at";
 
 function readNumber(v: string | null) {
   if (!v) return null;
@@ -38,6 +41,16 @@ function isAuthInvalidError(error: unknown) {
     msg.includes("token is expired") ||
     msg.includes("session not found")
   );
+}
+
+function isValidPlanTier(tier: string | null | undefined): tier is "starter" | "pro" | "business" {
+  return tier === "starter" || tier === "pro" || tier === "business";
+}
+
+function perTechCentsForTier(tier: "starter" | "pro" | "business") {
+  if (tier === "starter") return 14900;
+  if (tier === "pro") return 12900;
+  return 9900;
 }
 
 type AuthContextValue = {
@@ -124,6 +137,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileError(null);
     setProfile(data ?? null);
     return data ?? null;
+  }, []);
+
+  const applyPendingSubscriptionIfAny = React.useCallback(async (args: { email: string | null | undefined; companyId: string | null | undefined }) => {
+    const { email, companyId } = args;
+    if (!companyId) return;
+    if (!email) return;
+
+    let pendingTier: string | null = null;
+    let pendingEmail: string | null = null;
+    let pendingAt: string | null = null;
+    try {
+      pendingTier = localStorage.getItem(PENDING_SUBSCRIPTION_TIER_KEY);
+      pendingEmail = localStorage.getItem(PENDING_SUBSCRIPTION_EMAIL_KEY);
+      pendingAt = localStorage.getItem(PENDING_SUBSCRIPTION_AT_KEY);
+    } catch {
+      return;
+    }
+
+    const tier = (pendingTier ?? "").trim().toLowerCase();
+    if (!isValidPlanTier(tier)) return;
+    if ((pendingEmail ?? "").trim().toLowerCase() !== email.trim().toLowerCase()) return;
+
+    const at = pendingAt ? Date.parse(pendingAt) : NaN;
+    const ageMs = Number.isFinite(at) ? Date.now() - at : Number.POSITIVE_INFINITY;
+    // Only honor a pending upgrade for 48 hours.
+    if (ageMs > 48 * 60 * 60 * 1000) return;
+
+    const { error } = await supabase
+      .from("companies")
+      .update({
+        subscription_status: "active",
+        subscription_tier: tier,
+        per_tech_price_cents: perTechCentsForTier(tier),
+        included_techs: 1,
+      } as any)
+      .eq("id", companyId);
+
+    if (!error) {
+      try {
+        localStorage.removeItem(PENDING_SUBSCRIPTION_TIER_KEY);
+        localStorage.removeItem(PENDING_SUBSCRIPTION_EMAIL_KEY);
+        localStorage.removeItem(PENDING_SUBSCRIPTION_AT_KEY);
+      } catch {}
+    }
   }, []);
 
   const fetchRoles = React.useCallback(async (userId: string) => {
@@ -252,6 +309,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ensureRoles(nextUserId)
                 .catch(console.error)
                 .then(() => fetchProfile(nextUserId))
+                .then(async (p) => {
+                  await applyPendingSubscriptionIfAny({
+                    email: newSession?.user?.email,
+                    companyId: p?.company_id ?? null,
+                  });
+                  return p;
+                })
                 .then((p) => repairAssociationIfNeeded(nextUserId, p))
                 .catch(console.error)
                 .finally(() => {
@@ -326,6 +390,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setRolesLoading(true);
           await ensureRoles(nextSession.user.id);
           const p = await fetchProfile(nextSession.user.id);
+          await applyPendingSubscriptionIfAny({
+            email: nextSession?.user?.email,
+            companyId: p?.company_id ?? null,
+          });
           await repairAssociationIfNeeded(nextSession.user.id, p);
           if (isMounted) setProfileLoading(false);
           if (isMounted) setRolesLoading(false);
@@ -361,7 +429,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [ensureRoles, fetchProfile, repairAssociationIfNeeded]);
+  }, [ensureRoles, fetchProfile, repairAssociationIfNeeded, applyPendingSubscriptionIfAny]);
 
   // Enforce max session duration / idle timeout (optional via env vars).
   React.useEffect(() => {

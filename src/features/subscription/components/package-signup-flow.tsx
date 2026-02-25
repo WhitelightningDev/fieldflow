@@ -12,10 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { withTimeout } from "@/lib/with-timeout";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 type Step = "plan" | "info" | "payment";
 
 export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanTier }) {
+  const { session, profile } = useAuth();
+  const isUpgradeFlow = Boolean(session?.user && profile?.company_id);
+  const companyId = profile?.company_id ?? null;
   const [step, setStep] = React.useState<Step>(initialTier ? "info" : "plan");
   const [tier, setTier] = React.useState<PlanTier>(initialTier ?? "pro");
   const [loading, setLoading] = React.useState(false);
@@ -30,14 +34,47 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
   const plan = getPlan(tier);
 
   const canProceedInfo =
-    companyName.trim().length >= 2 &&
-    contactName.trim().length >= 2 &&
-    email.includes("@") &&
-    password.length >= 8;
+    isUpgradeFlow ||
+    (companyName.trim().length >= 2 &&
+      contactName.trim().length >= 2 &&
+      email.includes("@") &&
+      password.length >= 8);
+
+  React.useEffect(() => {
+    if (!isUpgradeFlow) return;
+    // For upgrades, skip the company info step entirely.
+    setStep("plan");
+  }, [isUpgradeFlow]);
 
   const handleMockPayment = async () => {
     setLoading(true);
     try {
+      if (isUpgradeFlow) {
+        if (!companyId) {
+          toastError("Upgrade failed", "No company found for your account. Please re-login.");
+          return;
+        }
+
+        const { error: subErr } = await supabase
+          .from("companies")
+          .update({
+            subscription_status: "active",
+            subscription_tier: tier,
+            per_tech_price_cents: plan.perTechPriceCents,
+            included_techs: 1,
+          } as any)
+          .eq("id", companyId);
+
+        if (subErr) {
+          toastError("Could not activate subscription", subErr.message);
+          return;
+        }
+
+        toastSuccess("Subscription updated!", `You're now on the ${plan.name} plan.`);
+        window.location.href = "/dashboard/settings";
+        return;
+      }
+
       // Sign out any existing session
       try { await supabase.auth.signOut({ scope: "local" }); } catch {}
 
@@ -51,6 +88,11 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
             company_name: companyName,
             industry,
             team_size: "1",
+            // Persist the intended subscription so it can be applied after email confirmation.
+            subscription_tier: tier,
+            subscription_status: "active",
+            per_tech_price_cents: plan.perTechPriceCents,
+            included_techs: 1,
           },
           emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
         },
@@ -122,7 +164,16 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
         // so `ensure_user_role()` won't ever resurrect a ghost company from old JWT metadata.
         try {
           await supabase.auth.updateUser({
-            data: { company_id: companyId, company_name: null, industry: null, team_size: null },
+            data: {
+              company_id: companyId,
+              company_name: null,
+              industry: null,
+              team_size: null,
+              subscription_tier: null,
+              subscription_status: null,
+              per_tech_price_cents: null,
+              included_techs: null,
+            },
           });
           await supabase.auth.refreshSession();
         } catch {}
@@ -149,12 +200,26 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
       } catch {}
 
       if (needsEmailConfirm) {
+        // If email confirmation is enabled, we won't have a session yet to update the company row.
+        // Store a short-lived "pending upgrade" so we can apply it right after the user confirms and logs in.
+        try {
+          localStorage.setItem("ff_pending_subscription_tier", tier);
+          localStorage.setItem("ff_pending_subscription_email", email);
+          localStorage.setItem("ff_pending_subscription_at", new Date().toISOString());
+        } catch {}
+
         toastSuccess(
           "Account created!",
           "Check your email to confirm your account, then log in.",
         );
         window.location.href = "/login";
       } else {
+        try {
+          localStorage.removeItem("ff_pending_subscription_tier");
+          localStorage.removeItem("ff_pending_subscription_email");
+          localStorage.removeItem("ff_pending_subscription_at");
+        } catch {}
+
         toastSuccess("Payment successful!", "Your account is now active.");
         window.location.href = "/dashboard/technicians";
       }
@@ -190,8 +255,10 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
         {step === "plan" && (
           <div className="space-y-6">
             <div className="text-center">
-              <h1 className="text-2xl font-bold">Choose your plan</h1>
-              <p className="text-muted-foreground">Select the plan that fits your business</p>
+              <h1 className="text-2xl font-bold">{isUpgradeFlow ? "Upgrade your plan" : "Choose your plan"}</h1>
+              <p className="text-muted-foreground">
+                {isUpgradeFlow ? "Select a new plan and confirm the change" : "Select the plan that fits your business"}
+              </p>
             </div>
             <div className="grid gap-6 sm:grid-cols-3">
               {PLANS.map((p) => (
@@ -231,7 +298,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
               ))}
             </div>
             <div className="flex justify-center">
-              <Button onClick={() => setStep("info")} size="lg">
+              <Button onClick={() => setStep(isUpgradeFlow ? "payment" : "info")} size="lg">
                 Continue with {getPlan(tier).name} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -239,7 +306,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
         )}
 
         {/* STEP 2: Company Info */}
-        {step === "info" && (
+        {step === "info" && !isUpgradeFlow && (
           <div className="max-w-md mx-auto space-y-6">
             <div className="text-center">
               <h1 className="text-2xl font-bold">Company details</h1>
@@ -337,14 +404,14 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
               </CardContent>
             </Card>
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("info")}>
+              <Button variant="outline" onClick={() => setStep(isUpgradeFlow ? "plan" : "info")}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
               <Button onClick={handleMockPayment} disabled={loading} size="lg">
                 {loading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                 ) : (
-                  <><Zap className="mr-2 h-4 w-4" /> Pay {formatZar(plan.basePriceCents)}/mo</>
+                  <><Zap className="mr-2 h-4 w-4" /> {isUpgradeFlow ? "Confirm upgrade" : `Pay ${formatZar(plan.basePriceCents)}/mo`}</>
                 )}
               </Button>
             </div>
