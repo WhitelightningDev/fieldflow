@@ -59,6 +59,9 @@ function extractOutputText(payload: unknown): string {
 
 const ALLOWED_ORIGINS = new Set([
   "https://fieldflow-billing.vercel.app",
+  "http://localhost:8000",
+  "http://127.0.0.1:8000",
+  "http://[::1]:8000",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ]);
