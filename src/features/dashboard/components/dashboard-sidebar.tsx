@@ -61,10 +61,14 @@ function groupForNavItem(to: string): NavGroupKey {
 export default function DashboardSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, roles } = useAuth();
   const { data } = useDashboardData();
   const company = data.company as any;
   const gate = useFeatureGate(company?.subscription_tier);
+  const canUseAi = React.useMemo(() => {
+    const allowed = new Set(["owner", "admin", "office_staff"]);
+    return (roles ?? []).some((r) => allowed.has(String(r)));
+  }, [roles]);
 
   const navItems = React.useMemo(
     () => getIndustryNav(data.company?.industry),
@@ -110,7 +114,9 @@ export default function DashboardSidebar() {
   };
 
   const renderNavLink = (item: typeof navItems[0]) => {
-    const allowed = gate.isRouteAllowed(item.to);
+    const allowedByPlan = gate.isRouteAllowed(item.to);
+    const allowedByRole = item.to === "/dashboard/ai" ? canUseAi : true;
+    const allowed = allowedByPlan && allowedByRole;
     return (
       <Link
         to={allowed ? item.to : "#"}

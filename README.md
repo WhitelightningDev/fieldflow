@@ -57,6 +57,35 @@ npm run lint     # eslint (note: repo may contain legacy lint errors)
 
 If the dashboard shows “Workspace unavailable”, it’s usually a Supabase policy/migration mismatch rather than an auth issue.
 
+## Deploy Edge Functions
+
+This repo uses Supabase Edge Functions (Deno) under `supabase/functions/`.
+
+If you see `{"code":"NOT_FOUND","message":"Requested function was not found"}` when calling a function, it usually means the function was not deployed to that Supabase project yet.
+
+### Deploy `ai-assistant`
+
+```sh
+supabase login
+supabase link --project-ref cchhfgdowqlspxujfbrb
+
+supabase secrets set OPENAI_API_KEY=...
+# optional:
+supabase secrets set OPENAI_MODEL=gpt-4o-mini
+supabase secrets set OPENAI_BASE_URL=https://api.openai.com/v1
+
+supabase functions deploy ai-assistant
+```
+
+Verify browser CORS preflight (should be 2xx and echo the origin):
+
+```sh
+curl -i -X OPTIONS 'https://cchhfgdowqlspxujfbrb.supabase.co/functions/v1/ai-assistant' \
+  -H 'Origin: https://fieldflow-billing.vercel.app' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: authorization, content-type'
+```
+
 ## Onboarding tutorials (spotlight tour)
 
 On first login (per user + company), FieldFlow can show a step-by-step tutorial that highlights dashboard elements and persists progress in Supabase.

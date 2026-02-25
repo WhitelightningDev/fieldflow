@@ -3,11 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { toastError } from "@/lib/toast-helpers";
 import * as React from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Lock, Sparkles } from "lucide-react";
+import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
+import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
 
 type ChatMessage = { role: "user" | "assistant"; text: string };
 type JobCard = Tables<"job_cards">;
@@ -24,10 +27,38 @@ function safeJsonStringify(value: unknown, maxLen = 6000) {
 
 export default function AiAssistant() {
   const { data } = useDashboardData();
+  const { roles } = useAuth();
   const company = data.company;
+  const gate = useFeatureGate(company?.subscription_tier as any);
+  const canUseAi = React.useMemo(() => {
+    const allowed = new Set(["owner", "admin", "office_staff"]);
+    return (roles ?? []).some((r) => allowed.has(String(r)));
+  }, [roles]);
   const [prompt, setPrompt] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
+
+  if (!gate.hasFeature("ai_job_summaries")) {
+    return <UpgradePrompt feature="AI Assistant" requiredTier="business" currentTier={gate.tier as any} />;
+  }
+
+  if (!canUseAi) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Card className="max-w-md w-full text-center">
+          <CardHeader>
+            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+              <Lock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <CardTitle>AI Assistant access restricted</CardTitle>
+            <CardDescription>
+              Only owners, admins, and office staff can use AI tools.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   const context = React.useMemo(() => {
     // Keep context small and useful; this is a placeholder and not a full data export.
@@ -83,6 +114,10 @@ export default function AiAssistant() {
   ];
 
   const send = async () => {
+    if (!gate.hasFeature("ai_job_summaries") || !canUseAi) {
+      toastError("AI request blocked", "Your plan or role does not allow AI access.");
+      return;
+    }
     const text = prompt.trim();
     if (!text) return;
     setPrompt("");
@@ -124,7 +159,7 @@ export default function AiAssistant() {
     <div className="space-y-6">
       <PageHeader
         title="AI Assistant"
-        subtitle="AI tools for owners and admins (placeholder wiring — add your API key server-side)."
+        subtitle="AI tools for owners/admins/office staff (Business plan)."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">

@@ -57,54 +57,135 @@ function extractOutputText(payload: unknown): string {
   return parts.join("\n").trim();
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://fieldflow-billing.vercel.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+const CORS_ALLOW_HEADERS = [
+  "authorization",
+  "x-client-info",
+  "apikey",
+  "content-type",
+  "x-supabase-client-platform",
+  "x-supabase-client-platform-version",
+  "x-supabase-client-runtime",
+  "x-supabase-client-runtime-version",
+].join(", ");
+
+function corsForRequest(req: Request): { allowed: boolean; headers: Record<string, string> } {
+  const origin = req.headers.get("Origin");
+  const hasOrigin = typeof origin === "string" && origin.length > 0;
+
+  if (hasOrigin && !ALLOWED_ORIGINS.has(origin)) {
+    return { allowed: false, headers: { Vary: "Origin" } };
+  }
+
+  const allowOrigin = hasOrigin ? origin : "*";
+  return {
+    allowed: true,
+    headers: {
+      Vary: "Origin",
+      "Access-Control-Allow-Origin": allowOrigin,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+    },
+  };
+}
+
+function jsonResponse(body: unknown, init: { status: number; headers: Record<string, string> }) {
+  return new Response(JSON.stringify(body), {
+    status: init.status,
+    headers: { ...init.headers, "Content-Type": "application/json" },
+  });
+}
 
 Deno.serve(async (req) => {
+  const cors = corsForRequest(req);
+  if (!cors.allowed) {
+    if (req.method === "OPTIONS") return new Response(null, { status: 403, headers: cors.headers });
+    return jsonResponse({ error: "Origin not allowed" }, { status: 403, headers: cors.headers });
+  }
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: cors.headers });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing auth header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Missing auth header" }, { status: 401, headers: cors.headers });
     }
 
     const token = authHeader.replace(/^Bearer\s+/i, "");
 
     const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
-    const serviceRoleKey = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
-    if (!supabaseUrl || !serviceRoleKey) {
+    const anonKey = (Deno.env.get("SUPABASE_ANON_KEY") ?? "").trim();
+    if (!supabaseUrl || !anonKey) {
       const missing: string[] = [];
       if (!supabaseUrl) missing.push("SUPABASE_URL");
-      if (!serviceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-      return new Response(
-        JSON.stringify({
+      if (!anonKey) missing.push("SUPABASE_ANON_KEY");
+      return jsonResponse(
+        {
           error: `Missing Supabase function env vars: ${missing.join(", ")}`,
-          hint: "Set SUPABASE_SERVICE_ROLE_KEY via `supabase secrets set` and redeploy the function.",
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          hint: "Set via `supabase secrets set`, then redeploy the function.",
+        },
+        { status: 500, headers: cors.headers },
       );
     }
 
-    const callerClient = createClient(supabaseUrl, serviceRoleKey, {
-      global: { headers: { Authorization: authHeader } },
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader, apikey: anonKey } },
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const { data: { user }, error: userError } = await callerClient.auth.getUser(token);
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Unauthorized" }, { status: 401, headers: cors.headers });
+    }
+
+    // Enforce plan tier (Business only) and allowed roles (owner/admin/office_staff).
+    const { data: profile, error: profileErr } = await callerClient
+      .from("profiles")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (profileErr) {
+      return jsonResponse({ error: profileErr.message ?? "Failed to load profile" }, { status: 500, headers: cors.headers });
+    }
+    const companyId = (profile as any)?.company_id as string | null | undefined;
+    if (!companyId) {
+      return jsonResponse({ error: "No company linked to this account" }, { status: 403, headers: cors.headers });
+    }
+
+    const { data: company, error: companyErr } = await callerClient
+      .from("companies")
+      .select("subscription_tier")
+      .eq("id", companyId)
+      .maybeSingle();
+    if (companyErr) {
+      return jsonResponse({ error: companyErr.message ?? "Failed to load company" }, { status: 500, headers: cors.headers });
+    }
+    const tier = String((company as any)?.subscription_tier ?? "starter").toLowerCase();
+    if (tier !== "business") {
+      return jsonResponse({ error: "Business plan required for AI Assistant" }, { status: 403, headers: cors.headers });
+    }
+
+    const { data: roleRows, error: rolesErr } = await callerClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+    if (rolesErr) {
+      return jsonResponse({ error: rolesErr.message ?? "Failed to load roles" }, { status: 500, headers: cors.headers });
+    }
+    const allowedRoles = new Set(["owner", "admin", "office_staff"]);
+    const canUseAi = (Array.isArray(roleRows) ? roleRows : []).some((row) => {
+      if (!isRecord(row)) return false;
+      return allowedRoles.has(String(row["role"] ?? ""));
+    });
+    if (!canUseAi) {
+      return jsonResponse({ error: "Insufficient permissions for AI Assistant" }, { status: 403, headers: cors.headers });
     }
 
     let rawBody: unknown = null;
@@ -120,20 +201,17 @@ Deno.serve(async (req) => {
     const context = (getOptionalString(body, "context") ?? "").trim();
 
     if (!message) {
-      return new Response(JSON.stringify({ error: "Missing message" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Missing message" }, { status: 400, headers: cors.headers });
     }
 
     const openaiKey = (Deno.env.get("OPENAI_API_KEY") ?? "").trim();
     if (!openaiKey) {
-      return new Response(
-        JSON.stringify({
+      return jsonResponse(
+        {
           error: "AI is not configured yet.",
           hint: "Set OPENAI_API_KEY (and optionally OPENAI_MODEL) via `supabase secrets set`, then redeploy this function.",
-        }),
-        { status: 501, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        },
+        { status: 501, headers: cors.headers },
       );
     }
 
@@ -164,29 +242,17 @@ Deno.serve(async (req) => {
     const payload: unknown = await res.json().catch(() => null);
     if (!res.ok) {
       const msg = readErrorMessage(payload) ?? res.statusText ?? "OpenAI request failed";
-      return new Response(JSON.stringify({ error: msg }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: msg }, { status: 502, headers: cors.headers });
     }
 
     const text = extractOutputText(payload);
     if (!text) {
-      return new Response(JSON.stringify({ error: "AI returned no text output." }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "AI returned no text output." }, { status: 502, headers: cors.headers });
     }
 
-    return new Response(JSON.stringify({ text }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ text }, { status: 200, headers: cors.headers });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: msg }, { status: 500, headers: cors.headers });
   }
 });

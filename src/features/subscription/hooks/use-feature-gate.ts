@@ -13,6 +13,8 @@ export function useFeatureGate(tier: PlanTier | undefined | null) {
       hasFeature: (key: PlanFeatureKey) => features.has(key),
       /** Routes that require Pro+ */
       isRouteAllowed: (path: string): boolean => {
+        // AI Assistant requires Business (feature: ai_job_summaries)
+        if (path.startsWith("/dashboard/ai") && !features.has("ai_job_summaries")) return false;
         // Invoicing requires pro+
         if (path.includes("/invoices") && !features.has("invoicing")) return false;
         // Messages/customer portal requires pro+
