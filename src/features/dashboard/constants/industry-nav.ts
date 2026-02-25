@@ -9,6 +9,7 @@ import {
   FileText,
   LayoutDashboard,
   MessageSquare,
+  Sparkles,
   Refrigerator,
   Receipt,
   Settings,
