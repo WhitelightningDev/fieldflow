@@ -20,11 +20,13 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { getIndustryNav } from "@/features/dashboard/constants/industry-nav";
 import { cn } from "@/lib/utils";
-import { LogOut, Building2, ChevronDown, Folder, Sparkles, MessageSquare, Settings } from "lucide-react";
+import { LogOut, Building2, ChevronDown, Folder, Sparkles, MessageSquare, Settings, Lock } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
 import ComplianceStatusIcon from "@/features/compliance/components/compliance-status-icon";
+import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
+import { Badge } from "@/components/ui/badge";
 
 function tourIdForNavPath(to: string) {
   if (to === "/dashboard") return "nav-overview";
@@ -61,6 +63,7 @@ export default function DashboardSidebar() {
   const { signOut } = useAuth();
   const { data } = useDashboardData();
   const company = data.company as any;
+  const gate = useFeatureGate(company?.subscription_tier);
 
   const navItems = React.useMemo(
     () => getIndustryNav(data.company?.industry),
@@ -105,6 +108,24 @@ export default function DashboardSidebar() {
     }
   };
 
+  const renderNavLink = (item: typeof navItems[0]) => {
+    const allowed = gate.isRouteAllowed(item.to);
+    return (
+      <Link
+        to={allowed ? item.to : "#"}
+        data-tour={tourIdForNavPath(item.to)}
+        className={cn("flex items-center gap-2", !allowed && "opacity-50 pointer-events-none")}
+        onClick={(e) => {
+          if (!allowed) e.preventDefault();
+        }}
+      >
+        <item.icon />
+        <span>{item.label}</span>
+        {!allowed && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+      </Link>
+    );
+  };
+
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-sidebar-border">
       <SidebarHeader className="px-2">
@@ -135,6 +156,11 @@ export default function DashboardSidebar() {
           {company?.id ? <ComplianceStatusIcon company={company} className="ml-auto shrink-0" /> : null}
         </Link>
       )}
+      {company?.subscription_tier && (
+        <div className="px-2 pb-1">
+          <Badge variant="secondary" className="text-xs capitalize">{company.subscription_tier} plan</Badge>
+        </div>
+      )}
       </SidebarHeader>
 
       <SidebarSeparator />
@@ -147,14 +173,7 @@ export default function DashboardSidebar() {
               {primaryNav.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton asChild isActive={isActive(item.to)} tooltip={item.label}>
-                    <Link
-                      to={item.to}
-                      data-tour={tourIdForNavPath(item.to)}
-                      className={cn("flex items-center gap-2")}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
+                    {renderNavLink(item)}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -178,14 +197,7 @@ export default function DashboardSidebar() {
                           {group.items.map((item) => (
                             <SidebarMenuSubItem key={item.to}>
                               <SidebarMenuSubButton asChild isActive={isActive(item.to)}>
-                                <Link
-                                  to={item.to}
-                                  data-tour={tourIdForNavPath(item.to)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <item.icon />
-                                  <span>{item.label}</span>
-                                </Link>
+                                {renderNavLink(item)}
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}

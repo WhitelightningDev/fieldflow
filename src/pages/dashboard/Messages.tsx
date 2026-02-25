@@ -15,6 +15,8 @@ import { MessageSquare, Send } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 import TypingBubble from "@/components/chat/typing-bubble";
+import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
+import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
 
 type ChatThread = {
   id: string;
@@ -107,6 +109,8 @@ function mergeMessagesById(prev: ChatMessageUI[], incoming: ChatMessage[]) {
 export default function Messages() {
   const { user, profile } = useAuth();
   const { data } = useDashboardData();
+  const company = data.company as any;
+  const gate = useFeatureGate(company?.subscription_tier);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [threads, setThreads] = React.useState<ChatThread[]>([]);
@@ -582,6 +586,10 @@ export default function Messages() {
     const tech = techniciansById.get(selectedThread.technician_id);
     return tech?.name ?? "Technician";
   }, [selectedThread, techniciansById]);
+
+  if (!gate.hasFeature("customer_portal")) {
+    return <UpgradePrompt feature="Messages" requiredTier="pro" currentTier={gate.tier} />;
+  }
 
   return (
     <div className="space-y-6">

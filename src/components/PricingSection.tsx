@@ -193,7 +193,7 @@ const PricingSection = () => {
                   }`}
                   variant={plan.popular ? "default" : "outline"}
                 >
-                  <Link to="/company-signup">Start Free Trial</Link>
+                  <Link to={`/subscribe?plan=${plan.name.toLowerCase()}`}>Start Free Trial</Link>
                 </Button>
 
                 <ul className="space-y-3">

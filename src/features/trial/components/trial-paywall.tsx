@@ -3,54 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Shield, Zap } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-
-const plans = [
-  {
-    name: "Starter",
-    price: "R499",
-    period: "/mo",
-    description: "For small teams getting started",
-    features: [
-      "Up to 2 technicians",
-      "Job cards & scheduling",
-      "Basic inventory",
-      "Mobile technician app",
-    ],
-    popular: false,
-  },
-  {
-    name: "Pro",
-    price: "R999",
-    period: "/mo",
-    description: "For growing service companies",
-    features: [
-      "Up to 10 technicians",
-      "All Starter features",
-      "Invoicing & payments",
-      "Customer portal",
-      "Priority support",
-    ],
-    popular: true,
-  },
-  {
-    name: "Business",
-    price: "R1,999",
-    period: "/mo",
-    description: "For established operations",
-    features: [
-      "Unlimited technicians",
-      "All Pro features",
-      "AI job summaries",
-      "Accounting integrations",
-      "API & webhook access",
-      "Dedicated support",
-    ],
-    popular: false,
-  },
-];
+import { PLANS, formatZar } from "@/features/subscription/plans";
+import { useNavigate } from "react-router-dom";
 
 export default function TrialPaywall() {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-10">
@@ -69,7 +27,7 @@ export default function TrialPaywall() {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 w-full max-w-4xl">
-        {plans.map((plan) => (
+        {PLANS.map((plan) => (
           <Card
             key={plan.name}
             className={`relative flex flex-col ${plan.popular ? "border-primary shadow-lg" : ""}`}
@@ -82,15 +40,18 @@ export default function TrialPaywall() {
             )}
             <CardHeader className="text-center">
               <CardTitle className="text-lg">{plan.name}</CardTitle>
-              <CardDescription>{plan.description}</CardDescription>
+              <CardDescription>{plan.featureLabels[0]}</CardDescription>
               <div className="pt-2">
-                <span className="text-3xl font-bold">{plan.price}</span>
-                <span className="text-muted-foreground text-sm">{plan.period}</span>
+                <span className="text-3xl font-bold">{formatZar(plan.basePriceCents)}</span>
+                <span className="text-muted-foreground text-sm">/mo</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                + {formatZar(plan.perTechPriceCents)}/extra tech
+              </p>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               <ul className="space-y-2 flex-1">
-                {plan.features.map((f) => (
+                {plan.featureLabels.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                     <span>{f}</span>
@@ -100,10 +61,7 @@ export default function TrialPaywall() {
               <Button
                 className="w-full mt-6"
                 variant={plan.popular ? "default" : "outline"}
-                onClick={() => {
-                  // TODO: integrate with Stripe checkout
-                  window.alert("Subscription coming soon! Contact support to activate your plan.");
-                }}
+                onClick={() => navigate(`/subscribe?plan=${plan.tier}`)}
               >
                 <Zap className="h-4 w-4 mr-2" />
                 Choose {plan.name}

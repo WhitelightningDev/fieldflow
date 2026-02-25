@@ -13,7 +13,7 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
+import { useTrialStatus, shouldShowTrialWarning } from "@/features/trial/hooks/use-trial-status";
 import TrialBanner from "@/features/trial/components/trial-banner";
 import TrialPaywall from "@/features/trial/components/trial-paywall";
 import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
@@ -58,7 +58,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     companyId: company?.id ?? null,
     endsAt: trialStatus.state === "trialing" ? trialStatus.endsAt : null,
   });
-  const showTrialBanner = trialStatus.state === "trialing" && !trialDismissal.dismissed;
+  const showTrialBanner = shouldShowTrialWarning(trialStatus) && !trialDismissal.dismissed;
 
   return (
     <SidebarProvider>
