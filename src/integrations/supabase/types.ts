@@ -129,43 +129,58 @@ export type Database = {
       }
       coc_certificates: {
         Row: {
-          certificate_no: string
-          certificate_type: string
-          company_id: string
-          created_at: string
-          data: Json
+          certificate_no: string | null
+          certificate_number: string
+          certificate_type: string | null
+          company_id: string | null
+          created_at: string | null
+          customer_id: string
+          data: Json | null
+          expiry_date: string | null
           id: string
           issued_at: string | null
+          issued_date: string
           job_card_id: string | null
           site_id: string | null
-          test_report: Json
-          updated_at: string
+          status: string | null
+          test_report: Json | null
+          updated_at: string | null
         }
         Insert: {
-          certificate_no: string
-          certificate_type: string
-          company_id: string
-          created_at?: string
-          data?: Json
+          certificate_no?: string | null
+          certificate_number?: string
+          certificate_type?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          data?: Json | null
+          expiry_date?: string | null
           id?: string
           issued_at?: string | null
+          issued_date: string
           job_card_id?: string | null
           site_id?: string | null
-          test_report?: Json
-          updated_at?: string
+          status?: string | null
+          test_report?: Json | null
+          updated_at?: string | null
         }
         Update: {
-          certificate_no?: string
-          certificate_type?: string
-          company_id?: string
-          created_at?: string
-          data?: Json
+          certificate_no?: string | null
+          certificate_number?: string
+          certificate_type?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          data?: Json | null
+          expiry_date?: string | null
           id?: string
           issued_at?: string | null
+          issued_date?: string
           job_card_id?: string | null
           site_id?: string | null
-          test_report?: Json
-          updated_at?: string
+          status?: string | null
+          test_report?: Json | null
+          updated_at?: string | null
         }
         Relationships: []
       }
