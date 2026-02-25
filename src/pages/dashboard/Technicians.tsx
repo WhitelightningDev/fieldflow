@@ -121,6 +121,10 @@ export default function Technicians() {
       .filter(Boolean);
   }, [data.technicians, includedTechIds]);
 
+  const activeTechCount = React.useMemo(() => {
+    return (data.technicians ?? []).filter((t: any) => Boolean((t as any)?.active)).length;
+  }, [data.technicians]);
+
   return (
     <div className="space-y-6">
       <EditTechnicianDialog
@@ -165,6 +169,26 @@ export default function Technicians() {
           </>
         }
       />
+
+      {includedTechLimit > 0 && activeTechCount === 0 ? (
+        <Card className="bg-card/70 backdrop-blur-sm">
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="font-medium">Create your included technician</div>
+              <div className="text-sm text-muted-foreground">
+                Your plan includes {includedTechLimit} technician{includedTechLimit === 1 ? "" : "s"}. Add your first technician to start assigning jobs.
+              </div>
+            </div>
+            <CreateTechnicianDialog
+              trigger={
+                <Button className="gradient-bg hover:opacity-90 shadow-glow">
+                  Create included technician
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {includedTechLimit > 0 ? (
         <div className="rounded-xl border bg-card/70 backdrop-blur-sm p-4 text-sm">

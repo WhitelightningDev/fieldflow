@@ -35,6 +35,7 @@ import RepairHistory from "./pages/dashboard/RepairHistory";
 import Messages from "./pages/dashboard/Messages";
 import DashboardSettings from "./pages/dashboard/Settings";
 import DashboardNotFound from "./pages/dashboard/DashboardNotFound";
+import AiAssistant from "./pages/dashboard/AiAssistant";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
@@ -71,6 +72,7 @@ const App = () => (
 	              <Route index element={<DashboardHome />} />
 	              <Route path="create-company" element={<CreateCompany />} />
 	              <Route path="settings" element={<DashboardSettings />} />
+                <Route path="ai" element={<AiAssistant />} />
 	              <Route path="jobs" element={<Jobs />} />
 	              <Route path="invoices" element={<Invoices />} />
 	              <Route path="customers" element={<Customers />} />

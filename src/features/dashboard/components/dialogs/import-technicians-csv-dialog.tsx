@@ -1,10 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter as AlertDialogFooterInner,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TRADES, isTradeId, type TradeId } from "@/features/company-signup/content/trades";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
+import { formatZar, getPlan, type PlanTier } from "@/features/subscription/plans";
 import { parseCsv, normalizeCsvHeader } from "@/lib/csv";
-import type { TablesInsert } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Upload } from "lucide-react";
 import * as React from "react";
 
@@ -92,6 +103,7 @@ export default function ImportTechniciansCsvDialog() {
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [validRows, setValidRows] = React.useState<TechnicianInsert[]>([]);
@@ -223,7 +235,45 @@ export default function ImportTechniciansCsvDialog() {
 
   const preview = React.useMemo(() => validRows.slice(0, 5), [validRows]);
 
+  const company = data.company as Tables<"companies"> | null;
+  const subscriptionTier = company?.subscription_tier as PlanTier | undefined;
+  const perTechPriceCents =
+    typeof company?.per_tech_price_cents === "number" && Number.isFinite(company.per_tech_price_cents)
+      ? company.per_tech_price_cents
+      : subscriptionTier === "starter" || subscriptionTier === "pro" || subscriptionTier === "business"
+        ? getPlan(subscriptionTier).perTechPriceCents
+        : 0;
+
+  const includedLimit =
+    typeof company?.included_techs === "number" && Number.isFinite(company.included_techs)
+      ? Math.max(0, Math.floor(company.included_techs))
+      : 1;
+
+  const activeNow = React.useMemo(() => {
+    return (data.technicians ?? []).filter((t) => Boolean(t.active)).length;
+  }, [data.technicians]);
+
+  const activeToAdd = React.useMemo(() => {
+    return (validRows ?? []).filter((t) => t.active === true).length;
+  }, [validRows]);
+
+  const billableBefore = Math.max(0, activeNow - includedLimit);
+  const billableAfter = Math.max(0, activeNow + activeToAdd - includedLimit);
+  const addedBillableSeats = Math.max(0, billableAfter - billableBefore);
+  const wouldIncreaseBilling = addedBillableSeats > 0;
+
+  const doImport = async () => {
+    setBusy(true);
+    try {
+      await actions.addTechniciansBulk(validRows as any);
+      setOpen(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
@@ -344,13 +394,11 @@ export default function ImportTechniciansCsvDialog() {
             className="gradient-bg hover:opacity-90 shadow-glow"
             disabled={busy || validRows.length === 0}
             onClick={async () => {
-              setBusy(true);
-              try {
-                await actions.addTechniciansBulk(validRows as any);
-                setOpen(false);
-              } finally {
-                setBusy(false);
+              if (wouldIncreaseBilling) {
+                setConfirmOpen(true);
+                return;
               }
+              await doImport();
             }}
           >
             Import {validRows.length || ""}{validRows.length === 1 ? " technician" : validRows.length ? " technicians" : ""}
@@ -358,6 +406,34 @@ export default function ImportTechniciansCsvDialog() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Import will add billable technicians</AlertDialogTitle>
+          <AlertDialogDescription>
+            This import will add {addedBillableSeats} billable seat{addedBillableSeats === 1 ? "" : "s"} to your subscription at {formatZar(perTechPriceCents)}/month each.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <div>Active technicians now: {activeNow}</div>
+          <div>Active technicians importing: {activeToAdd}</div>
+          <div>Included active technicians: {includedLimit}</div>
+        </div>
+        <AlertDialogFooterInner>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={busy}
+            onClick={() => {
+              setConfirmOpen(false);
+              void doImport();
+            }}
+          >
+            {busy ? "Importing..." : "Confirm & import"}
+          </AlertDialogAction>
+        </AlertDialogFooterInner>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
-

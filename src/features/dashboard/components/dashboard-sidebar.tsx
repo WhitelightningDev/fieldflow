@@ -44,6 +44,7 @@ type NavGroupKey = "operations" | "industry" | "communication" | "admin";
 
 function groupForNavItem(to: string): NavGroupKey {
   if (to === "/dashboard/settings") return "admin";
+  if (to === "/dashboard/ai") return "admin";
   if (to === "/dashboard/messages") return "communication";
   if (
     to === "/dashboard/sites" ||

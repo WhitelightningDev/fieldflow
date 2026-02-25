@@ -5,21 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, Crown, Plus, Trash2, Zap, CreditCard, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import { type PlanTier, PLANS, getPlan, formatZar, calculateMonthlyTotal } from "@/features/subscription/plans";
+import { Check, Crown, Zap, CreditCard, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { type PlanTier, PLANS, getPlan, formatZar } from "@/features/subscription/plans";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { withTimeout } from "@/lib/with-timeout";
 
-type Step = "plan" | "info" | "technicians" | "payment";
-
-interface TechEntry {
-  name: string;
-  email: string;
-  phone: string;
-}
+type Step = "plan" | "info" | "payment";
 
 export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanTier }) {
   const [step, setStep] = React.useState<Step>(initialTier ? "info" : "plan");
@@ -33,17 +27,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
   const [password, setPassword] = React.useState("");
   const [industry, setIndustry] = React.useState<TradeId>("electrical-contracting");
 
-  // Technicians
-  const [techs, setTechs] = React.useState<TechEntry[]>([{ name: "", email: "", phone: "" }]);
-
   const plan = getPlan(tier);
-  const validTechs = techs.filter((t) => t.name.trim().length > 0);
-  const billing = calculateMonthlyTotal(tier, Math.max(validTechs.length, 1));
-
-  const addTech = () => setTechs((prev) => [...prev, { name: "", email: "", phone: "" }]);
-  const removeTech = (i: number) => setTechs((prev) => prev.filter((_, idx) => idx !== i));
-  const updateTech = (i: number, field: keyof TechEntry, value: string) =>
-    setTechs((prev) => prev.map((t, idx) => (idx === i ? { ...t, [field]: value } : t)));
 
   const canProceedInfo =
     companyName.trim().length >= 2 &&
@@ -66,7 +50,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
             full_name: contactName,
             company_name: companyName,
             industry,
-            team_size: `${Math.max(validTechs.length, 1)}`,
+            team_size: "1",
           },
           emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
         },
@@ -82,8 +66,8 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
       if (authData?.session) {
         const userId = authData.session.user.id;
 
-        // Ensure the DB-side profile/company/roles are created/linked before we insert technicians.
-        // Without this, `profiles.company_id` is often still null immediately after signup, so tech inserts are skipped.
+        // Ensure the DB-side profile/company/roles are created/linked before we update subscription state.
+        // Without this, `profiles.company_id` is often still null immediately after signup.
         try {
           const res: any = await withTimeout(
             Promise.resolve(supabase.rpc("ensure_user_role" as any)),
@@ -115,7 +99,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
           const { data: companyId, error } = await supabase.rpc("create_company_for_current_user" as any, {
             _name: companyName,
             _industry: industry,
-            _team_size: `${Math.max(validTechs.length, 1)}`,
+            _team_size: "1",
           });
           if (error) {
             throw new Error(error.message ?? lastErr?.message ?? "Could not resolve company");
@@ -150,32 +134,12 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
             subscription_status: "active",
             subscription_tier: tier,
             per_tech_price_cents: plan.perTechPriceCents,
-            included_techs: plan.includedTechs,
+            included_techs: 1,
           } as any)
           .eq("id", companyId);
         if (subErr) {
           toastError("Could not activate subscription", subErr.message);
           return;
-        }
-
-        // Add technicians (single insert for atomicity)
-        const techRows = validTechs
-          .map((t) => ({
-            company_id: companyId,
-            name: t.name.trim(),
-            email: t.email.trim() || null,
-            phone: t.phone.trim() || null,
-            trades: [industry],
-            active: true,
-          }))
-          .filter((t) => t.name.length > 0);
-
-        if (techRows.length > 0) {
-          const { error: techErr } = await supabase.from("technicians").insert(techRows as any);
-          if (techErr) {
-            toastError("Could not add technicians", techErr.message);
-            return;
-          }
         }
       }
 
@@ -192,7 +156,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
         window.location.href = "/login";
       } else {
         toastSuccess("Payment successful!", "Your account is now active.");
-        window.location.href = "/dashboard";
+        window.location.href = "/dashboard/technicians";
       }
     } catch (err: any) {
       toastError("Something went wrong", err?.message ?? "Please try again.");
@@ -206,7 +170,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
       <div className="w-full max-w-4xl space-y-6">
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          {(["plan", "info", "technicians", "payment"] as Step[]).map((s, i) => (
+          {(["plan", "info", "payment"] as Step[]).map((s, i) => (
             <React.Fragment key={s}>
               {i > 0 && <div className="w-8 h-px bg-border" />}
               <div
@@ -316,77 +280,14 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
               <Button variant="outline" onClick={() => setStep("plan")}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
-              <Button onClick={() => setStep("technicians")} disabled={!canProceedInfo}>
+              <Button onClick={() => setStep("payment")} disabled={!canProceedInfo}>
                 Next <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* STEP 3: Technicians */}
-        {step === "technicians" && (
-          <div className="max-w-lg mx-auto space-y-6">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">Add your technicians</h1>
-              <p className="text-muted-foreground">
-                {plan.includedTechs} included in your plan.
-                Extra technicians are {formatZar(plan.perTechPriceCents)}/mo each.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {techs.map((tech, i) => (
-                <Card key={i}>
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Technician {i + 1}</span>
-                      {techs.length > 1 && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeTech(i)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <Input placeholder="Name *" value={tech.name} onChange={(e) => updateTech(i, "name", e.target.value)} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input placeholder="Email" value={tech.email} onChange={(e) => updateTech(i, "email", e.target.value)} />
-                      <Input placeholder="Phone" value={tech.phone} onChange={(e) => updateTech(i, "phone", e.target.value)} />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            {(plan.maxTechs === null || techs.length < plan.maxTechs) && (
-              <Button variant="outline" className="w-full" onClick={addTech}>
-                <Plus className="mr-2 h-4 w-4" /> Add another technician
-              </Button>
-            )}
-            {billing.extraTechs > 0 && (
-              <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span>Base ({plan.name})</span>
-                  <span>{formatZar(billing.base)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{billing.extraTechs} extra tech(s) × {formatZar(plan.perTechPriceCents)}</span>
-                  <span>{formatZar(billing.extraTechsCost)}</span>
-                </div>
-                <div className="flex justify-between font-bold border-t border-border pt-1">
-                  <span>Monthly total</span>
-                  <span>{formatZar(billing.total)}</span>
-                </div>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("info")}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back
-              </Button>
-              <Button onClick={() => setStep("payment")}>
-                Continue to payment <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Mock Payment */}
+        {/* STEP 3: Mock Payment */}
         {step === "payment" && (
           <div className="max-w-md mx-auto space-y-6">
             <div className="text-center">
@@ -400,17 +301,14 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span>{plan.name} plan (monthly)</span>
-                  <span className="font-medium">{formatZar(billing.base)}</span>
+                  <span className="font-medium">{formatZar(plan.basePriceCents)}</span>
                 </div>
-                {billing.extraTechs > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span>{billing.extraTechs} extra technician(s)</span>
-                    <span className="font-medium">{formatZar(billing.extraTechsCost)}</span>
-                  </div>
-                )}
+                <div className="text-xs text-muted-foreground">
+                  Includes 1 technician. Additional active technicians are billed at {formatZar(plan.perTechPriceCents)}/mo each.
+                </div>
                 <div className="flex justify-between font-bold border-t border-border pt-2">
                   <span>Total per month</span>
-                  <span>{formatZar(billing.total)}</span>
+                  <span>{formatZar(plan.basePriceCents)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -439,14 +337,14 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
               </CardContent>
             </Card>
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("technicians")}>
+              <Button variant="outline" onClick={() => setStep("info")}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
               <Button onClick={handleMockPayment} disabled={loading} size="lg">
                 {loading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                 ) : (
-                  <><Zap className="mr-2 h-4 w-4" /> Pay {formatZar(billing.total)}/mo</>
+                  <><Zap className="mr-2 h-4 w-4" /> Pay {formatZar(plan.basePriceCents)}/mo</>
                 )}
               </Button>
             </div>

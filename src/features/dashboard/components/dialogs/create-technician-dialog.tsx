@@ -4,10 +4,22 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
 import { isTradeId, TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { formatZar, getPlan, type PlanTier } from "@/features/subscription/plans";
+import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,12 +63,19 @@ function generatePassword(length = 14) {
   return out;
 }
 
-export default function CreateTechnicianDialog() {
+type CreateTechnicianDialogProps = {
+  trigger?: React.ReactElement;
+};
+
+export default function CreateTechnicianDialog(props: CreateTechnicianDialogProps = {}) {
   const { actions, data } = useDashboardData();
   const { profile } = useAuth();
   const [open, setOpen] = React.useState(false);
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [accessDetails, setAccessDetails] = React.useState<{ email: string; password: string; loginLink: string } | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [pendingValues, setPendingValues] = React.useState<Values | null>(null);
+  const [creating, setCreating] = React.useState(false);
 
   const lockedTradeId: TradeId | null =
     data.company?.industry && isTradeId(data.company.industry) ? data.company.industry : null;
@@ -82,83 +101,118 @@ export default function CreateTechnicianDialog() {
     form.setValue("trades", [lockedTradeId], { shouldValidate: true });
   }, [form, lockedTradeId, open]);
 
-  const submit = form.handleSubmit(async (values) => {
+  const company = data.company as Tables<"companies"> | null;
+  const subscriptionTier = company?.subscription_tier as PlanTier | undefined;
+  const perTechPriceCents =
+    typeof company?.per_tech_price_cents === "number" && Number.isFinite(company.per_tech_price_cents)
+      ? company.per_tech_price_cents
+      : subscriptionTier === "starter" || subscriptionTier === "pro" || subscriptionTier === "business"
+        ? getPlan(subscriptionTier).perTechPriceCents
+        : 0;
+
+  const includedLimit =
+    typeof company?.included_techs === "number" && Number.isFinite(company.included_techs)
+      ? Math.max(0, Math.floor(company.included_techs))
+      : 1;
+
+  const activeCount = React.useMemo(() => {
+    return (data.technicians ?? []).filter((t) => Boolean(t.active)).length;
+  }, [data.technicians]);
+
+  const doCreate = async (values: Values) => {
     if (!profile?.company_id) {
       toast({ title: "Not ready", description: "No company found on your profile. Please re-login.", variant: "destructive" });
       return;
     }
 
-    // 1) Provision technician login access first so we can store `technicians.user_id` at creation time
-    let provisionedUserId: string | null = null;
-    let provisionedLoginLink: string | null = null;
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke("invite-technician", {
-        body: {
-          companyId: profile.company_id,
-          industry: data.company?.industry,
-          password: values.password,
-          email: values.email,
-          name: values.name,
-          redirectTo: `${getPublicSiteUrl()}/auth/callback?next=/tech`,
-        },
-      });
-      if (fnError) {
-        let details = fnError.message;
-        const ctx: any = (fnError as any).context;
-        const res: Response | undefined = ctx?.response;
-        if (res) {
-          try {
-            const text = await res.text();
-            const parsed = text ? JSON.parse(text) : null;
-            details = parsed?.error ?? text ?? details;
-          } catch {
-            // ignore
+      setCreating(true);
+
+      // 1) Provision technician login access first so we can store `technicians.user_id` at creation time
+      let provisionedUserId: string | null = null;
+      let provisionedLoginLink: string | null = null;
+      try {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("invite-technician", {
+          body: {
+            companyId: profile.company_id,
+            industry: data.company?.industry,
+            password: values.password,
+            email: values.email,
+            name: values.name,
+            redirectTo: `${getPublicSiteUrl()}/auth/callback?next=/tech`,
+          },
+        });
+        if (fnError) {
+          let details = fnError.message;
+          const ctx: any = (fnError as any).context;
+          const res: Response | undefined = ctx?.response;
+          if (res) {
+            try {
+              const text = await res.text();
+              const parsed = text ? JSON.parse(text) : null;
+              details = parsed?.error ?? text ?? details;
+            } catch {
+              // ignore
+            }
+            if (res.status === 404) details = 'Edge function "invite-technician" is not deployed.';
+            if (res.status === 401) details = "Not authorized to create technician access. Please re-login and try again.";
           }
-          if (res.status === 404) details = 'Edge function "invite-technician" is not deployed.';
-          if (res.status === 401) details = "Not authorized to create technician access. Please re-login and try again.";
+          if (details.toLowerCase().includes("supabasekey is required")) {
+            details =
+              "Supabase Edge Function is missing required secrets (usually `SUPABASE_SERVICE_ROLE_KEY`). Set the secret and redeploy the function.";
+          }
+          toast({ title: "Technician access failed", description: details, variant: "destructive" });
+          return;
         }
-        if (details.toLowerCase().includes("supabasekey is required")) {
-          details =
-            "Supabase Edge Function is missing required secrets (usually `SUPABASE_SERVICE_ROLE_KEY`). Set the secret and redeploy the function.";
+
+        provisionedUserId = ((fnData as any)?.userId as string | undefined) ?? null;
+        provisionedLoginLink = ((fnData as any)?.loginLink as string | undefined) ?? null;
+        if (!provisionedUserId) {
+          toast({ title: "Technician access failed", description: "Missing `userId` from edge function response.", variant: "destructive" });
+          return;
         }
-        toast({ title: "Technician access failed", description: details, variant: "destructive" });
+      } catch {
+        toast({ title: "Technician access failed", description: "Could not provision login access.", variant: "destructive" });
         return;
       }
 
-      provisionedUserId = ((fnData as any)?.userId as string | undefined) ?? null;
-      provisionedLoginLink = ((fnData as any)?.loginLink as string | undefined) ?? null;
-      if (!provisionedUserId) {
-        toast({ title: "Technician access failed", description: "Missing `userId` from edge function response.", variant: "destructive" });
-        return;
+      // 2) Create technician record with `user_id` set
+      const tech = await actions.addTechnician({
+        user_id: provisionedUserId,
+        invite_status: "invited",
+        name: values.name,
+        phone: values.phone || null,
+        email: values.email || null,
+        hourly_cost_cents: moneyToCents(values.hourlyCost),
+        hourly_bill_rate_cents: moneyToCents(values.hourlyBillRate),
+        active: values.active,
+        trades: lockedTradeId ? [lockedTradeId] : values.trades,
+      });
+
+      if (!tech) return;
+
+      if (provisionedLoginLink) {
+        setAccessDetails({ email: values.email, password: values.password, loginLink: provisionedLoginLink });
+        setAccessOpen(true);
       }
-    } catch {
-      toast({ title: "Technician access failed", description: "Could not provision login access.", variant: "destructive" });
+      toast({ title: "Technician added", description: "Login access created. Copy the portal link and share it with the technician." });
+
+      setOpen(false);
+      form.reset({ name: "", phone: "", email: "", password: "", hourlyCost: "", hourlyBillRate: "", active: true, trades: [lockedTradeId ?? TRADES[0].id] });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const submit = form.handleSubmit(async (values) => {
+    // Confirm billing impact before any provisioning happens.
+    const wouldBeBillable = Boolean(values.active) && activeCount + 1 > includedLimit;
+    if (wouldBeBillable) {
+      setPendingValues(values);
+      setConfirmOpen(true);
       return;
     }
-
-    // 2) Create technician record with `user_id` set
-    const tech = await actions.addTechnician({
-      user_id: provisionedUserId,
-      invite_status: "invited",
-      name: values.name,
-      phone: values.phone || null,
-      email: values.email || null,
-      hourly_cost_cents: moneyToCents(values.hourlyCost),
-      hourly_bill_rate_cents: moneyToCents(values.hourlyBillRate),
-      active: values.active,
-      trades: lockedTradeId ? [lockedTradeId] : values.trades,
-    });
-
-    if (!tech) return;
-
-    if (provisionedLoginLink) {
-      setAccessDetails({ email: values.email, password: values.password, loginLink: provisionedLoginLink });
-      setAccessOpen(true);
-    }
-    toast({ title: "Technician added", description: "Login access created. Copy the portal link and share it with the technician." });
-
-    setOpen(false);
-    form.reset({ name: "", phone: "", email: "", password: "", hourlyCost: "", hourlyBillRate: "", active: true, trades: [lockedTradeId ?? TRADES[0].id] });
+    await doCreate(values);
   });
 
   const selectedTrades = form.watch("trades");
@@ -167,7 +221,7 @@ export default function CreateTechnicianDialog() {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="sm" data-tour="technicians-add">Add technician</Button>
+          {props.trigger ?? <Button size="sm" data-tour="technicians-add">Add technician</Button>}
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -308,14 +362,55 @@ export default function CreateTechnicianDialog() {
             </div>
 
             <DialogFooter>
-              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting} data-tour="technician-submit">
-                {form.formState.isSubmitting ? "Creating..." : "Create technician access"}
+              <Button
+                type="submit"
+                className="gradient-bg hover:opacity-90 shadow-glow"
+                disabled={form.formState.isSubmitting || creating}
+                data-tour="technician-submit"
+              >
+                {form.formState.isSubmitting || creating ? "Creating..." : "Create technician access"}
               </Button>
             </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(next) => {
+          setConfirmOpen(next);
+          if (!next) setPendingValues(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Additional technician will be billed</AlertDialogTitle>
+            <AlertDialogDescription>
+              This technician will add {formatZar(perTechPriceCents)}/month to your subscription because only {includedLimit} active technician{includedLimit === 1 ? "" : "s"} {includedLimit === 1 ? "is" : "are"} included.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <div>Active technicians now: {activeCount}</div>
+            <div>Active technicians after: {activeCount + 1}</div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={creating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={creating || !pendingValues}
+              onClick={() => {
+                const v = pendingValues;
+                setConfirmOpen(false);
+                setPendingValues(null);
+                if (!v) return;
+                void doCreate(v);
+              }}
+            >
+              {creating ? "Creating..." : "Confirm & create"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={accessOpen} onOpenChange={setAccessOpen}>
         <DialogContent className="max-w-lg">
