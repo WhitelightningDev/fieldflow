@@ -8,6 +8,18 @@ clientsClaim();
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Allow the app to trigger activation of a waiting SW (used by `virtual:pwa-register`).
+// We intentionally do NOT call `self.skipWaiting()` automatically so we can prompt users.
+self.addEventListener("message", (event) => {
+  if (event?.data?.type === "SKIP_WAITING") {
+    try {
+      void self.skipWaiting();
+    } catch {
+      // ignore
+    }
+  }
+});
+
 // SPA navigation fallback, but don't hijack Supabase endpoints.
 const navigationHandler = createHandlerBoundToURL("/index.html");
 registerRoute(
