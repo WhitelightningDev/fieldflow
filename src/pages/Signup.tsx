@@ -21,7 +21,7 @@ export default function Signup() {
               Pick your trade to pre-fill the company signup flow.
             </div>
           </div>
-          <TradeCardsGrid to={(tradeId) => `/company-signup?industry=${tradeId}`} />
+          <TradeCardsGrid to={(tradeId) => `/plan-wizard?industry=${tradeId}`} />
         </div>
       }
     >

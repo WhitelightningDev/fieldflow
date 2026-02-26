@@ -81,7 +81,7 @@ const Header = () => {
                   <Link to="/login">Log in</Link>
                 </Button>
                 <Button asChild size="sm" className="gradient-bg hover:opacity-90 transition-opacity shadow-glow">
-                  <Link to="/company-signup">Start Free Trial</Link>
+                  <Link to="/plan-wizard">Start Free Trial</Link>
                 </Button>
               </>
             )}
@@ -131,7 +131,7 @@ const Header = () => {
                       <Link to="/login" onClick={closeMobileMenu}>Log in</Link>
                     </Button>
                     <Button asChild className="w-full gradient-bg">
-                      <Link to="/company-signup" onClick={closeMobileMenu}>Start Free Trial</Link>
+                      <Link to="/plan-wizard" onClick={closeMobileMenu}>Start Free Trial</Link>
                     </Button>
                   </>
                 )}

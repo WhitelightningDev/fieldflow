@@ -118,7 +118,7 @@ BEGIN
           SET
             subscription_tier = _meta_tier,
             per_tech_price_cents = COALESCE(_per_tech_cents, per_tech_price_cents),
-            included_techs = 1,
+            included_techs = CASE WHEN _meta_tier IN ('pro', 'business') THEN 2 ELSE 1 END,
             subscription_status = CASE WHEN _meta_status IN ('active', 'paid') THEN _meta_status ELSE subscription_status END
           WHERE id = _company_id;
 
@@ -203,7 +203,7 @@ BEGIN
           _team_size,
           CASE WHEN _meta_tier IN ('starter', 'pro', 'business') THEN _meta_tier ELSE 'starter' END,
           _per_tech_cents,
-          1,
+          CASE WHEN _meta_tier IN ('pro', 'business') THEN 2 ELSE 1 END,
           CASE WHEN _meta_status IN ('active', 'paid', 'trialing') THEN _meta_status ELSE 'trialing' END
         )
         RETURNING id INTO _company_id;
@@ -305,7 +305,7 @@ BEGIN
       NULLIF(NEW.raw_user_meta_data->>'team_size', ''),
       CASE WHEN _meta_tier IN ('starter', 'pro', 'business') THEN _meta_tier ELSE 'starter' END,
       _per_tech_cents,
-      1,
+      CASE WHEN _meta_tier IN ('pro', 'business') THEN 2 ELSE 1 END,
       CASE WHEN _meta_status IN ('active', 'paid', 'trialing') THEN _meta_status ELSE 'trialing' END
     )
     RETURNING id INTO _company_id;
@@ -334,4 +334,3 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-

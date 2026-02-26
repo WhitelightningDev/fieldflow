@@ -6,15 +6,23 @@ import { COMPANY_SIGNUP_FEATURES } from "@/features/company-signup/content/featu
 import { TRADES, getTradeById } from "@/features/company-signup/content/trades";
 import { useCompanySignupForm } from "@/features/company-signup/hooks/use-company-signup-form";
 import { useIndustrySearchParam } from "@/features/company-signup/hooks/use-industry-search-param";
+import { type PlanTier } from "@/features/subscription/plans";
 import { CheckCircle2 } from "lucide-react";
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+
+function isPlanTier(v: string | null): v is PlanTier {
+  return v === "starter" || v === "pro" || v === "business";
+}
 
 export default function CompanySignup() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { industry, setIndustry } = useIndustrySearchParam();
+  const planTier = isPlanTier(params.get("plan")) ? (params.get("plan") as PlanTier) : undefined;
   const { form, submit } = useCompanySignupForm({
     defaultIndustry: industry ?? TRADES[0].id,
+    planTier,
     onSuccess: ({ needsEmailConfirm }) => navigate(needsEmailConfirm ? "/login" : "/dashboard"),
   });
 
@@ -47,7 +55,12 @@ export default function CompanySignup() {
             <div className="text-sm font-semibold">Choose your industry</div>
             <TradeCardsGrid
               selected={selected}
-              to={(tradeId) => `/company-signup?industry=${tradeId}`}
+              to={(tradeId) => {
+                const qs = new URLSearchParams();
+                qs.set("industry", tradeId);
+                if (planTier) qs.set("plan", planTier);
+                return `/company-signup?${qs.toString()}`;
+              }}
             />
           </div>
 

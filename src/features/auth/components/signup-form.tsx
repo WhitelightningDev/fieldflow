@@ -133,7 +133,7 @@ export default function SignupForm() {
 
       <div className="text-sm text-muted-foreground">
         Starting FieldFlow for your business?{" "}
-        <Link to="/company-signup" className="text-primary hover:underline">
+        <Link to="/plan-wizard" className="text-primary hover:underline">
           Create a company account
         </Link>
         .

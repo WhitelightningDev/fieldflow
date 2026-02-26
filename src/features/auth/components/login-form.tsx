@@ -187,7 +187,7 @@ export default function LoginForm() {
 
       <div className="text-sm text-muted-foreground">
         New here?{" "}
-        <Link to="/company-signup" className="text-primary hover:underline">
+        <Link to="/plan-wizard" className="text-primary hover:underline">
           Create your company account
         </Link>
         .

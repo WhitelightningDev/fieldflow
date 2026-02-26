@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import CompanySignup from "./pages/CompanySignup";
+import PlanWizard from "./pages/PlanWizard";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import AuthCallback from "./pages/AuthCallback";
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/plan-wizard" element={<PlanWizard />} />
             <Route path="/company-signup" element={<CompanySignup />} />
             <Route path="/subscribe" element={<Subscribe />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

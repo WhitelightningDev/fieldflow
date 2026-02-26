@@ -40,7 +40,7 @@ const HeroSection = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-fade-in-up opacity-0 stagger-3">
               <Button asChild size="lg" className="gradient-bg hover:opacity-90 shadow-glow hover:shadow-lg transition-all">
-                <Link to="/company-signup">
+                <Link to="/plan-wizard">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

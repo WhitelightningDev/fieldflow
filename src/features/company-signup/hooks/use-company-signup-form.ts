@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { TEAM_SIZE_VALUES } from "@/features/company-signup/content/team-sizes";
+import { getPlan, type PlanTier } from "@/features/subscription/plans";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
@@ -23,6 +24,7 @@ export type CompanySignupValues = z.infer<typeof companySignupSchema>;
 
 type UseCompanySignupFormArgs = {
   defaultIndustry?: TradeId;
+  planTier?: PlanTier;
   onSuccess?: (args: { values: CompanySignupValues; needsEmailConfirm: boolean }) => void;
 };
 
@@ -60,6 +62,17 @@ export function useCompanySignupForm(args?: UseCompanySignupFormArgs) {
             company_name: values.companyName,
             industry: values.industry,
             team_size: values.teamSize,
+            ...(args?.planTier
+              ? (() => {
+                  const plan = getPlan(args.planTier);
+                  return {
+                    subscription_tier: args.planTier,
+                    subscription_status: "trialing",
+                    per_tech_price_cents: plan.perTechPriceCents,
+                    included_techs: plan.includedTechs,
+                  };
+                })()
+              : {}),
           },
           emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
         },

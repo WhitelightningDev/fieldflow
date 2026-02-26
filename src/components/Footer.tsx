@@ -10,7 +10,7 @@ const Footer = () => {
   ];
 
   const getStartedLinks = [
-    { label: "Start Free Trial", to: "/company-signup" },
+    { label: "Start Free Trial", to: "/plan-wizard" },
     { label: "Log in", to: "/login" },
     { label: "Contact", to: "/contact" },
   ];

@@ -34,7 +34,7 @@ const CTASection = () => {
               variant="secondary"
               className="bg-background text-foreground hover:bg-background/90 shadow-xl"
             >
-              <Link to="/company-signup">
+              <Link to="/plan-wizard">
                 Start Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
