@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       // "prompt" so the app can show a UI asking the user to reload/close+reopen.
       // This is especially important for installed iOS PWAs where users rarely hard-refresh.
       registerType: "prompt",
@@ -62,24 +65,13 @@ export default defineConfig(({ mode }) => ({
           { src: "/pwa-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
-      workbox: {
-        clientsClaim: true,
-        // Keep the new SW in "waiting" so we can prompt the user before applying the update.
-        skipWaiting: false,
-        cleanupOutdatedCaches: true,
-        navigateFallbackDenylist: [/^\/rest\/v1\//, /^\/auth\/v1\//, /^\/functions\/v1\//],
+      // Keep the new SW in "waiting" so we can prompt the user before applying the update.
+      // (skipWaiting=false is the default, but keep the intent explicit)
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern: ({ request }) => request.destination === "image",
-            handler: "CacheFirst",
-            options: {
-              cacheName: "images",
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-        ],
       },
+      // Helps test Web Push locally on http://localhost:8000
+      devOptions: { enabled: true },
     }),
     mode === "development" && componentTagger(),
   ].filter(Boolean),

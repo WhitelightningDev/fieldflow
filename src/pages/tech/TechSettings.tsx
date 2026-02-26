@@ -11,6 +11,14 @@ import {
   setSystemNotificationsEnabled,
   showSystemNotification,
 } from "@/lib/system-notifications";
+import {
+  disableBackgroundPush,
+  enableBackgroundPush,
+  getBackgroundPushSubscription,
+  isBackgroundPushSupported,
+  sendTestBackgroundPush,
+} from "@/lib/background-push";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { Bell, Navigation } from "lucide-react";
 import * as React from "react";
 
@@ -27,6 +35,8 @@ function describeGeoPermission(p: GeoPermission) {
 }
 
 export default function TechSettings() {
+  const { user } = useAuth();
+
   const [gpsEnabled, setGpsEnabled] = React.useState(() => {
     try {
       return window.localStorage.getItem(GPS_ENABLE_KEY) === "1";
@@ -40,6 +50,10 @@ export default function TechSettings() {
   const [notifPermission, setNotifPermission] = React.useState<NotificationPermission | "unsupported">(() => getSystemNotificationPermission());
   const [notifEnabled, setNotifEnabled] = React.useState(() => (typeof window === "undefined" ? false : getSystemNotificationsEnabled()));
   const [notifRequesting, setNotifRequesting] = React.useState(false);
+
+  const [pushSupported] = React.useState(() => isBackgroundPushSupported());
+  const [pushSubscribed, setPushSubscribed] = React.useState<boolean | null>(null);
+  const [pushBusy, setPushBusy] = React.useState(false);
 
   const hasGeo = React.useMemo(() => typeof window !== "undefined" && "geolocation" in navigator, []);
 
@@ -97,6 +111,25 @@ export default function TechSettings() {
     setNotifEnabled(getSystemNotificationsEnabled());
   }, []);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!pushSupported) {
+      setPushSubscribed(false);
+      return;
+    }
+    void (async () => {
+      try {
+        const sub = await getBackgroundPushSubscription();
+        if (cancelled) return;
+        setPushSubscribed(Boolean(sub));
+      } catch {
+        if (cancelled) return;
+        setPushSubscribed(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [pushSupported]);
+
   const requestGpsPermission = React.useCallback(async () => {
     if (!hasGeo) {
       toast({ title: "GPS not supported", description: "This device/browser doesn't support location sharing.", variant: "destructive" });
@@ -131,6 +164,17 @@ export default function TechSettings() {
         setNotifEnabled(true);
         setSystemNotificationsEnabled(true);
         await showSystemNotification({ title: "FieldFlow notifications enabled", body: "You'll receive job updates here." });
+        if (user?.id) {
+          try {
+            setPushBusy(true);
+            const res = await enableBackgroundPush(user.id);
+            if (res.ok) setPushSubscribed(true);
+          } catch {
+            // ignore
+          } finally {
+            setPushBusy(false);
+          }
+        }
         return true;
       }
       if (p === "denied") explainDeniedNotifications();
@@ -138,7 +182,7 @@ export default function TechSettings() {
     } finally {
       setNotifRequesting(false);
     }
-  }, []);
+  }, [user?.id]);
 
   return (
     <div className="space-y-6">
@@ -209,13 +253,37 @@ export default function TechSettings() {
               <div className="text-xs text-muted-foreground">
                 Permission: {notifPermission === "unsupported" ? "Not supported" : notifPermission}
               </div>
+              <div className="text-xs text-muted-foreground">
+                Background push: {!pushSupported ? "Not supported" : pushSubscribed === null ? "Checking..." : pushSubscribed ? "Enabled" : "Disabled"}
+              </div>
             </div>
             <Switch
               checked={notifEnabled && notifPermission === "granted"}
               disabled={notifPermission !== "granted" || notifRequesting}
-              onCheckedChange={(v) => {
+              onCheckedChange={async (v) => {
                 setNotifEnabled(Boolean(v));
                 setSystemNotificationsEnabled(Boolean(v));
+                if (!user?.id) return;
+                if (!v) {
+                  setPushBusy(true);
+                  try {
+                    await disableBackgroundPush(user.id);
+                    setPushSubscribed(false);
+                  } finally {
+                    setPushBusy(false);
+                  }
+                  return;
+                }
+                if (notifPermission === "granted") {
+                  setPushBusy(true);
+                  try {
+                    const res = await enableBackgroundPush(user.id);
+                    if (res.ok) setPushSubscribed(true);
+                    else toast({ title: "Background push not enabled", description: res.error, variant: "destructive" });
+                  } finally {
+                    setPushBusy(false);
+                  }
+                }
               }}
               aria-label="Enable device notifications"
             />
@@ -232,28 +300,48 @@ export default function TechSettings() {
                 className="h-8"
                 onClick={() => showSystemNotification({ title: "Test notification", body: "If you can read this, alerts are working." })}
               >
-                Test
+                Test (local)
               </Button>
             </div>
           ) : (
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 className="h-8"
                 onClick={() => showSystemNotification({ title: "Test notification", body: "If you can read this, alerts are working." })}
               >
-                Test
+                Test (local)
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8"
+                disabled={!user?.id || !pushSupported || pushBusy || notifPermission !== "granted"}
+                onClick={async () => {
+                  setPushBusy(true);
+                  try {
+                    const res = await sendTestBackgroundPush();
+                    if (!res.ok) {
+                      toast({ title: "Push test failed", description: res.error, variant: "destructive" });
+                      return;
+                    }
+                    toast({ title: "Test push sent", description: "Background the app/device and wait for the notification." });
+                  } finally {
+                    setPushBusy(false);
+                  }
+                }}
+              >
+                Test (push)
               </Button>
             </div>
           )}
 
           <div className="text-xs text-muted-foreground">
-            For best results on iOS, install the app via “Add to Home Screen”. (Background push requires extra setup.)
+            For iOS Safari, background push works only for installed apps (Share → “Add to Home Screen”).
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

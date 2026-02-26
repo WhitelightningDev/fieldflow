@@ -29,6 +29,8 @@ VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_ANON_KEY
 VITE_MAX_SESSION_HOURS=12
 VITE_IDLE_TIMEOUT_MINUTES=120
+# Optional (PWA background push / Web Push):
+# VITE_WEB_PUSH_VAPID_PUBLIC_KEY=YOUR_VAPID_PUBLIC_KEY
 ```
 
 3) Run the app
@@ -67,7 +69,7 @@ If you see `{"code":"NOT_FOUND","message":"Requested function was not found"}` w
 
 ```sh
 supabase login
-supabase link --project-ref cchhfgdowqlspxujfbrb
+supabase link --project-ref YOUR_PROJECT_REF
 
 supabase secrets set OPENAI_API_KEY=...
 # optional:
@@ -80,11 +82,47 @@ supabase functions deploy ai-assistant
 Verify browser CORS preflight (should be 2xx and echo the origin):
 
 ```sh
-curl -i -X OPTIONS 'https://cchhfgdowqlspxujfbrb.supabase.co/functions/v1/ai-assistant' \
+curl -i -X OPTIONS 'https://YOUR_PROJECT.supabase.co/functions/v1/ai-assistant' \
   -H 'Origin: https://fieldflow-billing.vercel.app' \
   -H 'Access-Control-Request-Method: POST' \
   -H 'Access-Control-Request-Headers: authorization, content-type'
 ```
+
+### Background push (Android/iOS PWA Web Push)
+
+FieldFlow supports **background push notifications** for installed PWAs (Android Chrome + iOS Safari “Add to Home Screen”).
+
+1) Generate VAPID keys
+
+```sh
+npx web-push generate-vapid-keys
+```
+
+2) Add the VAPID public key to your web env
+
+- Local: `.env` → `VITE_WEB_PUSH_VAPID_PUBLIC_KEY=...`
+- Production (Vercel): set `VITE_WEB_PUSH_VAPID_PUBLIC_KEY`
+
+3) Set Edge Function secrets
+
+```sh
+supabase secrets set WEB_PUSH_SUBJECT=mailto:you@yourdomain.com
+supabase secrets set WEB_PUSH_VAPID_PUBLIC_KEY=...
+supabase secrets set WEB_PUSH_VAPID_PRIVATE_KEY=...
+```
+
+4) Deploy the test sender function
+
+```sh
+supabase functions deploy push-test
+```
+
+5) Test in the app
+
+- Go to `/tech/settings`
+- Enable “Device notifications”
+- Confirm it shows “Background push: Enabled”
+- Tap “Test (push)”, then background the app/device and wait for the notification
 
 ## Onboarding tutorials (spotlight tour)
 
