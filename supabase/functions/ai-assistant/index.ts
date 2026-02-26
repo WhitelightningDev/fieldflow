@@ -7,10 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
@@ -90,10 +86,11 @@ Deno.serve(async (req) => {
       rawBody = null;
     }
 
+    const mode = (typeof rawBody?.mode === "string" ? rawBody.mode : "chat").trim();
     const message = (typeof rawBody?.message === "string" ? rawBody.message : "").trim();
     const context = (typeof rawBody?.context === "string" ? rawBody.context : "").trim();
 
-    if (!message) {
+    if (mode === "chat" && !message) {
       return jsonResponse({ error: "Missing message" }, 400);
     }
 
@@ -103,13 +100,37 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "AI is not configured (missing LOVABLE_API_KEY)" }, 501);
     }
 
-    const systemPrompt =
-      "You are FieldFlow AI, an assistant inside an admin dashboard for a field-service business. " +
-      "Be concise, practical, and action-oriented. If context is missing, ask one short clarifying question.";
+    let systemPrompt: string;
+    let userContent: string;
 
-    const userContent = context
-      ? `User request:\n${message}\n\nDashboard context (may be partial):\n${context}`
-      : message;
+    if (mode === "insights") {
+      systemPrompt =
+        "You are FieldFlow AI, a proactive business intelligence assistant for field-service companies. " +
+        "Analyze the provided dashboard data and return EXACTLY a JSON array of insight objects. " +
+        "Each object must have: " +
+        '  "type": one of "alert", "suggestion", "warning", "tip" ' +
+        '  "icon": one of "flame", "dollar", "clock", "wrench", "users", "alert-triangle", "trending-up", "package" ' +
+        '  "title": short headline (max 60 chars) ' +
+        '  "body": actionable 1-2 sentence explanation ' +
+        '  "severity": one of "critical", "warning", "info" ' +
+        "Rules: " +
+        "- Look for: overdue/unpaid invoices, technicians with high callback rates, unassigned jobs, " +
+        "  customers without recent jobs (upsell opportunities), low stock items, scheduling gaps, " +
+        "  revenue trends, sites without recent visits, techs with no jobs today. " +
+        "- Return 3-6 insights, most critical first. " +
+        "- If data is too sparse, give helpful tips for getting started. " +
+        "- Return ONLY the JSON array, no markdown, no explanation.";
+
+      userContent = `Analyze this dashboard data and provide proactive insights:\n${context}`;
+    } else {
+      systemPrompt =
+        "You are FieldFlow AI, an assistant inside an admin dashboard for a field-service business. " +
+        "Be concise, practical, and action-oriented. If context is missing, ask one short clarifying question.";
+
+      userContent = context
+        ? `User request:\n${message}\n\nDashboard context (may be partial):\n${context}`
+        : message;
+    }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -143,6 +164,22 @@ Deno.serve(async (req) => {
 
     if (!text.trim()) {
       return jsonResponse({ error: "AI returned no text output." }, 502);
+    }
+
+    if (mode === "insights") {
+      // Try to parse as JSON array
+      try {
+        // Strip markdown code fences if present
+        let cleaned = text.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+        }
+        const insights = JSON.parse(cleaned);
+        return jsonResponse({ insights }, 200);
+      } catch {
+        // Return raw text as fallback
+        return jsonResponse({ text: text.trim() }, 200);
+      }
     }
 
     return jsonResponse({ text: text.trim() }, 200);

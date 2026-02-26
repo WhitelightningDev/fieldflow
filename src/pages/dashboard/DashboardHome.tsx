@@ -13,6 +13,7 @@ import {
   SectionHeader,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
+import { AiInsightsCard } from "@/features/dashboard/components/overview/ai-insights-card";
 import { formatZarFromCents } from "@/lib/money";
 import {
   AlertTriangle,
@@ -50,6 +51,9 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
   return (
     <div className="space-y-6">
       <PageHeader title="Owner Dashboard" subtitle={`${data.company?.name} — Overview`} />
+
+      {/* AI Insights - Business plan only */}
+      <AiInsightsCard data={data} />
 
       {/* ACT TODAY */}
       <div>
@@ -189,18 +193,32 @@ export default function DashboardHome() {
 
   const props = { data, allJobs };
 
-  switch (data.company.industry) {
-    case "plumbing":
-      return <PlumbingDashboard {...props} />;
-    case "electrical-contracting":
-      return <ElectricalDashboard {...props} />;
-    case "mobile-mechanics":
-      return <MobileMechanicsDashboard {...props} />;
-    case "refrigeration":
-      return <RefrigerationDashboard {...props} />;
-    case "appliance-repair":
-      return <ApplianceRepairDashboard {...props} />;
-    default:
-      return <GenericDashboard {...props} />;
+  const tradeDashboard = (() => {
+    switch (data.company.industry) {
+      case "plumbing":
+        return <PlumbingDashboard {...props} />;
+      case "electrical-contracting":
+        return <ElectricalDashboard {...props} />;
+      case "mobile-mechanics":
+        return <MobileMechanicsDashboard {...props} />;
+      case "refrigeration":
+        return <RefrigerationDashboard {...props} />;
+      case "appliance-repair":
+        return <ApplianceRepairDashboard {...props} />;
+      default:
+        return <GenericDashboard {...props} />;
+    }
+  })();
+
+  // For trade dashboards (non-generic), inject AI insights at the top
+  if (data.company.industry !== undefined && data.company.industry !== "general") {
+    return (
+      <div className="space-y-6">
+        <AiInsightsCard data={data} />
+        {tradeDashboard}
+      </div>
+    );
   }
+
+  return tradeDashboard;
 }
