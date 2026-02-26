@@ -61,10 +61,9 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
             subscription_status: "active",
             subscription_tier: tier,
             per_tech_price_cents: plan.perTechPriceCents,
-            included_techs: 1,
+            included_techs: plan.includedTechs,
           } as any)
           .eq("id", companyId);
-
         if (subErr) {
           toastError("Could not activate subscription", subErr.message);
           return;
@@ -92,7 +91,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
             subscription_tier: tier,
             subscription_status: "active",
             per_tech_price_cents: plan.perTechPriceCents,
-            included_techs: 1,
+            included_techs: plan.includedTechs,
           },
           emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
         },
@@ -185,7 +184,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
             subscription_status: "active",
             subscription_tier: tier,
             per_tech_price_cents: plan.perTechPriceCents,
-            included_techs: 1,
+            included_techs: plan.includedTechs,
           } as any)
           .eq("id", companyId);
         if (subErr) {
@@ -371,7 +370,7 @@ export default function PackageSignupFlow({ initialTier }: { initialTier?: PlanT
                   <span className="font-medium">{formatZar(plan.basePriceCents)}</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Includes 1 technician. Additional active technicians are billed at {formatZar(plan.perTechPriceCents)}/mo each.
+                  Includes {plan.includedTechs} technician{plan.includedTechs > 1 ? "s" : ""}. Additional active technicians are billed at {formatZar(plan.perTechPriceCents)}/mo each.
                 </div>
                 <div className="flex justify-between font-bold border-t border-border pt-2">
                   <span>Total per month</span>
