@@ -33,6 +33,7 @@ export const PLANS: PlanDefinition[] = [
     perTechPriceCents: 14900,
     includedTechs: 1,
     maxTechs: 5,
+    // Starter: 1 tech included in base price
     features: ["job_cards", "scheduling", "basic_inventory", "mobile_app"],
     featureLabels: [
       "1 technician included",
@@ -47,7 +48,7 @@ export const PLANS: PlanDefinition[] = [
     name: "Pro",
     basePriceCents: 99900,
     perTechPriceCents: 12900,
-    includedTechs: 1,
+    includedTechs: 2,
     maxTechs: 25,
     features: [
       "job_cards",
@@ -59,7 +60,7 @@ export const PLANS: PlanDefinition[] = [
       "priority_support",
     ],
     featureLabels: [
-      "1 technician included",
+      "2 technicians included",
       "All Starter features",
       "Invoicing & payments",
       "Customer portal",
@@ -72,7 +73,7 @@ export const PLANS: PlanDefinition[] = [
     name: "Business",
     basePriceCents: 199900,
     perTechPriceCents: 9900,
-    includedTechs: 1,
+    includedTechs: 2,
     maxTechs: null,
     features: [
       "job_cards",
@@ -88,7 +89,7 @@ export const PLANS: PlanDefinition[] = [
       "dedicated_support",
     ],
     featureLabels: [
-      "1 technician included",
+      "2 technicians included",
       "All Pro features",
       "AI job summaries",
       "Accounting integrations",

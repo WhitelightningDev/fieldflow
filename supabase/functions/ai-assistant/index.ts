@@ -1,141 +1,38 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function unwrapPayload(raw: unknown): Record<string, unknown> {
-  if (!isRecord(raw)) return {};
-  const body = raw["body"];
-  if (isRecord(body)) return body;
-  const data = raw["data"];
-  if (isRecord(data)) return data;
-  return raw;
-}
-
-function getOptionalString(obj: Record<string, unknown>, key: string) {
-  const v = obj[key];
-  return typeof v === "string" ? v : null;
-}
-
-function joinUrl(base: string, path: string) {
-  const b = base.replace(/\/+$/, "");
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${b}${p}`;
-}
-
-function readErrorMessage(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
-  const err = payload["error"];
-  if (typeof err === "string") return err;
-  if (isRecord(err) && typeof err["message"] === "string") return String(err["message"]);
-  return null;
-}
-
-function extractOutputText(payload: unknown): string {
-  if (!isRecord(payload)) return "";
-
-  const direct = payload["output_text"];
-  if (typeof direct === "string" && direct.trim()) return direct;
-
-  const output = payload["output"];
-  if (!Array.isArray(output)) return "";
-
-  const parts: string[] = [];
-  for (const item of output) {
-    if (!isRecord(item)) continue;
-    if (item["type"] !== "message") continue;
-    const content = item["content"];
-    if (!Array.isArray(content)) continue;
-    for (const c of content) {
-      if (!isRecord(c)) continue;
-      if (c["type"] === "output_text" && typeof c["text"] === "string") {
-        parts.push(String(c["text"]));
-      }
-    }
-  }
-  return parts.join("\n").trim();
-}
-
-const ALLOWED_ORIGINS = new Set([
-  "https://fieldflow-billing.vercel.app",
-  "http://localhost:8000",
-  "http://127.0.0.1:8000",
-  "http://[::1]:8000",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-]);
-
-const CORS_ALLOW_HEADERS = [
-  "authorization",
-  "x-client-info",
-  "apikey",
-  "content-type",
-  "x-supabase-client-platform",
-  "x-supabase-client-platform-version",
-  "x-supabase-client-runtime",
-  "x-supabase-client-runtime-version",
-].join(", ");
-
-function corsForRequest(req: Request): { allowed: boolean; headers: Record<string, string> } {
-  const origin = req.headers.get("Origin");
-  const hasOrigin = typeof origin === "string" && origin.length > 0;
-
-  if (hasOrigin && !ALLOWED_ORIGINS.has(origin)) {
-    return { allowed: false, headers: { Vary: "Origin" } };
-  }
-
-  const allowOrigin = hasOrigin ? origin : "*";
-  return {
-    allowed: true,
-    headers: {
-      Vary: "Origin",
-      "Access-Control-Allow-Origin": allowOrigin,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
-    },
-  };
-}
-
-function jsonResponse(body: unknown, init: { status: number; headers: Record<string, string> }) {
+function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
-    status: init.status,
-    headers: { ...init.headers, "Content-Type": "application/json" },
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req) => {
-  const cors = corsForRequest(req);
-  if (!cors.allowed) {
-    if (req.method === "OPTIONS") return new Response(null, { status: 403, headers: cors.headers });
-    return jsonResponse({ error: "Origin not allowed" }, { status: 403, headers: cors.headers });
-  }
-
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors.headers });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return jsonResponse({ error: "Missing auth header" }, { status: 401, headers: cors.headers });
+      return jsonResponse({ error: "Missing auth header" }, 401);
     }
-
-    const token = authHeader.replace(/^Bearer\s+/i, "");
 
     const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
     const anonKey = (Deno.env.get("SUPABASE_ANON_KEY") ?? "").trim();
     if (!supabaseUrl || !anonKey) {
-      const missing: string[] = [];
-      if (!supabaseUrl) missing.push("SUPABASE_URL");
-      if (!anonKey) missing.push("SUPABASE_ANON_KEY");
-      return jsonResponse(
-        {
-          error: `Missing Supabase function env vars: ${missing.join(", ")}`,
-          hint: "Set via `supabase secrets set`, then redeploy the function.",
-        },
-        { status: 500, headers: cors.headers },
-      );
+      return jsonResponse({ error: "Missing Supabase env vars" }, 500);
     }
 
     const callerClient = createClient(supabaseUrl, anonKey, {
@@ -143,55 +40,49 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    const token = authHeader.replace(/^Bearer\s+/i, "");
     const { data: { user }, error: userError } = await callerClient.auth.getUser(token);
     if (userError || !user) {
-      return jsonResponse({ error: "Unauthorized" }, { status: 401, headers: cors.headers });
+      return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    // Enforce plan tier (Business only) and allowed roles (owner/admin/office_staff).
-    const { data: profile, error: profileErr } = await callerClient
+    // Check profile → company
+    const { data: profile } = await callerClient
       .from("profiles")
       .select("company_id")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (profileErr) {
-      return jsonResponse({ error: profileErr.message ?? "Failed to load profile" }, { status: 500, headers: cors.headers });
-    }
-    const companyId = (profile as any)?.company_id as string | null | undefined;
+    const companyId = (profile as any)?.company_id as string | null;
     if (!companyId) {
-      return jsonResponse({ error: "No company linked to this account" }, { status: 403, headers: cors.headers });
+      return jsonResponse({ error: "No company linked to this account" }, 403);
     }
 
-    const { data: company, error: companyErr } = await callerClient
+    // Check Business plan
+    const { data: company } = await callerClient
       .from("companies")
       .select("subscription_tier")
       .eq("id", companyId)
       .maybeSingle();
-    if (companyErr) {
-      return jsonResponse({ error: companyErr.message ?? "Failed to load company" }, { status: 500, headers: cors.headers });
-    }
     const tier = String((company as any)?.subscription_tier ?? "starter").toLowerCase();
     if (tier !== "business") {
-      return jsonResponse({ error: "Business plan required for AI Assistant" }, { status: 403, headers: cors.headers });
+      return jsonResponse({ error: "Business plan required for AI Assistant" }, 403);
     }
 
-    const { data: roleRows, error: rolesErr } = await callerClient
+    // Check allowed roles
+    const { data: roleRows } = await callerClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id);
-    if (rolesErr) {
-      return jsonResponse({ error: rolesErr.message ?? "Failed to load roles" }, { status: 500, headers: cors.headers });
-    }
     const allowedRoles = new Set(["owner", "admin", "office_staff"]);
-    const canUseAi = (Array.isArray(roleRows) ? roleRows : []).some((row) => {
-      if (!isRecord(row)) return false;
-      return allowedRoles.has(String(row["role"] ?? ""));
-    });
-    if (!canUseAi) {
-      return jsonResponse({ error: "Insufficient permissions for AI Assistant" }, { status: 403, headers: cors.headers });
+    const canUse = (Array.isArray(roleRows) ? roleRows : []).some((row: any) =>
+      allowedRoles.has(String(row?.role ?? ""))
+    );
+    if (!canUse) {
+      return jsonResponse({ error: "Insufficient permissions for AI Assistant" }, 403);
     }
 
-    let rawBody: unknown = null;
+    // Parse body
+    let rawBody: any = null;
     try {
       const text = await req.text();
       rawBody = text ? JSON.parse(text) : null;
@@ -199,63 +90,65 @@ Deno.serve(async (req) => {
       rawBody = null;
     }
 
-    const body = unwrapPayload(rawBody);
-    const message = (getOptionalString(body, "message") ?? "").trim();
-    const context = (getOptionalString(body, "context") ?? "").trim();
+    const message = (typeof rawBody?.message === "string" ? rawBody.message : "").trim();
+    const context = (typeof rawBody?.context === "string" ? rawBody.context : "").trim();
 
     if (!message) {
-      return jsonResponse({ error: "Missing message" }, { status: 400, headers: cors.headers });
+      return jsonResponse({ error: "Missing message" }, 400);
     }
 
-    const openaiKey = (Deno.env.get("OPENAI_API_KEY") ?? "").trim();
-    if (!openaiKey) {
-      return jsonResponse(
-        {
-          error: "AI is not configured yet.",
-          hint: "Set OPENAI_API_KEY (and optionally OPENAI_MODEL) via `supabase secrets set`, then redeploy this function.",
-        },
-        { status: 501, headers: cors.headers },
-      );
+    // Use Lovable AI Gateway
+    const LOVABLE_API_KEY = (Deno.env.get("LOVABLE_API_KEY") ?? "").trim();
+    if (!LOVABLE_API_KEY) {
+      return jsonResponse({ error: "AI is not configured (missing LOVABLE_API_KEY)" }, 501);
     }
 
-    const openaiBaseUrl = (Deno.env.get("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").trim();
-    const openaiModel = (Deno.env.get("OPENAI_MODEL") ?? "gpt-4o-mini").trim();
-
-    const instructions =
+    const systemPrompt =
       "You are FieldFlow AI, an assistant inside an admin dashboard for a field-service business. " +
       "Be concise, practical, and action-oriented. If context is missing, ask one short clarifying question.";
 
-    const input = context
+    const userContent = context
       ? `User request:\n${message}\n\nDashboard context (may be partial):\n${context}`
       : message;
 
-    const res = await fetch(joinUrl(openaiBaseUrl, "/responses"), {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${openaiKey}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: openaiModel,
-        instructions,
-        input,
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
       }),
     });
 
-    const payload: unknown = await res.json().catch(() => null);
-    if (!res.ok) {
-      const msg = readErrorMessage(payload) ?? res.statusText ?? "OpenAI request failed";
-      return jsonResponse({ error: msg }, { status: 502, headers: cors.headers });
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return jsonResponse({ error: "Rate limit exceeded, please try again later." }, 429);
+      }
+      if (aiResponse.status === 402) {
+        return jsonResponse({ error: "AI credits depleted. Please add credits to continue." }, 402);
+      }
+      const errText = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, errText);
+      return jsonResponse({ error: "AI gateway error" }, 502);
     }
 
-    const text = extractOutputText(payload);
-    if (!text) {
-      return jsonResponse({ error: "AI returned no text output." }, { status: 502, headers: cors.headers });
+    const aiData: any = await aiResponse.json();
+    const text = aiData?.choices?.[0]?.message?.content ?? "";
+
+    if (!text.trim()) {
+      return jsonResponse({ error: "AI returned no text output." }, 502);
     }
 
-    return jsonResponse({ text }, { status: 200, headers: cors.headers });
+    return jsonResponse({ text: text.trim() }, 200);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return jsonResponse({ error: msg }, { status: 500, headers: cors.headers });
+    console.error("ai-assistant error:", msg);
+    return jsonResponse({ error: msg }, 500);
   }
 });
