@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "@/components/ui/use-toast";
 import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/content/trades";
 import CreateJobCardDialog from "@/features/dashboard/components/dialogs/create-job-card-dialog";
+import SchedulingBoard from "@/features/dashboard/components/dispatch/scheduling-board";
+import DispatchRouteMap from "@/features/dashboard/components/dispatch/dispatch-route-map";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
@@ -36,7 +39,7 @@ export default function Jobs() {
   const defaultTradeId = trade === "all" ? TRADES[0].id : trade;
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<JobCardStatus | "all">("all");
-  const [view, setView] = React.useState<"list" | "by-site">("list");
+  const [view, setView] = React.useState<"list" | "by-site" | "schedule" | "map">("list");
 
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
   const inventoryById = React.useMemo(() => new Map(data.inventoryItems.map((i) => [i.id, i])), [data.inventoryItems]);
@@ -201,13 +204,15 @@ export default function Jobs() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={view} onValueChange={(v) => setView(v as any)}>
+             <Select value={view} onValueChange={(v) => setView(v as any)}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="list">All jobs</SelectItem>
                 <SelectItem value="by-site">Jobs by site</SelectItem>
+                <SelectItem value="schedule">Dispatch board</SelectItem>
+                <SelectItem value="map">Route map</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -218,7 +223,30 @@ export default function Jobs() {
         </CardContent>
       </Card>
 
-      {filteredJobs.length === 0 ? (
+      {view === "schedule" ? (
+        <SchedulingBoard
+          jobs={selectors.jobCards}
+          technicians={data.technicians}
+          customersById={selectors.customersById}
+          sitesById={selectors.sitesById}
+          onReschedule={async (jobId, scheduledAt, technicianId) => {
+            const patch: any = { scheduled_at: scheduledAt };
+            if (technicianId !== undefined) patch.technician_id = technicianId;
+            const result = await actions.updateJobCard(jobId, patch);
+            if (result) {
+              toast({ title: "Job rescheduled" });
+            }
+          }}
+        />
+      ) : view === "map" ? (
+        <DispatchRouteMap
+          jobs={selectors.jobCards}
+          technicians={data.technicians}
+          techLocations={data.technicianLocations}
+          sitesById={selectors.sitesById}
+          customersById={selectors.customersById}
+        />
+      ) : filteredJobs.length === 0 ? (
         <div className="rounded-xl border bg-card/70 backdrop-blur-sm py-10 text-center text-muted-foreground">
           No job cards match your filters.
         </div>
