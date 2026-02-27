@@ -59,7 +59,7 @@ function toRow(subscription: PushSubscription) {
 
 export async function getBackgroundPushSubscription() {
   if (!isBackgroundPushSupported()) return null;
-  const reg = await ensureServiceWorkerRegistration();
+  const reg = await ensureServiceWorkerRegistration() as any;
   if (!reg?.pushManager) return null;
   return await reg.pushManager.getSubscription();
 }
@@ -72,7 +72,7 @@ export async function enableBackgroundPush(userId: string) {
     return { ok: false as const, error: "Missing VAPID public key (VITE_WEB_PUSH_VAPID_PUBLIC_KEY)." };
   }
 
-  const reg = await ensureServiceWorkerRegistration();
+  const reg = await ensureServiceWorkerRegistration() as any;
   if (!reg?.pushManager) {
     return { ok: false as const, error: "Service worker is not available." };
   }

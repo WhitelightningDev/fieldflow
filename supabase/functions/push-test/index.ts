@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
-import webpush from "https://code4fukui.github.io/web-push/src/index.js";
+import webpush from "npm:web-push@3.6.7";
 
 const ALLOWED_ORIGINS = new Set([
   "https://fieldflow-billing.vercel.app",
