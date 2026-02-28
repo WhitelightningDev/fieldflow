@@ -91,20 +91,22 @@ export default function ApplianceRepairDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Appliance Repair Dashboard"
-        subtitle={`${data.company?.name} — Warranty, parts, and first-visit performance`}
-        actions={(
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard/repair-history">Repair history</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard/warranty-tracker">Warranty tracker</Link>
-            </Button>
-          </>
-        )}
-      />
+      <div data-tour="overview-header">
+        <PageHeader
+          title="Appliance Repair Dashboard"
+          subtitle={`${data.company?.name} — Warranty, parts, and first-visit performance`}
+          actions={(
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/dashboard/repair-history">Repair history</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/dashboard/warranty-tracker">Warranty tracker</Link>
+              </Button>
+            </>
+          )}
+        />
+      </div>
 
       {/* WARRANTY & PARTS */}
       <div>

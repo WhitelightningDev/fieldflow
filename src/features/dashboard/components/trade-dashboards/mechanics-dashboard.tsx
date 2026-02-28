@@ -74,7 +74,9 @@ export default function MobileMechanicsDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mobile Mechanics Dashboard" subtitle={`${data.company?.name} — Roadside, diagnostics, and fleet performance`} />
+      <div data-tour="overview-header">
+        <PageHeader title="Mobile Mechanics Dashboard" subtitle={`${data.company?.name} — Roadside, diagnostics, and fleet performance`} />
+      </div>
 
       {/* ROADSIDE & DISPATCH */}
       <div>

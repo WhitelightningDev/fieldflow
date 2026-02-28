@@ -87,7 +87,7 @@ export default function Customers() {
                 onDeleted={() => setSelectedIds(new Set())}
               />
             ) : null}
-            <CreateCustomerDialog />
+            <CreateCustomerDialog onboardingDialogKey="create-customer" />
           </>
         }
       />

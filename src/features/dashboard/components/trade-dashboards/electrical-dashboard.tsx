@@ -81,7 +81,9 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Electrical Dashboard" subtitle={`${data.company?.name} — Compliance, solar, and job performance`} />
+      <div data-tour="overview-header">
+        <PageHeader title="Electrical Dashboard" subtitle={`${data.company?.name} — Compliance, solar, and job performance`} />
+      </div>
 
       {/* COMPLIANCE & INSPECTIONS */}
       <div>

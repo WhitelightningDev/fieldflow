@@ -10,6 +10,7 @@ export const createSiteTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="sites-add"]',
     placement: "bottom",
     route: "/dashboard/sites",
+    dialog: { key: "create-site", state: "closed" },
   },
   {
     id: "name",
@@ -19,6 +20,7 @@ export const createSiteTutorialSteps: TutorialStep[] = [
     placement: "right",
     route: "/dashboard/sites",
     autoClickSelector: '[data-tour="sites-add"]',
+    dialog: { key: "create-site", state: "open" },
   },
   {
     id: "customer",
@@ -27,6 +29,7 @@ export const createSiteTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="site-customer"]',
     placement: "right",
     route: "/dashboard/sites",
+    dialog: { key: "create-site", state: "open" },
   },
   {
     id: "save",
@@ -35,5 +38,6 @@ export const createSiteTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="site-submit"]',
     placement: "top",
     route: "/dashboard/sites",
+    dialog: { key: "create-site", state: "open" },
   },
 ];

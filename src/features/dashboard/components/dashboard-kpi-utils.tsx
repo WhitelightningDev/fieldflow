@@ -123,7 +123,7 @@ export function KpiCard({
         ? "text-amber-600"
         : "";
   return (
-    <Card className="bg-card/70 backdrop-blur-sm">
+    <Card className="bg-card/70 backdrop-blur-sm" data-tour="kpi-card">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Icon className="h-3.5 w-3.5" /> {label}

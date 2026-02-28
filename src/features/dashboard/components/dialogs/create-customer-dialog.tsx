@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { subscribeOnboardingDialog, type OnboardingDialogKey } from "@/features/onboarding/ui-events";
 
 const schema = z.object({
   name: z.string().min(2, "Customer name is required"),
@@ -26,9 +27,17 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export default function CreateCustomerDialog() {
+export default function CreateCustomerDialog({ onboardingDialogKey }: { onboardingDialogKey?: OnboardingDialogKey }) {
   const { actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!onboardingDialogKey) return;
+    return subscribeOnboardingDialog((detail) => {
+      if (detail.key !== onboardingDialogKey) return;
+      setOpen(detail.open);
+    });
+  }, [onboardingDialogKey]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),

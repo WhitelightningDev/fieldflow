@@ -10,6 +10,7 @@ export const createCustomerTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="customers-add"]',
     placement: "bottom",
     route: "/dashboard/customers",
+    dialog: { key: "create-customer", state: "closed" },
   },
   {
     id: "name",
@@ -19,6 +20,7 @@ export const createCustomerTutorialSteps: TutorialStep[] = [
     placement: "right",
     route: "/dashboard/customers",
     autoClickSelector: '[data-tour="customers-add"]',
+    dialog: { key: "create-customer", state: "open" },
   },
   {
     id: "billing",
@@ -27,6 +29,7 @@ export const createCustomerTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="customer-billing-email"]',
     placement: "right",
     route: "/dashboard/customers",
+    dialog: { key: "create-customer", state: "open" },
   },
   {
     id: "save",
@@ -35,5 +38,6 @@ export const createCustomerTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="customer-submit"]',
     placement: "top",
     route: "/dashboard/customers",
+    dialog: { key: "create-customer", state: "open" },
   },
 ];

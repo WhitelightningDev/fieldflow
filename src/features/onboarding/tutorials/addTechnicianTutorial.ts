@@ -10,6 +10,7 @@ export const addTechnicianTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="technicians-add"]',
     placement: "bottom",
     route: "/dashboard/technicians",
+    dialog: { key: "create-technician-primary", state: "closed" },
   },
   {
     id: "identity",
@@ -19,6 +20,7 @@ export const addTechnicianTutorialSteps: TutorialStep[] = [
     placement: "right",
     route: "/dashboard/technicians",
     autoClickSelector: '[data-tour="technicians-add"]',
+    dialog: { key: "create-technician-primary", state: "open" },
   },
   {
     id: "password",
@@ -27,6 +29,7 @@ export const addTechnicianTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="technician-password"]',
     placement: "right",
     route: "/dashboard/technicians",
+    dialog: { key: "create-technician-primary", state: "open" },
   },
   {
     id: "save",
@@ -35,5 +38,6 @@ export const addTechnicianTutorialSteps: TutorialStep[] = [
     targetSelector: '[data-tour="technician-submit"]',
     placement: "top",
     route: "/dashboard/technicians",
+    dialog: { key: "create-technician-primary", state: "open" },
   },
 ];

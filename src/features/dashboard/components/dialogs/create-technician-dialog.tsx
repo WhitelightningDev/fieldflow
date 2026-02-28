@@ -26,6 +26,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { subscribeOnboardingDialog, type OnboardingDialogKey } from "@/features/onboarding/ui-events";
 
 const tradeIds = TRADES.map((t) => t.id) as [TradeId, ...TradeId[]];
 
@@ -65,6 +66,8 @@ function generatePassword(length = 14) {
 
 type CreateTechnicianDialogProps = {
   trigger?: React.ReactElement;
+  onboardingDialogKey?: OnboardingDialogKey;
+  enableTourTags?: boolean;
 };
 
 export default function CreateTechnicianDialog(props: CreateTechnicianDialogProps = {}) {
@@ -76,6 +79,16 @@ export default function CreateTechnicianDialog(props: CreateTechnicianDialogProp
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pendingValues, setPendingValues] = React.useState<Values | null>(null);
   const [creating, setCreating] = React.useState(false);
+
+  const enableTourTags = props.enableTourTags ?? false;
+
+  React.useEffect(() => {
+    if (!props.onboardingDialogKey) return;
+    return subscribeOnboardingDialog((detail) => {
+      if (detail.key !== props.onboardingDialogKey) return;
+      setOpen(detail.open);
+    });
+  }, [props.onboardingDialogKey]);
 
   const lockedTradeId: TradeId | null =
     data.company?.industry && isTradeId(data.company.industry) ? data.company.industry : null;
@@ -240,7 +253,12 @@ export default function CreateTechnicianDialog(props: CreateTechnicianDialogProp
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Jordan" autoComplete="name" data-tour="technician-name" {...field} />
+                    <Input
+                      placeholder="e.g. Jordan"
+                      autoComplete="name"
+                      data-tour={enableTourTags ? "technician-name" : undefined}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -293,7 +311,13 @@ export default function CreateTechnicianDialog(props: CreateTechnicianDialogProp
                     </Button>
                   </div>
                   <FormControl>
-                    <Input type="text" placeholder="Set a password (min 8 chars)" autoComplete="new-password" data-tour="technician-password" {...field} />
+                    <Input
+                      type="text"
+                      placeholder="Set a password (min 8 chars)"
+                      autoComplete="new-password"
+                      data-tour={enableTourTags ? "technician-password" : undefined}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -366,7 +390,7 @@ export default function CreateTechnicianDialog(props: CreateTechnicianDialogProp
                 type="submit"
                 className="gradient-bg hover:opacity-90 shadow-glow"
                 disabled={form.formState.isSubmitting || creating}
-                data-tour="technician-submit"
+                data-tour={enableTourTags ? "technician-submit" : undefined}
               >
                 {form.formState.isSubmitting || creating ? "Creating..." : "Create technician access"}
               </Button>

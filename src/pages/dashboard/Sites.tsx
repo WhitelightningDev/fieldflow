@@ -116,7 +116,7 @@ export default function Sites() {
       <PageHeader
         title="Sites"
         subtitle="Site-level control: team assignments, time tracking, photos, materials, and COC documentation."
-        actions={<CreateSiteDialog />}
+        actions={<CreateSiteDialog onboardingDialogKey="create-site" />}
       />
 
       <div className="rounded-xl border bg-card/70 backdrop-blur-sm">

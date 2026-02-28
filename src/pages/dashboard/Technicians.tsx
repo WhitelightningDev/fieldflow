@@ -165,7 +165,7 @@ export default function Technicians() {
         actions={
           <>
             <ImportTechniciansCsvDialog />
-            <CreateTechnicianDialog />
+            <CreateTechnicianDialog onboardingDialogKey="create-technician-primary" enableTourTags />
           </>
         }
       />

@@ -60,6 +60,7 @@ async function ensureRow(args: { userId: string; companyId: string; tutorialKey:
 export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): OnboardingController {
   const queryClient = useQueryClient();
   const errorShownRef = React.useRef<string | null>(null);
+  const [locallyDismissed, setLocallyDismissed] = React.useState(false);
 
   const enabled = Boolean(userId && companyId && tutorialKey && steps.length > 0);
   const queryKey = React.useMemo(() => ["user_onboarding", userId, companyId, tutorialKey], [userId, companyId, tutorialKey]);
@@ -116,6 +117,11 @@ export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): 
   const row = (rowQuery.data ?? null) as UserOnboardingRow | null;
   const isCompleted = Boolean(row?.is_completed);
 
+  React.useEffect(() => {
+    // Reset optimistic dismissal whenever the tutorial identity changes or is disabled.
+    setLocallyDismissed(false);
+  }, [enabled, userId, companyId, tutorialKey]);
+
   const currentStepIndex = React.useMemo(() => {
     const raw = row?.current_step ?? 0;
     const n = Number(raw);
@@ -125,7 +131,7 @@ export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): 
   }, [row?.current_step, steps.length]);
 
   const isLoading = rowQuery.isLoading || updateMutation.isPending;
-  const isOpen = enabled && !isLoading && Boolean(row) && !isCompleted;
+  const isOpen = enabled && !isLoading && Boolean(row) && !isCompleted && !locallyDismissed;
 
   const activeStep = isOpen ? (steps[currentStepIndex] ?? null) : null;
 
@@ -134,6 +140,7 @@ export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): 
     if (steps.length === 0) return;
     const nextIndex = currentStepIndex + 1;
     if (nextIndex >= steps.length) {
+      setLocallyDismissed(true);
       updateMutation.mutate({ is_completed: true, completed_at: new Date().toISOString() });
       return;
     }
@@ -148,16 +155,19 @@ export function useOnboarding({ userId, companyId, tutorialKey, steps }: Args): 
 
   const skip = React.useCallback(() => {
     if (!row || isLoading) return;
+    setLocallyDismissed(true);
     updateMutation.mutate({ is_completed: true, completed_at: new Date().toISOString() });
   }, [row, isLoading, updateMutation]);
 
   const finish = React.useCallback(() => {
     if (!row || isLoading) return;
+    setLocallyDismissed(true);
     updateMutation.mutate({ is_completed: true, completed_at: new Date().toISOString() });
   }, [row, isLoading, updateMutation]);
 
   const replay = React.useCallback(() => {
     if (!row || isLoading) return;
+    setLocallyDismissed(false);
     updateMutation.mutate({ current_step: 0, is_completed: false, completed_at: null });
   }, [row, isLoading, updateMutation]);
 

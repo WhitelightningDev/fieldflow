@@ -50,7 +50,9 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Owner Dashboard" subtitle={`${data.company?.name} — Overview`} />
+      <div data-tour="overview-header">
+        <PageHeader title="Owner Dashboard" subtitle={`${data.company?.name} — Overview`} />
+      </div>
 
       {/* AI Insights - Business plan only */}
       <AiInsightsCard data={data} />

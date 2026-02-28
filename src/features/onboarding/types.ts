@@ -1,3 +1,5 @@
+import type { OnboardingDialogKey } from "@/features/onboarding/ui-events";
+
 export type TutorialPlacement = "top" | "bottom" | "left" | "right";
 
 export type TutorialStep = {
@@ -7,6 +9,7 @@ export type TutorialStep = {
   targetSelector: string;
   placement: TutorialPlacement;
   route?: string;
+  dialog?: { key: OnboardingDialogKey; state: "open" | "closed" };
   /**
    * Optional helper for multi-step flows that require opening UI (e.g. a modal).
    * If the step's target isn't found, the overlay will attempt to click this selector once.

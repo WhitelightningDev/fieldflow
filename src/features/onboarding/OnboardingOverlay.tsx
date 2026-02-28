@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Spotlight } from "@/features/onboarding/Spotlight";
 import { TutorialCard } from "@/features/onboarding/TutorialCard";
 import { useOnboardingController } from "@/features/onboarding/OnboardingProvider";
+import { emitOnboardingDialog } from "@/features/onboarding/ui-events";
 
 function findTarget(selector: string) {
   try {
@@ -68,6 +69,12 @@ export function OnboardingOverlay() {
 
     const tick = () => {
       if (cancelled) return;
+
+      // If this step requires a dialog open/closed, enforce it deterministically.
+      if (step.dialog?.key) {
+        emitOnboardingDialog({ key: step.dialog.key, open: step.dialog.state === "open" });
+      }
+
       const el = findTarget(step.targetSelector);
       if (el) {
         // Best-effort scroll so the element is visible (only once per step).
@@ -132,6 +139,10 @@ export function OnboardingOverlay() {
 
   if (!controller || !isOpen || !step) return null;
 
+  const closeStepDialog = () => {
+    if (step.dialog?.key) emitOnboardingDialog({ key: step.dialog.key, open: false });
+  };
+
   return (
     <div className="fixed inset-0 z-[9998] pointer-events-none">
       <Spotlight rect={targetRect} mode="outline" />
@@ -144,8 +155,14 @@ export function OnboardingOverlay() {
         isBusy={controller.isLoading}
         onBack={controller.actions.back}
         onNext={controller.actions.next}
-        onSkip={controller.actions.skip}
-        onFinish={controller.actions.finish}
+        onSkip={() => {
+          closeStepDialog();
+          controller.actions.skip();
+        }}
+        onFinish={() => {
+          closeStepDialog();
+          controller.actions.finish();
+        }}
       />
     </div>
   );

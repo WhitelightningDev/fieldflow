@@ -185,7 +185,7 @@ export function AiInsightsCard({ data }: { data: DashboardData }) {
   };
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm border-primary/20">
+    <Card className="bg-card/70 backdrop-blur-sm border-primary/20" data-tour="overview-ai-insights">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">

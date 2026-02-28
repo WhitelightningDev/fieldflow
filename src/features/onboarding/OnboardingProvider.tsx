@@ -7,6 +7,7 @@ import { PLUMBER_DASHBOARD_TUTORIAL_KEY, plumberDashboardTutorialSteps } from "@
 import { CREATE_CUSTOMER_TUTORIAL_KEY, createCustomerTutorialSteps } from "@/features/onboarding/tutorials/createCustomerTutorial";
 import { CREATE_SITE_TUTORIAL_KEY, createSiteTutorialSteps } from "@/features/onboarding/tutorials/createSiteTutorial";
 import { ADD_TECHNICIAN_TUTORIAL_KEY, addTechnicianTutorialSteps } from "@/features/onboarding/tutorials/addTechnicianTutorial";
+import { OVERVIEW_DASHBOARD_TUTORIAL_KEY, overviewDashboardTutorialSteps } from "@/features/onboarding/tutorials/overviewDashboardTutorial";
 import { useLocation } from "react-router-dom";
 
 const OnboardingContext = React.createContext<OnboardingManager | null>(null);
@@ -29,10 +30,18 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   const canRun = companyState.kind === "ok" && Boolean(companyId) && Boolean(user?.id);
 
-  const sidebarTourEnabled = canRun && industry === "plumbing" && location.pathname.startsWith("/dashboard");
-  const createCustomerEnabled = canRun && location.pathname.startsWith("/dashboard/customers");
-  const createSiteEnabled = canRun && location.pathname.startsWith("/dashboard/sites");
-  const addTechnicianEnabled = canRun && location.pathname.startsWith("/dashboard/technicians");
+  const overviewEnabled = canRun && location.pathname === "/dashboard";
+  const sidebarTourEnabled = canRun && industry === "plumbing" && location.pathname === "/dashboard";
+  const createCustomerEnabled = canRun && location.pathname.startsWith("/dashboard/customers") && (data.customers?.length ?? 0) === 0;
+  const createSiteEnabled = canRun && location.pathname.startsWith("/dashboard/sites") && (data.sites?.length ?? 0) === 0;
+  const addTechnicianEnabled = canRun && location.pathname.startsWith("/dashboard/technicians") && (data.technicians?.length ?? 0) === 0;
+
+  const overviewController = useOnboarding({
+    userId: user?.id,
+    companyId,
+    tutorialKey: overviewEnabled ? OVERVIEW_DASHBOARD_TUTORIAL_KEY : null,
+    steps: overviewEnabled ? overviewDashboardTutorialSteps : [],
+  });
 
   const sidebarController = useOnboarding({
     userId: user?.id,
@@ -64,16 +73,18 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   const controllers = React.useMemo<Record<string, OnboardingController>>(
     () => ({
+      [OVERVIEW_DASHBOARD_TUTORIAL_KEY]: overviewController,
       [PLUMBER_DASHBOARD_TUTORIAL_KEY]: sidebarController,
       [CREATE_CUSTOMER_TUTORIAL_KEY]: createCustomerController,
       [CREATE_SITE_TUTORIAL_KEY]: createSiteController,
       [ADD_TECHNICIAN_TUTORIAL_KEY]: addTechnicianController,
     }),
-    [sidebarController, createCustomerController, createSiteController, addTechnicianController],
+    [overviewController, sidebarController, createCustomerController, createSiteController, addTechnicianController],
   );
 
   const priority = React.useMemo(
     () => [
+      OVERVIEW_DASHBOARD_TUTORIAL_KEY,
       PLUMBER_DASHBOARD_TUTORIAL_KEY,
       CREATE_CUSTOMER_TUTORIAL_KEY,
       CREATE_SITE_TUTORIAL_KEY,

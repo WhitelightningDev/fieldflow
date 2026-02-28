@@ -13,6 +13,7 @@ import { MapPin } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { subscribeOnboardingDialog, type OnboardingDialogKey } from "@/features/onboarding/ui-events";
 
 const schema = z.object({
   name: z.string().min(2, "Site name is required"),
@@ -54,10 +55,18 @@ type Values = z.infer<typeof schema>;
 
 const NONE = "__none__";
 
-export default function CreateSiteDialog() {
+export default function CreateSiteDialog({ onboardingDialogKey }: { onboardingDialogKey?: OnboardingDialogKey }) {
   const { data, actions } = useDashboardData();
   const [open, setOpen] = React.useState(false);
   const [scopeTemplate, setScopeTemplate] = React.useState<ScopeTemplateV1 | null>(null);
+
+  React.useEffect(() => {
+    if (!onboardingDialogKey) return;
+    return subscribeOnboardingDialog((detail) => {
+      if (detail.key !== onboardingDialogKey) return;
+      setOpen(detail.open);
+    });
+  }, [onboardingDialogKey]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),

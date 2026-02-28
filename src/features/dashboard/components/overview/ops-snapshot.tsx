@@ -47,7 +47,7 @@ export function OpsSnapshot({
   title?: string;
 }) {
   return (
-    <div>
+    <div data-tour="ops-snapshot">
       <SectionHeader title={title} question="What needs attention right now?" />
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7 space-y-4">
@@ -93,7 +93,7 @@ function LowStockOverviewCard({ items }: { items: InventoryItem[] }) {
   }, [lowStock]);
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm">
+    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-low-stock">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -220,7 +220,7 @@ function TechnicianStatusOverviewCard({
   }, [rows]);
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm">
+    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-tech-status">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -437,7 +437,7 @@ function DispatchBoardCard({
   };
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm">
+    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-dispatch-board">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -544,7 +544,7 @@ function TechnicianLiveLocationsOverviewCard({
   const liveCount = rows.filter((r) => r.isLive).length;
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm">
+    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-tech-locations">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -776,7 +776,7 @@ function FinancialTrendsCard({
   }, [series]);
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm">
+    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-financial-trends">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">

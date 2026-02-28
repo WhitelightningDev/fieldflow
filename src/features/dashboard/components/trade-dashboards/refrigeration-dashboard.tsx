@@ -86,7 +86,9 @@ export default function RefrigerationDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Refrigeration Dashboard" subtitle={`${data.company?.name} — Cold chain, compliance, and service contracts`} />
+      <div data-tour="overview-header">
+        <PageHeader title="Refrigeration Dashboard" subtitle={`${data.company?.name} — Cold chain, compliance, and service contracts`} />
+      </div>
 
       {/* COLD CHAIN & COMPLIANCE */}
       <div>

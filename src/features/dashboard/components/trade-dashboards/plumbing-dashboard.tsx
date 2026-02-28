@@ -356,39 +356,41 @@ export default function PlumbingDashboard({ data, allJobs }: Props) {
 
   return (
     <div className="space-y-6">
-      <div data-tour="plumber-header">
-        <PageHeader
-          title="Plumbing Overview"
-          subtitle={`${data.company?.name} — Scheduling, cashflow, compliance, and performance`}
-          actions={(
-            <>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => onboarding?.replay(PLUMBER_DASHBOARD_TUTORIAL_KEY)}
-              >
-                <RefreshCcw className="h-4 w-4" /> Replay tutorial
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/service-calls">Service calls</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/jobs">Job cards</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/technicians">Technicians</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/inventory">Inventory</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/customers">Customers</Link>
-              </Button>
-            </>
-          )}
-        />
+      <div data-tour="overview-header">
+        <div data-tour="plumber-header">
+          <PageHeader
+            title="Plumbing Overview"
+            subtitle={`${data.company?.name} — Scheduling, cashflow, compliance, and performance`}
+            actions={(
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => onboarding?.replay(PLUMBER_DASHBOARD_TUTORIAL_KEY)}
+                >
+                  <RefreshCcw className="h-4 w-4" /> Replay tutorial
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/dashboard/service-calls">Service calls</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/dashboard/jobs">Job cards</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/dashboard/technicians">Technicians</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/dashboard/inventory">Inventory</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/dashboard/customers">Customers</Link>
+                </Button>
+              </>
+            )}
+          />
+        </div>
       </div>
 
       {/* ─── BUSINESS HEALTH KPIS ─── */}
