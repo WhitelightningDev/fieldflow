@@ -413,7 +413,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .select()
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
-      setData((prev) => ({ ...prev, customers: [row, ...prev.customers] }));
+      setData((prev) => {
+        if (prev.customers.some((x) => x.id === row.id)) return prev;
+        return { ...prev, customers: [row, ...prev.customers] };
+      });
       return row;
     },
     addCustomersBulk: async (customers) => {
@@ -648,7 +651,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return row;
     },
     adjustInventory: async (itemId, delta) => {
-      const item = data.inventoryItems.find((i) => i.id === itemId);
+      let item: InventoryItem | undefined;
+      setData((prev) => {
+        item = prev.inventoryItems.find((i) => i.id === itemId);
+        return prev;
+      });
       if (!item) return;
       const newQty = Math.max(0, item.quantity_on_hand + delta);
       const { error } = await supabase
@@ -723,7 +730,10 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .select()
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
-      setData((prev) => ({ ...prev, teams: [row, ...prev.teams] }));
+      setData((prev) => {
+        if (prev.teams.some((x) => x.id === row.id)) return prev;
+        return { ...prev, teams: [row, ...prev.teams] };
+      });
       return row;
     },
     setTechnicianRates: async (technicianId, { hourlyCostCents, hourlyBillRateCents }) => {
@@ -740,16 +750,25 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       }));
     },
     addTeamMember: async (teamId, technicianId) => {
-      const tech = data.technicians.find((t) => t.id === technicianId);
+      // Read latest state to avoid stale closure
+      let tech: Technician | undefined;
+      let currentCompanyId: string | undefined;
+      setData((prev) => {
+        tech = prev.technicians.find((t) => t.id === technicianId);
+        currentCompanyId = prev.company?.id ?? undefined;
+        return prev; // no mutation
+      });
       if (!tech) { toast({ title: "Error", description: "Technician not found", variant: "destructive" }); return null; }
-      const companyId = data.company?.id;
       const { data: row, error } = await supabase
         .from("team_members")
-        .insert({ team_id: teamId, full_name: tech.name, email: tech.email, phone: tech.phone, company_id: companyId })
+        .insert({ team_id: teamId, full_name: tech.name, email: tech.email, phone: tech.phone, company_id: currentCompanyId })
         .select()
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
-      setData((prev) => ({ ...prev, teamMembers: [row, ...prev.teamMembers] }));
+      setData((prev) => {
+        if (prev.teamMembers.some((x) => x.id === row.id)) return prev;
+        return { ...prev, teamMembers: [row, ...prev.teamMembers] };
+      });
       return row;
     },
     removeTeamMember: async (teamMemberId) => {
@@ -791,7 +810,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       }));
     },
     refreshData: fetchAll,
-  }), [companyId, data.inventoryItems, fetchAll]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [companyId, fetchAll]);
 
   const value = React.useMemo<DashboardStore>(() => ({ data, actions, loading, companyState }), [data, actions, loading, companyState]);
 
