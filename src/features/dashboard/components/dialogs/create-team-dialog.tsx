@@ -63,7 +63,7 @@ export default function CreateTeamDialog() {
             />
 
             <DialogFooter>
-              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow">
+              <Button type="submit" className="gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
                 Create team
               </Button>
             </DialogFooter>

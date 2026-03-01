@@ -69,6 +69,7 @@ export default defineConfig(({ mode }) => ({
       // (skipWaiting=false is the default, but keep the intent explicit)
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
       },
       // Helps test Web Push locally on http://localhost:8000
       devOptions: { enabled: true },
