@@ -7,10 +7,17 @@ import { useInventoryAlerts } from "@/features/dashboard/hooks/use-inventory-ale
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import {
+  CHART_COLORS,
   computeBaseMetrics,
+  DashboardEmptyState,
+  DensityProvider,
+  DensityToggle,
+  isLast7Days,
   isToday,
   KpiCard,
+  KpiCardSkeleton,
   SectionHeader,
+  useDensity,
 } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { OpsSnapshot } from "@/features/dashboard/components/overview/ops-snapshot";
 import { AiInsightsCard } from "@/features/dashboard/components/overview/ai-insights-card";
@@ -26,6 +33,7 @@ import {
   Percent,
   RefreshCcw,
   TrendingUp,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -39,33 +47,103 @@ import ElectricalDashboard from "@/features/dashboard/components/trade-dashboard
 import MobileMechanicsDashboard from "@/features/dashboard/components/trade-dashboards/mechanics-dashboard";
 import RefrigerationDashboard from "@/features/dashboard/components/trade-dashboards/refrigeration-dashboard";
 import ApplianceRepairDashboard from "@/features/dashboard/components/trade-dashboards/appliance-dashboard";
+import * as React from "react";
+
+/* ─── Build 7-day sparkline from jobs ─── */
+function useSparkline(allJobs: any[], field: "scheduled_at" | "updated_at", filter?: (j: any) => boolean) {
+  return React.useMemo(() => {
+    const days = Array(7).fill(0);
+    const now = Date.now();
+    for (const j of allJobs) {
+      if (filter && !filter(j)) continue;
+      const d = j[field];
+      if (!d) continue;
+      const age = now - new Date(d).getTime();
+      const idx = 6 - Math.floor(age / 86_400_000);
+      if (idx >= 0 && idx < 7) days[idx]++;
+    }
+    return days;
+  }, [allJobs, field, filter]);
+}
 
 /* ─── Fallback generic dashboard ─── */
 function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
   const base = computeBaseMetrics(allJobs, data.technicians);
   const { lowStock, expiringSoon } = useInventoryAlerts(data.inventoryItems);
+  const { density } = useDensity();
 
   const jobsToday = allJobs.filter((j) => j.scheduled_at && isToday(j.scheduled_at));
   const emergencyToday = jobsToday.filter((j) => j.priority === "urgent" || j.priority === "emergency");
 
+  const jobsSpark = useSparkline(allJobs, "scheduled_at");
+  const emergSpark = useSparkline(allJobs, "scheduled_at", (j) => j.priority === "urgent" || j.priority === "emergency");
+  const revenueSpark = useSparkline(allJobs, "updated_at", (j) => j.status === "invoiced" || j.status === "completed");
+
+  const activeTechs = data.technicians.filter((t: any) => t.active).length;
+
   return (
     <div className="space-y-6">
-      <div data-tour="overview-header">
+      <div className="flex items-center justify-between gap-4" data-tour="overview-header">
         <PageHeader title="Owner Dashboard" subtitle={`${data.company?.name} — Overview`} />
+        <DensityToggle />
       </div>
 
       {/* AI Insights - Business plan only */}
       <AiInsightsCard data={data} />
 
-      {/* ACT TODAY */}
+      {/* AT-A-GLANCE STRIP */}
       <div>
-        <SectionHeader title="Act Today" question="Where do I need to act today?" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={Flame} label="Emergency Today" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} />
-          <KpiCard icon={Briefcase} label="Jobs Today" value={jobsToday.length} />
-          <KpiCard icon={FileWarning} label="Unbilled Jobs" value={base.unbilledJobs.length} accent={base.unbilledJobs.length > 0 ? "destructive" : undefined} sub={formatZarFromCents(base.unbilledRevenue) + " at risk"} />
-          <KpiCard icon={PackageSearch} label="Low Stock Items" value={lowStock.length} accent={lowStock.length > 0 ? "warning" : undefined} />
-          <KpiCard icon={Users} label="Active Techs" value={data.technicians.filter((t: any) => t.active).length} sub={`${data.technicians.length} total`} />
+        <SectionHeader title="At a Glance" question="Where do I need to act today?" />
+        <div className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`}>
+          <KpiCard
+            icon={Flame}
+            label="Emergency"
+            value={emergencyToday.length}
+            accent={emergencyToday.length > 0 ? "destructive" : undefined}
+            sparkData={emergSpark}
+            sparkColor={CHART_COLORS.loss}
+            href="/dashboard/jobs"
+          />
+          <KpiCard
+            icon={Briefcase}
+            label="Jobs Today"
+            value={jobsToday.length}
+            sparkData={jobsSpark}
+            sparkColor={CHART_COLORS.neutral}
+            href="/dashboard/jobs"
+          />
+          <KpiCard
+            icon={FileWarning}
+            label="Unbilled"
+            value={base.unbilledJobs.length}
+            accent={base.unbilledJobs.length > 0 ? "destructive" : undefined}
+            sub={formatZarFromCents(base.unbilledRevenue) + " at risk"}
+            href="/dashboard/invoices"
+          />
+          <KpiCard
+            icon={PackageSearch}
+            label="Low Stock"
+            value={lowStock.length}
+            accent={lowStock.length > 0 ? "warning" : undefined}
+            href="/dashboard/inventory"
+          />
+          {activeTechs > 0 ? (
+            <KpiCard
+              icon={Users}
+              label="Active Techs"
+              value={activeTechs}
+              sub={`${data.technicians.length} total`}
+              href="/dashboard/technicians"
+            />
+          ) : (
+            <DashboardEmptyState
+              icon={UserPlus}
+              title="No technicians"
+              description="Add your first technician to start dispatching jobs."
+              actionLabel="Add technician"
+              actionHref="/dashboard/technicians"
+            />
+          )}
         </div>
       </div>
 
@@ -81,17 +159,24 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
         siteMaterialUsage={data.siteMaterialUsage}
       />
 
-      {/* LOSING MONEY */}
+      {/* FINANCIAL */}
       <div>
         <SectionHeader title="Financial" question="Where am I losing money?" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <KpiCard icon={DollarSign} label="Avg Revenue / Job" value={formatZarFromCents(base.avgRevenuePerJob)} />
-          <KpiCard icon={TrendingUp} label="Revenue (Month)" value={formatZarFromCents(base.revenueThisMonth)} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <KpiCard icon={DollarSign} label="Avg / Job" value={formatZarFromCents(base.avgRevenuePerJob)} href="/dashboard/invoices" />
+          <KpiCard
+            icon={TrendingUp}
+            label="Revenue (Month)"
+            value={formatZarFromCents(base.revenueThisMonth)}
+            sparkData={revenueSpark}
+            sparkColor={CHART_COLORS.profit}
+            href="/dashboard/invoices"
+          />
           <KpiCard icon={Percent} label="Gross Margin" value={`${base.grossMargin}%`} accent={base.grossMargin < 30 ? "destructive" : undefined}>
             <Progress value={Math.max(0, base.grossMargin)} className="mt-2 h-1.5" />
           </KpiCard>
-          <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="rework erodes profit" />
-          <KpiCard icon={FileWarning} label="Unbilled Revenue" value={formatZarFromCents(base.unbilledRevenue)} accent={base.unbilledRevenue > 0 ? "warning" : undefined} />
+          <KpiCard icon={RefreshCcw} label="Callbacks (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} sub="rework erodes profit" href="/dashboard/jobs" />
+          <KpiCard icon={FileWarning} label="Unbilled Rev." value={formatZarFromCents(base.unbilledRevenue)} accent={base.unbilledRevenue > 0 ? "warning" : undefined} href="/dashboard/invoices" />
         </div>
         {base.callbackJobs.length > 0 && (
           <Alert variant="destructive" className="mt-4">
@@ -107,11 +192,28 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
       {/* RISK */}
       <div>
         <SectionHeader title="Risk" question="Where is risk building?" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard icon={RefreshCcw} label="Return Visits (30d)" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} />
-          <KpiCard icon={CalendarClock} label="Expiring Stock" value={expiringSoon.length} accent={expiringSoon.length > 0 ? "warning" : undefined} />
-          <KpiCard icon={PackageSearch} label="Below Reorder" value={lowStock.length} accent={lowStock.length > 0 ? "warning" : undefined} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <KpiCard icon={RefreshCcw} label="Return Visits" value={base.callbackJobs.length} accent={base.callbackJobs.length > 0 ? "destructive" : undefined} href="/dashboard/jobs" />
+          <KpiCard icon={CalendarClock} label="Expiring Stock" value={expiringSoon.length} accent={expiringSoon.length > 0 ? "warning" : undefined} href="/dashboard/inventory" />
+          <KpiCard icon={PackageSearch} label="Below Reorder" value={lowStock.length} accent={lowStock.length > 0 ? "warning" : undefined} href="/dashboard/inventory" />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Loading skeleton ─── */
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-6 w-48 rounded bg-muted animate-pulse" />
+          <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => <KpiCardSkeleton key={i} />)}
       </div>
     </div>
   );
@@ -135,9 +237,9 @@ export default function DashboardHome() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner />
-      </div>
+      <DensityProvider>
+        <DashboardSkeleton />
+      </DensityProvider>
     );
   }
 
@@ -148,7 +250,7 @@ export default function DashboardHome() {
         <PageHeader title="Overview" subtitle="We couldn't load your workspace." />
         <NoCompanyStateCard
           title="Workspace unavailable"
-          description={`${companyState.message}${status}. Try again. If this keeps happening, it’s usually a Supabase policy/migration issue rather than your password.`}
+          description={`${companyState.message}${status}. Try again. If this keeps happening, it's usually a Supabase policy/migration issue rather than your password.`}
           canCreateCompany={false}
           onRetryLink={() => void retryLink()}
         />
@@ -184,7 +286,7 @@ export default function DashboardHome() {
           description={
             canCreateCompany
               ? "Create your company to unlock job cards, inventory, teams, and sites."
-              : "This account has a dashboard role but isn’t linked to a company. Ask an admin/owner to link you, then retry."
+              : "This account has a dashboard role but isn't linked to a company. Ask an admin/owner to link you, then retry."
           }
           canCreateCompany={canCreateCompany}
           onRetryLink={() => void retryLink()}
@@ -215,12 +317,14 @@ export default function DashboardHome() {
   // For trade dashboards (non-generic), inject AI insights at the top
   if (data.company.industry !== undefined && data.company.industry !== "general") {
     return (
-      <div className="space-y-6">
-        <AiInsightsCard data={data} />
-        {tradeDashboard}
-      </div>
+      <DensityProvider>
+        <div className="space-y-6">
+          <AiInsightsCard data={data} />
+          {tradeDashboard}
+        </div>
+      </DensityProvider>
     );
   }
 
-  return tradeDashboard;
+  return <DensityProvider>{tradeDashboard}</DensityProvider>;
 }

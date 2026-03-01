@@ -20,9 +20,7 @@ describe("onboarding ui-events", () => {
     const handler = vi.fn();
     const unsubscribe = subscribeOnboardingDialog(handler);
 
-    // @ts-expect-error - invalid detail (runtime guard should ignore)
     window.dispatchEvent(new CustomEvent("fieldflow:onboarding:dialog", { detail: { key: "nope", open: true } }));
-    // @ts-expect-error - invalid detail (runtime guard should ignore)
     window.dispatchEvent(new CustomEvent("fieldflow:onboarding:dialog", { detail: { key: "create-site", open: "yes" } }));
 
     expect(handler).toHaveBeenCalledTimes(0);
