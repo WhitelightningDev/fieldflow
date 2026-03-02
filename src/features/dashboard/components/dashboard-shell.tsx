@@ -3,7 +3,6 @@ import DashboardSidebar from "@/features/dashboard/components/dashboard-sidebar"
 import DashboardTopbar from "@/features/dashboard/components/dashboard-topbar";
 import CompleteProfileDialog from "@/features/dashboard/components/complete-profile-dialog";
 import ProfileCompletionBanner from "@/features/dashboard/components/profile-completion-banner";
-import CompanyComplianceBanner from "@/features/dashboard/components/company-compliance-banner";
 import CompanyComplianceWizardDialog from "@/features/dashboard/components/company-compliance-wizard-dialog";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import * as React from "react";
@@ -53,7 +52,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, [company?.id, company?.profile_complete]);
 
   const showProfileBanner = Boolean(company?.id && !company.profile_complete);
-  const showComplianceBanner = Boolean(company?.id && company.profile_complete && canCreateCompany);
   const trialDismissal = useTrialBannerDismissal({
     companyId: company?.id ?? null,
     endsAt: trialStatus.state === "trialing" ? trialStatus.endsAt : null,
@@ -65,28 +63,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <DashboardSidebar />
       <SidebarRail />
       <SidebarInset>
-        <DashboardTopbar />
+        <DashboardTopbar onOpenCompliance={() => setComplianceOpen(true)} />
         {showProfileBanner ? <ProfileCompletionBanner onOpen={() => setDialogOpen(true)} /> : null}
-
-        {showComplianceBanner && showTrialBanner ? (
-          <div className="px-4 pt-2">
-            <div className="grid gap-2 lg:grid-cols-2">
-              <CompanyComplianceBanner
-                company={company}
-                onOpen={() => setComplianceOpen(true)}
-                variant="card"
-              />
-              <TrialBanner status={trialStatus} variant="card" dismissible onDismiss={trialDismissal.dismiss} />
-            </div>
-          </div>
-        ) : (
-          <>
-            {showComplianceBanner ? (
-              <CompanyComplianceBanner company={company} onOpen={() => setComplianceOpen(true)} />
-            ) : null}
-            {showTrialBanner ? <TrialBanner status={trialStatus} dismissible onDismiss={trialDismissal.dismiss} /> : null}
-          </>
-        )}
+        {showTrialBanner ? <TrialBanner status={trialStatus} dismissible onDismiss={trialDismissal.dismiss} /> : null}
         <div className="container mx-auto px-4 py-6">
           {trialStatus.state === "expired" ? (
             <TrialPaywall />

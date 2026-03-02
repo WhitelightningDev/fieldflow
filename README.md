@@ -2,6 +2,31 @@
 
 FieldFlow Billing is a Vite + React + Supabase field-service dashboard for trade businesses, with a strong focus on plumbing, electrical, applicance repair and Refrigeration operations (dispatch, service calls, compliance, inventory usage, and billing visibility).
 
+## Why this exists
+
+Running a trade business often means juggling dispatch, on-site work evidence, compliance paperwork, parts usage, and “what can we invoice right now?” across multiple tools (or WhatsApp + spreadsheets). FieldFlow Billing exists to make that workflow visible, searchable, and team-friendly from the office to the field.
+
+## What problem it solves
+
+- **Operational visibility**: a shared source of truth for job cards, schedules, technician status, time logs, photos, and notes.
+- **Compliance workflow**: lightweight tagging (`#gas-coc`, `#pressure-test`, etc.) to surface compliance risks in day-to-day dispatching.
+- **Billing readiness**: track what happened on a job (time + parts + evidence) so office staff can invoice without chasing technicians.
+- **Field usability**: a technician-first flow (`/tech`) that works on mobile while keeping the owner/dispatcher view (`/dashboard`) comprehensive.
+
+## Tradeoffs made
+
+- **Supabase as the backend**: ships fast (Auth/Postgres/Storage/Functions), but comes with platform coupling and a heavier emphasis on correct RLS policies/migrations.
+- **Mostly client-rendered app**: simple static hosting and fast iteration, but less suited to content/SEO use cases and requires disciplined session/state handling.
+- **Flexible “tags in notes” for some KPIs**: quick to adopt and easy to search, but less structured than dedicated normalized tables (and needs parsing conventions).
+- **Route-specific feature sets**: keeps the technician UI focused, but increases the need for consistent permissioning and shared domain models.
+
+## How it scales
+
+- **Frontend**: static assets can be CDN-cached (Vercel/Netlify/etc.), so traffic spikes are typically not a bottleneck.
+- **Database**: Postgres scales through good indexing, query discipline, and (when needed) views/materialized views for dashboard aggregates; multi-tenant separation typically lives in the schema via workspace/company IDs + RLS.
+- **Workloads**: long-running or privileged tasks move into Supabase Edge Functions; file-heavy usage (photos) goes to Supabase Storage.
+- **Growth levers**: archiving old job cards, partitioning high-volume tables (time entries/messages), and introducing caching for read-heavy KPIs as data volume increases.
+
 ## What you get
 
 - **Owner/office dashboard** (`/dashboard`): overview KPIs, dispatch timeline, live technician status (GPS), job cards, customers, sites, inventory, teams, messages.

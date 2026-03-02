@@ -24,7 +24,6 @@ import { LogOut, Building2, ChevronDown, Folder, Sparkles, MessageSquare, Settin
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { BrandIcon, BrandWordmark } from "@/components/brand/brand-mark";
-import ComplianceStatusIcon from "@/features/compliance/components/compliance-status-icon";
 import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
 import { Badge } from "@/components/ui/badge";
 
@@ -147,7 +146,6 @@ export default function DashboardSidebar() {
           <span className="text-sm font-semibold leading-tight truncate min-w-0">
             {company.name}
           </span>
-          {company?.id ? <ComplianceStatusIcon company={company} className="ml-auto shrink-0" /> : null}
         </Link>
       ) : (
         <Link to="/" className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-sidebar-accent overflow-hidden">
@@ -160,7 +158,6 @@ export default function DashboardSidebar() {
               </span>
             )}
           </span>
-          {company?.id ? <ComplianceStatusIcon company={company} className="ml-auto shrink-0" /> : null}
         </Link>
       )}
       {company?.subscription_tier && (
@@ -225,7 +222,6 @@ export default function DashboardSidebar() {
           <div className="px-3 py-2 flex items-center gap-2 text-xs text-sidebar-foreground/60 border-t border-sidebar-border overflow-hidden">
             <Building2 className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate min-w-0">{company.name}</span>
-            {company?.id ? <ComplianceStatusIcon company={company} className="ml-auto shrink-0" /> : null}
           </div>
         )}
         <Button

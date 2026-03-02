@@ -395,8 +395,11 @@ export default function TechJobDetail() {
     ? job.checklist.map((c: any) => (typeof c === "string" ? c : c.label ?? ""))
     : [];
 
+  const stepMeta = JOB_FLOW_STEPS.find((s) => s.id === currentStep) ?? null;
+  const stepPos = Math.max(0, JOB_FLOW_STEPS.findIndex((s) => s.id === currentStep));
+
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
+    <div className="space-y-4 max-w-3xl mx-auto pb-20 sm:pb-0">
       {/* Header */}
       <div>
         <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-3 mb-1">
@@ -438,12 +441,26 @@ export default function TechJobDetail() {
         customerAddress={customer?.address}
       />
 
-      {/* Step Navigator */}
-      <JobFlowSteps
-        currentStep={currentStep}
-        completedSteps={completedSteps}
-        onStepClick={(step) => setStep(step)}
-      />
+      {/* Step Navigator (sticky on mobile) */}
+      <div className="sticky top-0 z-20 -mx-3 px-3 pt-2 pb-2 bg-background/95 backdrop-blur-xl border-b border-border/60 sm:static sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 sm:bg-transparent sm:backdrop-blur-none sm:border-b-0">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="text-xs text-muted-foreground">
+            Step <span className="tabular-nums">{stepPos + 1}</span> of{" "}
+            <span className="tabular-nums">{JOB_FLOW_STEPS.length}</span>
+          </div>
+          <div className="text-xs font-medium truncate">
+            {stepMeta?.label ?? ""}
+          </div>
+        </div>
+        <JobFlowSteps
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          onStepClick={(step) => setStep(step)}
+        />
+        <div className="text-[11px] text-muted-foreground">
+          {stepMeta?.description ?? ""}
+        </div>
+      </div>
 
       {/* Contextual Prompts */}
       <JobFlowPrompts step={currentStep} />
@@ -726,31 +743,44 @@ export default function TechJobDetail() {
       )}
 
       {/* Step navigation */}
-      <Card className="bg-card/70 backdrop-blur-sm">
-        <CardContent className="py-3 flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goPrev}
-            disabled={prevStep(currentStep) === null}
-          >
-            Back
-          </Button>
-          <div className="flex-1 text-center text-xs text-muted-foreground">
-            {JOB_FLOW_STEPS.find((s) => s.id === currentStep)?.description ?? ""}
-          </div>
-          <Button
-            type="button"
-            className="gradient-bg hover:opacity-90 shadow-glow"
-            onClick={() => void goNext()}
-            disabled={!canGoNext}
-          >
-            {nextStep(currentStep)
-              ? `Next: ${JOB_FLOW_STEPS.find((s) => s.id === nextStep(currentStep))?.label ?? "Next"}`
-              : "Finish"}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] z-30 xl:static xl:bottom-auto">
+        <Card className="bg-card/80 backdrop-blur-xl border-border/60">
+          <CardContent className="py-3 flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goPrev}
+              disabled={prevStep(currentStep) === null}
+              className="shrink-0"
+            >
+              Back
+            </Button>
+            <div className="flex-1 text-center text-xs text-muted-foreground min-w-0">
+              <div className="truncate">
+                {stepMeta?.label ?? ""}
+              </div>
+              <div className="hidden sm:block truncate">
+                {stepMeta?.description ?? ""}
+              </div>
+            </div>
+            <Button
+              type="button"
+              className="gradient-bg hover:opacity-90 shadow-glow shrink-0"
+              onClick={() => void goNext()}
+              disabled={!canGoNext}
+            >
+              {nextStep(currentStep)
+                ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="hidden sm:inline">Next:</span>
+                    {JOB_FLOW_STEPS.find((s) => s.id === nextStep(currentStep))?.label ?? "Next"}
+                  </span>
+                )
+                : "Finish"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

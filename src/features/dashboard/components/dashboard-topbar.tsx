@@ -14,7 +14,7 @@ import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
 import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
 import TrialDaysIconButton from "@/features/trial/components/trial-days-icon-button";
 
-export default function DashboardTopbar() {
+export default function DashboardTopbar({ onOpenCompliance }: { onOpenCompliance?: () => void }) {
   const { profile, roles, loading: authLoading, profileLoading } = useAuth();
   const { data } = useDashboardData();
   const company = data.company as any;
@@ -52,7 +52,7 @@ export default function DashboardTopbar() {
             <NotificationBell basePath="/dashboard" />
             {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
             {!authLoading && !profileLoading && profile?.company_id ? (
-              <div className="hidden sm:flex items-center gap-2">
+              <div className="flex items-center gap-2 max-w-[50vw] sm:max-w-[20rem]">
                 {company?.logo_url ? (
                   <img
                     src={company.logo_url}
@@ -62,8 +62,16 @@ export default function DashboardTopbar() {
                 ) : (
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="text-sm text-muted-foreground">{company?.name ?? "Company"}</span>
-                {company?.id ? <ComplianceStatusIcon company={company} /> : null}
+                <span className="text-sm text-muted-foreground truncate">{company?.name ?? "Company"}</span>
+                {company?.id ? (
+                  canCreateCompany && onOpenCompliance ? (
+                    <button type="button" className="shrink-0" onClick={onOpenCompliance} aria-label="Open compliance wizard">
+                      <ComplianceStatusIcon company={company} />
+                    </button>
+                  ) : (
+                    <ComplianceStatusIcon company={company} />
+                  )
+                ) : null}
               </div>
             ) : !authLoading && !profileLoading && canCreateCompany ? (
               <Button asChild variant="outline" size="sm">

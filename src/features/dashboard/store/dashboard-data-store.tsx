@@ -578,7 +578,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .select()
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
-      setData((prev) => ({ ...prev, jobCards: [row, ...prev.jobCards] }));
+      // Deduplicate against realtime INSERT events (which can arrive before this promise resolves).
+      setData((prev) => ({ ...prev, jobCards: mergeById([row], prev.jobCards) }));
       return row;
     },
     updateJobCard: async (id, patch) => {
@@ -647,7 +648,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .select()
         .single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
-      setData((prev) => ({ ...prev, inventoryItems: [row, ...prev.inventoryItems] }));
+      // Realtime INSERT can arrive before this resolves; dedupe by id to avoid duplicates.
+      setData((prev) => ({ ...prev, inventoryItems: mergeById([row], prev.inventoryItems) }));
       return row;
     },
     adjustInventory: async (itemId, delta) => {
