@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
+import { formatZarFromCents } from "@/lib/money";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 type MyQuoteRow = {
   id: string;
@@ -16,6 +19,19 @@ type MyQuoteRow = {
   message: string | null;
   status: string;
   created_at: string;
+  callout_status: string | null;
+  callout_total_cents: number | null;
+  callout_requested_at: string | null;
+  callout_paid_at: string | null;
+  job_card_id: string | null;
+  job_status: "new" | "scheduled" | "in-progress" | "completed" | "invoiced" | "cancelled" | null;
+  scheduled_at: string | null;
+  technician_name: string | null;
+  invoice_id: string | null;
+  invoice_number: string | null;
+  invoice_status: string | null;
+  invoice_total_cents: number | null;
+  invoice_amount_paid_cents: number | null;
 };
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -33,6 +49,7 @@ function statusBadge(status: string) {
 }
 
 export default function MyQuotes() {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["portal_my_quote_requests"],
     queryFn: async () => {
@@ -76,13 +93,20 @@ export default function MyQuotes() {
                     <TableHead>Company</TableHead>
                     <TableHead>Trade</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Call-out</TableHead>
+                    <TableHead>Job</TableHead>
+                    <TableHead>Invoice</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Message</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {quotes.map((q) => (
-                    <TableRow key={q.id}>
+                    <TableRow
+                      key={q.id}
+                      className="cursor-pointer hover:bg-muted/40"
+                      onClick={() => navigate(`/portal/quotes/${q.id}`)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {q.company_logo_url ? (
@@ -100,6 +124,48 @@ export default function MyQuotes() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{q.trade ?? "—"}</TableCell>
                       <TableCell>{statusBadge(q.status)}</TableCell>
+                      <TableCell>
+                        {q.callout_status ? (
+                          <div className="space-y-1">
+                            <Badge variant={q.callout_status === "paid" ? "default" : q.callout_status === "requested" ? "secondary" : "outline"} className="text-[10px]">
+                              {q.callout_status}
+                            </Badge>
+                            {q.callout_status === "requested" && typeof q.callout_total_cents === "number" ? (
+                              <div className="text-xs text-muted-foreground">
+                                Action required: {formatZarFromCents(q.callout_total_cents)}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {q.job_status ? (
+                          <div className="space-y-1">
+                            <JobStatusBadge status={q.job_status as any} />
+                            {q.technician_name ? (
+                              <div className="text-xs text-muted-foreground truncate">{q.technician_name}</div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {q.invoice_number ? (
+                          <div className="space-y-1">
+                            <div className="font-medium">{q.invoice_number}</div>
+                            {q.invoice_status ? (
+                              <Badge variant={q.invoice_status === "paid" ? "default" : q.invoice_status === "partial" ? "secondary" : "outline"} className="text-[10px]">
+                                {q.invoice_status}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {q.created_at ? format(new Date(q.created_at), "dd MMM yyyy") : "—"}
                       </TableCell>
@@ -119,4 +185,3 @@ export default function MyQuotes() {
     </div>
   );
 }
-

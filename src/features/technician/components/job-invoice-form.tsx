@@ -205,11 +205,19 @@ export default function JobInvoiceForm({
       toast({ title: "Error creating invoice", description: error.message, variant: "destructive" });
       return;
     }
-    setInvoice(data);
+    // Refetch to pick up any DB-side trigger updates (e.g. prepaid call-out applied as a payment).
+    let nextInvoice: any = data;
+    try {
+      const { data: refreshed } = await supabase.from("invoices").select("*").eq("id", data.id).single();
+      if (refreshed) nextInvoice = refreshed;
+    } catch {
+      // ignore
+    }
+    setInvoice(nextInvoice);
     // Update job status + revenue so dashboards reflect invoicing immediately.
     await supabase
       .from("job_cards")
-      .update({ status: "invoiced", revenue_cents: data.total_cents } as any)
+      .update({ status: "invoiced", revenue_cents: nextInvoice.total_cents } as any)
       .eq("id", job.id);
     toast({ title: "Invoice created", description: `${invoiceNumber}` });
     onInvoiceCreated?.();

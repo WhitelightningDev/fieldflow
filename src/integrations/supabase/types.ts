@@ -193,6 +193,7 @@ export type Database = {
           compliance_status: string
           compliance_updated_at: string
           created_at: string
+          default_warranty_days: number
           id: string
           included_techs: number
           industry: string
@@ -211,6 +212,7 @@ export type Database = {
           updated_at: string
           vat_number: string | null
           website: string | null
+          warranty_terms: string | null
         }
         Insert: {
           address?: string | null
@@ -220,6 +222,7 @@ export type Database = {
           compliance_status?: string
           compliance_updated_at?: string
           created_at?: string
+          default_warranty_days?: number
           id?: string
           included_techs?: number
           industry: string
@@ -238,6 +241,7 @@ export type Database = {
           updated_at?: string
           vat_number?: string | null
           website?: string | null
+          warranty_terms?: string | null
         }
         Update: {
           address?: string | null
@@ -247,6 +251,7 @@ export type Database = {
           compliance_status?: string
           compliance_updated_at?: string
           created_at?: string
+          default_warranty_days?: number
           id?: string
           included_techs?: number
           industry?: string
@@ -265,6 +270,7 @@ export type Database = {
           updated_at?: string
           vat_number?: string | null
           website?: string | null
+          warranty_terms?: string | null
         }
         Relationships: []
       }
@@ -497,6 +503,8 @@ export type Database = {
           updated_at: string
           vat_cents: number
           vat_percent: number
+          warranty_expires_at: string | null
+          warranty_terms: string | null
         }
         Insert: {
           amount_paid_cents?: number
@@ -519,6 +527,8 @@ export type Database = {
           updated_at?: string
           vat_cents?: number
           vat_percent?: number
+          warranty_expires_at?: string | null
+          warranty_terms?: string | null
         }
         Update: {
           amount_paid_cents?: number
@@ -541,6 +551,8 @@ export type Database = {
           updated_at?: string
           vat_cents?: number
           vat_percent?: number
+          warranty_expires_at?: string | null
+          warranty_terms?: string | null
         }
         Relationships: [
           {
@@ -824,9 +836,15 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          job_card_id: string | null
           message: string | null
           name: string
           phone: string | null
+          portal_invited_at: string | null
+          portal_invited_by: string | null
+          profile_consent: boolean
+          profile_consent_at: string | null
+          requester_user_id: string | null
           status: string
           trade: string | null
           updated_at: string
@@ -838,9 +856,15 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          job_card_id?: string | null
           message?: string | null
           name: string
           phone?: string | null
+          portal_invited_at?: string | null
+          portal_invited_by?: string | null
+          profile_consent?: boolean
+          profile_consent_at?: string | null
+          requester_user_id?: string | null
           status?: string
           trade?: string | null
           updated_at?: string
@@ -852,9 +876,15 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          job_card_id?: string | null
           message?: string | null
           name?: string
           phone?: string | null
+          portal_invited_at?: string | null
+          portal_invited_by?: string | null
+          profile_consent?: boolean
+          profile_consent_at?: string | null
+          requester_user_id?: string | null
           status?: string
           trade?: string | null
           updated_at?: string
@@ -869,10 +899,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quote_requests_job_card_id_fkey"
+            columns: ["job_card_id"]
+            isOneToOne: false
+            referencedRelation: "job_cards"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "quote_requests_widget_installation_id_fkey"
             columns: ["widget_installation_id"]
             isOneToOne: false
             referencedRelation: "widget_installations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_request_callouts: {
+        Row: {
+          applied_at: string | null
+          applied_invoice_id: string | null
+          callout_fee_cents: number
+          company_id: string
+          id: string
+          metadata: Json
+          paid_at: string | null
+          payment_provider: string
+          payment_reference: string | null
+          quote_request_id: string
+          requested_at: string
+          requested_by: string | null
+          requester_user_id: string
+          status: string
+          total_cents: number
+          vat_percent: number
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_invoice_id?: string | null
+          callout_fee_cents: number
+          company_id: string
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          payment_provider?: string
+          payment_reference?: string | null
+          quote_request_id: string
+          requested_at?: string
+          requested_by?: string | null
+          requester_user_id: string
+          status: string
+          total_cents: number
+          vat_percent?: number
+        }
+        Update: {
+          applied_at?: string | null
+          applied_invoice_id?: string | null
+          callout_fee_cents?: number
+          company_id?: string
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          payment_provider?: string
+          payment_reference?: string | null
+          quote_request_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          requester_user_id?: string
+          status?: string
+          total_cents?: number
+          vat_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_request_callouts_applied_invoice_id_fkey"
+            columns: ["applied_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_request_callouts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_request_callouts_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "quote_requests"
             referencedColumns: ["id"]
           },
         ]

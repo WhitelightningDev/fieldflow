@@ -20,6 +20,12 @@ const typeEmoji: Record<string, string> = {
   job_assigned: "🔧",
   job_status_changed: "📋",
   chat_message: "💬",
+  job_assigned_customer: "🧑‍🔧",
+  job_status_changed_customer: "📋",
+  job_scheduled_customer: "🗓️",
+  callout_fee_required: "💳",
+  callout_paid: "✅",
+  callout_declined: "⚠️",
   info: "ℹ️",
 };
 

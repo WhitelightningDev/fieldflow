@@ -22,6 +22,12 @@ const typeIcon: Record<string, string> = {
   job_assigned: "🔧",
   job_status_changed: "📋",
   chat_message: "💬",
+  job_assigned_customer: "🧑‍🔧",
+  job_status_changed_customer: "📋",
+  job_scheduled_customer: "🗓️",
+  callout_fee_required: "💳",
+  callout_paid: "✅",
+  callout_declined: "⚠️",
   info: "ℹ️",
 };
 
@@ -105,6 +111,17 @@ export default function NotificationBell({ basePath = "/dashboard" }: { basePath
   }, [open]);
 
   const handleNavigate = (n: Notification) => {
+    if (basePath === "/portal") {
+      const quoteRequestId = n.metadata?.quote_request_id;
+      if (quoteRequestId) {
+        navigate(`/portal/quotes/${quoteRequestId}`);
+        setOpen(false);
+        return;
+      }
+      setOpen(false);
+      return;
+    }
+
     const jobCardId = n.metadata?.job_card_id;
     if (jobCardId) {
       if (basePath === "/tech") {

@@ -1,5 +1,6 @@
 import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
+import NotificationBell from "@/components/notification-bell";
 import { RequireAuth, useAuth } from "@/features/auth/hooks/use-auth";
 import * as React from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -41,9 +42,12 @@ export default function Portal() {
               </NavLink>
             </nav>
 
-            <Button type="button" variant="outline" size="sm" onClick={() => void doSignOut()} disabled={signingOut}>
-              {signingOut ? "Signing out..." : "Sign out"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <NotificationBell basePath="/portal" />
+              <Button type="button" variant="outline" size="sm" onClick={() => void doSignOut()} disabled={signingOut}>
+                {signingOut ? "Signing out..." : "Sign out"}
+              </Button>
+            </div>
           </div>
         </header>
 

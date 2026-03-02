@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import * as QRCode from "qrcode";
+import { useNavigate } from "react-router-dom";
 
 type QuoteRequest = {
   id: string;
@@ -42,6 +43,7 @@ type QuoteRequest = {
   address: string | null;
   message: string | null;
   status: string;
+  job_card_id?: string | null;
   profile_consent?: boolean;
   profile_consent_at?: string | null;
   requester_user_id?: string | null;
@@ -63,6 +65,9 @@ const STATUS_OPTIONS = [
   { value: "new", label: "New", variant: "default" as const },
   { value: "contacted", label: "Contacted", variant: "secondary" as const },
   { value: "quoted", label: "Quoted", variant: "outline" as const },
+  { value: "callout-requested", label: "Call-out requested", variant: "secondary" as const },
+  { value: "callout-paid", label: "Call-out paid", variant: "default" as const },
+  { value: "callout-declined", label: "Call-out declined", variant: "destructive" as const },
   { value: "won", label: "Won", variant: "default" as const },
   { value: "lost", label: "Lost", variant: "destructive" as const },
 ];
@@ -186,6 +191,7 @@ export default function QuoteRequests() {
   const companyId = dashData.company?.id;
   const publicKey = (dashData.company as any)?.public_key as string | undefined;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const gate = useFeatureGate(dashData.company?.subscription_tier as any);
   const canUseQuotes = gate.hasFeature("quote_requests");
 
@@ -272,6 +278,42 @@ export default function QuoteRequests() {
     },
   });
 
+  const requestCallout = useMutation({
+    mutationFn: async (quoteRequestId: string) => {
+      const { data, error } = await supabase.functions.invoke("request-quote-callout", {
+        body: { quoteRequestId },
+      });
+      if (error) {
+        let details = error.message;
+        const ctx: any = (error as any).context;
+        const res: Response | undefined = ctx?.response;
+        if (res) {
+          try {
+            const text = await res.text();
+            const parsed = text ? JSON.parse(text) : null;
+            details = parsed?.error ?? text ?? details;
+          } catch {
+            // ignore
+          }
+          if (res.status === 404) details = 'Edge function "request-quote-callout" is not deployed.';
+          if (res.status === 401) details = "Not authorized. Please re-login and try again.";
+        }
+        throw new Error(details);
+      }
+      return data as any;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quote_requests"] });
+      toast({
+        title: "Call-out requested",
+        description: "The customer has been notified and can pay in the portal.",
+      });
+    },
+    onError: (e: any) => {
+      toast({ title: "Request failed", description: e?.message ?? "Could not request call-out fee.", variant: "destructive" });
+    },
+  });
+
   // Delete quote
   const deleteQuote = useMutation({
     mutationFn: async (id: string) => {
@@ -313,6 +355,21 @@ export default function QuoteRequests() {
   // Detail dialog
   const [selectedQuote, setSelectedQuote] = React.useState<QuoteRequest | null>(null);
 
+  const { data: selectedCallout } = useQuery({
+    queryKey: ["quote_request_callout", selectedQuote?.id],
+    enabled: !!selectedQuote?.id && canUseQuotes,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quote_request_callouts" as any)
+        .select("*")
+        .eq("quote_request_id", selectedQuote!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+    retry: false,
+  });
+
   // QR / shareable quote link (token is opaque and can be printed/shared publicly)
   const { data: quoteLinkToken, isLoading: quoteLinkLoading } = useQuery({
     queryKey: ["quote_link_token", companyId],
@@ -337,15 +394,6 @@ export default function QuoteRequests() {
   });
 
   const quoteLinkUrl = React.useMemo(() => {
-    if (!quoteLinkToken) return "";
-    try {
-      return `${window.location.origin}/quote-request.html?t=${encodeURIComponent(quoteLinkToken)}`;
-    } catch {
-      return "";
-    }
-  }, [quoteLinkToken]);
-
-  const quoteAppUrl = React.useMemo(() => {
     if (!quoteLinkToken) return "";
     try {
       return `${window.location.origin}/quote/${encodeURIComponent(quoteLinkToken)}`;
@@ -916,7 +964,11 @@ export default function QuoteRequests() {
                         <Select
                           value={q.status}
                           onValueChange={(val) =>
-                            val === "quoted" ? provisionRequester.mutate(q.id) : updateStatus.mutate({ id: q.id, status: val })
+                            val === "quoted"
+                              ? provisionRequester.mutate(q.id)
+                              : val === "callout-requested"
+                                ? requestCallout.mutate(q.id)
+                                : updateStatus.mutate({ id: q.id, status: val })
                           }
                         >
                           <SelectTrigger className="h-8 w-[120px]">
@@ -924,7 +976,11 @@ export default function QuoteRequests() {
                           </SelectTrigger>
                           <SelectContent>
                             {STATUS_OPTIONS.map((s) => (
-                              <SelectItem key={s.value} value={s.value}>
+                              <SelectItem
+                                key={s.value}
+                                value={s.value}
+                                disabled={s.value === "callout-paid" || s.value === "callout-declined"}
+                              >
                                 {s.label}
                               </SelectItem>
                             ))}
@@ -1012,6 +1068,15 @@ export default function QuoteRequests() {
               <div>
                 <span className="font-medium">Status:</span> {statusBadge(selectedQuote.status)}
               </div>
+              {selectedCallout ? (
+                <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <div className="text-xs font-medium">Call-out fee</div>
+                  <div className="text-xs text-muted-foreground">
+                    Status: <span className="font-medium text-foreground">{String(selectedCallout.status ?? "—")}</span>
+                    {typeof selectedCallout.total_cents === "number" ? ` • Amount: R${(selectedCallout.total_cents / 100).toFixed(2)} (incl VAT)` : ""}
+                  </div>
+                </div>
+              ) : null}
               <div>
                 <span className="font-medium">Received:</span>{" "}
                 {format(new Date(selectedQuote.created_at), "dd MMM yyyy HH:mm")}
@@ -1020,6 +1085,26 @@ export default function QuoteRequests() {
           )}
           {selectedQuote ? (
             <DialogFooter className="pt-2">
+              {selectedQuote.job_card_id ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedQuote(null);
+                    navigate("/dashboard/jobs");
+                  }}
+                >
+                  View job
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!selectedQuote.profile_consent || requestCallout.isPending || String(selectedCallout?.status ?? "") === "paid"}
+                onClick={() => requestCallout.mutate(selectedQuote.id)}
+              >
+                {requestCallout.isPending ? "Requesting..." : String(selectedCallout?.status ?? "") === "requested" ? "Re-send call-out request" : "Request call-out fee"}
+              </Button>
               <Button
                 type="button"
                 variant="outline"

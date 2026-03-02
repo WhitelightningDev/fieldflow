@@ -53,6 +53,7 @@ import Subscribe from "./pages/Subscribe";
 import QuoteRequestPublic from "./pages/QuoteRequestPublic";
 import Portal from "./pages/Portal";
 import MyQuotes from "./pages/portal/MyQuotes";
+import QuoteDetail from "./pages/portal/QuoteDetail";
 import PortalSettings from "./pages/portal/PortalSettings";
 import PortalNotFound from "./pages/portal/PortalNotFound";
 
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/portal" element={<Portal />}>
               <Route index element={<MyQuotes />} />
+              <Route path="quotes/:quoteRequestId" element={<QuoteDetail />} />
               <Route path="settings" element={<PortalSettings />} />
               <Route path="*" element={<PortalNotFound />} />
             </Route>
