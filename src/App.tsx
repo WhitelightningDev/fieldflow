@@ -51,6 +51,10 @@ import TechNotFound from "./pages/tech/TechNotFound";
 import NotFound from "./pages/NotFound";
 import Subscribe from "./pages/Subscribe";
 import QuoteRequestPublic from "./pages/QuoteRequestPublic";
+import Portal from "./pages/Portal";
+import MyQuotes from "./pages/portal/MyQuotes";
+import PortalSettings from "./pages/portal/PortalSettings";
+import PortalNotFound from "./pages/portal/PortalNotFound";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +77,11 @@ const App = () => (
             <Route path="/subscribe" element={<Subscribe />} />
             <Route path="/quote/:token" element={<QuoteRequestPublic />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/portal" element={<Portal />}>
+              <Route index element={<MyQuotes />} />
+              <Route path="settings" element={<PortalSettings />} />
+              <Route path="*" element={<PortalNotFound />} />
+            </Route>
 	            <Route path="/dashboard" element={<Dashboard />}>
 	              <Route index element={<DashboardHome />} />
 	              <Route path="create-company" element={<CreateCompany />} />

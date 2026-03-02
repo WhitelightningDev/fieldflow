@@ -62,6 +62,8 @@
       "@media (max-width:420px){.ff-header{padding:20px 18px 0}.ff-body{padding:16px 18px 20px}.ff-row{flex-direction:column;gap:0}}" +
       ".ff-error{display:none;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;font-size:13px;line-height:1.35}" +
       ".ff-note{margin-top:12px;font-size:12px;line-height:1.35;color:#64748b}" +
+      ".ff-consent{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;color:#475569;font-size:12px;line-height:1.35}" +
+      ".ff-checkbox{margin-top:2px;flex:0 0 auto}" +
       ".ff-btn{width:100%;margin-top:14px;padding:12px 14px;border:none;border-radius:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:15px;font-weight:750;letter-spacing:.01em;cursor:pointer;box-shadow:0 10px 22px rgba(37,99,235,.22);transition:transform .08s,filter .15s,box-shadow .15s}" +
       ".ff-btn:hover{filter:brightness(1.03);box-shadow:0 12px 26px rgba(37,99,235,.28)}" +
       ".ff-btn:active{transform:translateY(1px)}" +
@@ -117,9 +119,13 @@
       '<label class="ff-label" for="ff-message">Message</label>' +
       '<textarea id="ff-message" class="ff-textarea" name="message" maxlength="2000" placeholder="Describe what you need..."></textarea>' +
       "</div>" +
+      '<label class="ff-consent" for="ff-consent">' +
+      '<input id="ff-consent" class="ff-checkbox" type="checkbox" name="profile_consent" required>' +
+      "<span>I agree that a profile will be created so I can log in and track the status of my quote request.</span>" +
+      "</label>" +
       '<div class="ff-error" id="ff-error"></div>' +
       '<button class="ff-btn" type="submit">Send Quote Request</button>' +
-      '<div class="ff-note">By submitting, you agree that we can contact you about this request.</div>' +
+      '<div class="ff-note">By submitting, you agree that we can contact you about this request and create a profile for quote tracking.</div>' +
       "</form>" +
       "</div>";
 
@@ -138,6 +144,14 @@
       errorEl.textContent = "";
 
       var fd = new FormData(form);
+      var consent = (fd.get("profile_consent") || "").toString() === "on";
+      if (!consent) {
+        errorEl.textContent = "Please consent so we can create a profile for tracking your quote request.";
+        errorEl.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Send Quote Request";
+        return;
+      }
       var payload = {
         company_public_key: companyKey,
         name: (fd.get("name") || "").toString().trim(),
@@ -146,6 +160,7 @@
         trade: (fd.get("trade") || "").toString().trim() || null,
         address: (fd.get("address") || "").toString().trim() || null,
         message: (fd.get("message") || "").toString().trim() || null,
+        profile_consent: true,
       };
 
       fetch(API_URL, {

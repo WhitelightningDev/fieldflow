@@ -81,11 +81,17 @@ Deno.serve(async (req) => {
   const companyPublicKey = String(body.company_public_key ?? "").trim();
   const quoteLinkToken = String(body.quote_link_token ?? "").trim();
   const name = String(body.name ?? "").trim();
-  const email = String(body.email ?? "").trim();
+  const email = String(body.email ?? "").trim().toLowerCase();
   const phone = typeof body.phone === "string" ? body.phone.trim() : null;
   const trade = typeof body.trade === "string" ? body.trade.trim() : null;
   const address = typeof body.address === "string" ? body.address.trim() : null;
   const message = typeof body.message === "string" ? body.message.trim() : null;
+  const profileConsentRaw = (body as any).profile_consent;
+  const profileConsent =
+    profileConsentRaw === true ||
+    profileConsentRaw === "true" ||
+    profileConsentRaw === 1 ||
+    profileConsentRaw === "1";
 
   // Validate required fields
   if (!companyPublicKey && !quoteLinkToken) {
@@ -94,6 +100,13 @@ Deno.serve(async (req) => {
   if (!name || name.length > 200) return jsonResponse({ error: "Name is required (max 200 chars)" }, 400, origin);
   if (!email || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResponse({ error: "Valid email is required" }, 400, origin);
+  }
+  if (!profileConsent) {
+    return jsonResponse(
+      { error: "Consent is required to create a profile for tracking your quote request." },
+      400,
+      origin,
+    );
   }
   if (phone && phone.length > 30) return jsonResponse({ error: "Phone too long" }, 400, origin);
   if (trade && trade.length > 100) return jsonResponse({ error: "Trade too long" }, 400, origin);
@@ -228,6 +241,8 @@ Deno.serve(async (req) => {
       address,
       message,
       status: "new",
+      profile_consent: true,
+      profile_consent_at: new Date().toISOString(),
     })
     .select("id")
     .single();

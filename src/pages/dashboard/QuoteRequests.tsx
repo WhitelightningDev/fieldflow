@@ -42,6 +42,11 @@ type QuoteRequest = {
   address: string | null;
   message: string | null;
   status: string;
+  profile_consent?: boolean;
+  profile_consent_at?: string | null;
+  requester_user_id?: string | null;
+  portal_invited_at?: string | null;
+  portal_invited_by?: string | null;
   created_at: string;
 };
 
@@ -225,6 +230,45 @@ export default function QuoteRequests() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quote_requests"] });
+    },
+  });
+
+  const provisionRequester = useMutation({
+    mutationFn: async (quoteRequestId: string) => {
+      const { data, error } = await supabase.functions.invoke("provision-quote-requester", {
+        body: { quoteRequestId },
+      });
+      if (error) {
+        let details = error.message;
+        const ctx: any = (error as any).context;
+        const res: Response | undefined = ctx?.response;
+        if (res) {
+          try {
+            const text = await res.text();
+            const parsed = text ? JSON.parse(text) : null;
+            details = parsed?.error ?? text ?? details;
+          } catch {
+            // ignore
+          }
+          if (res.status === 404) details = 'Edge function "provision-quote-requester" is not deployed.';
+          if (res.status === 401) details = "Not authorized. Please re-login and try again.";
+        }
+        throw new Error(details);
+      }
+      return data as any;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["quote_requests"] });
+      const sent = Boolean(data?.emailSent);
+      toast({
+        title: sent ? "Login email sent" : "Customer linked",
+        description: sent
+          ? "The customer can now log in to track this quote request."
+          : "This quote request is linked to the customer portal (email was already sent).",
+      });
+    },
+    onError: (e: any) => {
+      toast({ title: "Invite failed", description: e?.message ?? "Could not invite customer.", variant: "destructive" });
     },
   });
 
@@ -872,7 +916,7 @@ export default function QuoteRequests() {
                         <Select
                           value={q.status}
                           onValueChange={(val) =>
-                            updateStatus.mutate({ id: q.id, status: val })
+                            val === "quoted" ? provisionRequester.mutate(q.id) : updateStatus.mutate({ id: q.id, status: val })
                           }
                         >
                           <SelectTrigger className="h-8 w-[120px]">
@@ -974,6 +1018,18 @@ export default function QuoteRequests() {
               </div>
             </div>
           )}
+          {selectedQuote ? (
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!selectedQuote.profile_consent || provisionRequester.isPending}
+                onClick={() => provisionRequester.mutate(selectedQuote.id)}
+              >
+                {provisionRequester.isPending ? "Sending..." : "Send portal login email"}
+              </Button>
+            </DialogFooter>
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

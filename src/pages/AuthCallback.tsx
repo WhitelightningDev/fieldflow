@@ -40,7 +40,8 @@ async function getRedirectPath(userId: string): Promise<string> {
     roleSet.has("owner") ||
     roleSet.has("admin") ||
     roleSet.has("office_staff") ||
-    roleSet.has("technician");
+    roleSet.has("technician") ||
+    roleSet.has("customer");
 
   if (!isAssociated) return "/login?reason=unauthorized";
 
@@ -53,6 +54,9 @@ async function getRedirectPath(userId: string): Promise<string> {
       .eq("user_id", userId);
     return "/tech";
   }
+
+  const isCustomer = roleSet.has("customer");
+  if (isCustomer) return "/portal";
 
   return "/dashboard";
 }
@@ -110,6 +114,10 @@ export default function AuthCallback() {
             return;
           }
           if (next && redirectPath === "/tech" && next.startsWith("/tech")) {
+            navigate(next, { replace: true });
+            return;
+          }
+          if (next && redirectPath === "/portal" && next.startsWith("/portal")) {
             navigate(next, { replace: true });
             return;
           }

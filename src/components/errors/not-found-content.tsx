@@ -29,6 +29,8 @@ export function NotFoundContent({
     if (!session) return { to: "/", label: "Go home" };
     const roleSet = new Set(roles);
     const isTech = roleSet.has("technician");
+    const isCustomer = roleSet.has("customer");
+    if (isCustomer) return { to: "/portal", label: "Go to Quote Portal" };
     return { to: isTech ? "/tech" : "/dashboard", label: isTech ? "Go to Tech dashboard" : "Go to Dashboard" };
   }, [roles, session]);
 
@@ -70,4 +72,3 @@ export function NotFoundContent({
     </div>
   );
 }
-

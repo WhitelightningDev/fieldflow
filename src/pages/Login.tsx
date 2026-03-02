@@ -26,10 +26,12 @@ export default function Login() {
       roleSet.has("owner") ||
       roleSet.has("admin") ||
       roleSet.has("office_staff") ||
-      roleSet.has("technician"),
+      roleSet.has("technician") ||
+      roleSet.has("customer"),
     [roleSet],
   );
   const isTech = React.useMemo(() => roleSet.has("technician"), [roleSet]);
+  const isCustomer = React.useMemo(() => roleSet.has("customer"), [roleSet]);
 
   const hardReset = React.useCallback(async () => {
     try {
@@ -110,7 +112,7 @@ export default function Login() {
               You’re signed in as <span className="font-medium text-foreground">{user.email ?? user.id}</span>. Deleting company rows does not log you out of Supabase Auth.
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => navigate(isTech ? "/tech" : "/dashboard")}>
+              <Button type="button" onClick={() => navigate(isTech ? "/tech" : isCustomer ? "/portal" : "/dashboard")}>
                 Continue
               </Button>
               <Button type="button" variant="outline" onClick={() => void signOut().then(() => navigate("/login", { replace: true }))}>

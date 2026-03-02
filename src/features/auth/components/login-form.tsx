@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { toastSuccess, toastError } from "@/lib/toast-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/with-timeout";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -67,6 +68,34 @@ export default function LoginForm() {
       toastSuccess("Confirmation email sent", "Check your inbox (and spam folder), then try signing in again.");
     } catch (e: any) {
       toastError("Resend failed", e?.message ?? "Network error");
+    }
+  }, [form]);
+
+  const emailLoginLink = React.useCallback(async () => {
+    const valid = await form.trigger("email");
+    if (!valid) {
+      toastError("Email login failed", "Enter a valid email first.");
+      return;
+    }
+
+    const email = form.getValues("email").trim();
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithOtp({
+          email,
+          shouldCreateUser: false,
+          options: { emailRedirectTo: `${getPublicSiteUrl()}/auth/callback?next=/portal` },
+        }),
+        15000,
+        "Request timed out. Check your connection and try again.",
+      );
+      if (error) {
+        toastError("Email login failed", error.message);
+        return;
+      }
+      toastSuccess("Login link sent", "Check your inbox (and spam folder).");
+    } catch (e: any) {
+      toastError("Email login failed", e?.message ?? "Network error");
     }
   }, [form]);
 
@@ -184,6 +213,18 @@ export default function LoginForm() {
           </div>
         </form>
       </Form>
+
+      <div className="rounded-md border border-border/60 bg-muted/20 px-4 py-3">
+        <div className="text-sm font-medium">Prefer an email login link?</div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          We'll email you a login button. This is the recommended way to access the quote portal.
+        </div>
+        <div className="mt-3">
+          <Button type="button" variant="outline" size="sm" onClick={emailLoginLink} disabled={form.formState.isSubmitting || !emailValue}>
+            Email me a login link
+          </Button>
+        </div>
+      </div>
 
       <div className="text-sm text-muted-foreground">
         New here?{" "}
