@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.push-test]
 verify_jwt = false
+
+[functions.create-quote-request]
+verify_jwt = false

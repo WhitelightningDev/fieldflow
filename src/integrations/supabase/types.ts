@@ -202,6 +202,7 @@ export type Database = {
           per_tech_price_cents: number
           phone: string | null
           profile_complete: boolean
+          public_key: string
           subscription_status: string
           subscription_tier: string
           team_size: string | null
@@ -228,6 +229,7 @@ export type Database = {
           per_tech_price_cents?: number
           phone?: string | null
           profile_complete?: boolean
+          public_key?: string
           subscription_status?: string
           subscription_tier?: string
           team_size?: string | null
@@ -254,6 +256,7 @@ export type Database = {
           per_tech_price_cents?: number
           phone?: string | null
           profile_complete?: boolean
+          public_key?: string
           subscription_status?: string
           subscription_tier?: string
           team_size?: string | null
@@ -810,6 +813,66 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_requests: {
+        Row: {
+          address: string | null
+          company_id: string
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          name: string
+          phone: string | null
+          status: string
+          trade: string | null
+          updated_at: string
+          widget_installation_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          phone?: string | null
+          status?: string
+          trade?: string | null
+          updated_at?: string
+          widget_installation_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string | null
+          status?: string
+          trade?: string | null
+          updated_at?: string
+          widget_installation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_requests_widget_installation_id_fkey"
+            columns: ["widget_installation_id"]
+            isOneToOne: false
+            referencedRelation: "widget_installations"
             referencedColumns: ["id"]
           },
         ]
@@ -1599,6 +1662,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      widget_installations: {
+        Row: {
+          allowed_domains: string[]
+          company_id: string
+          config: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          allowed_domains?: string[]
+          company_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allowed_domains?: string[]
+          company_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "widget_installations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
