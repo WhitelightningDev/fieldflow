@@ -15,7 +15,6 @@ type ResolvedQuoteLink = {
 };
 
 const TRADE_OPTIONS = [
-  { value: "", label: "Select a trade (optional)" },
   { value: "electrical-contracting", label: "Electrical" },
   { value: "plumbing", label: "Plumbing" },
   { value: "mobile-mechanics", label: "Mobile Mechanics" },
@@ -181,7 +180,7 @@ export default function QuoteRequestPublic() {
                       </SelectTrigger>
                       <SelectContent>
                         {TRADE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value || "none"} value={opt.value}>
+                          <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
                         ))}
