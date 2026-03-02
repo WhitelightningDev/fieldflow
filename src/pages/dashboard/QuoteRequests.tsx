@@ -12,8 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Copy, ExternalLink, Plus, RefreshCw, Inbox, Eye, Trash2 } from "lucide-react";
+import { Copy, Download, Eye, Inbox, Plus, RefreshCw, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import * as QRCode from "qrcode";
 
 type QuoteRequest = {
   id: string;
@@ -142,6 +143,110 @@ export default function QuoteRequests() {
   // Detail dialog
   const [selectedQuote, setSelectedQuote] = React.useState<QuoteRequest | null>(null);
 
+  // QR / shareable quote link (token is opaque and can be printed/shared publicly)
+  const { data: quoteLinkToken, isLoading: quoteLinkLoading } = useQuery({
+    queryKey: ["quote_link_token", companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_or_create_quote_link_token" as any);
+      if (error) throw error;
+      return data as string;
+    },
+  });
+
+  const rotateQuoteLinkToken = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("rotate_quote_link_token" as any);
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quote_link_token"] });
+      toast({ title: "QR link regenerated", description: "Old QR codes will stop working." });
+    },
+  });
+
+  const quoteLinkUrl = React.useMemo(() => {
+    if (!quoteLinkToken) return "";
+    try {
+      return `${window.location.origin}/quote/${quoteLinkToken}`;
+    } catch {
+      return "";
+    }
+  }, [quoteLinkToken]);
+
+  const [qrDataUrl, setQrDataUrl] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (!quoteLinkUrl) {
+      setQrDataUrl("");
+      return;
+    }
+
+    let cancelled = false;
+    void QRCode.toDataURL(quoteLinkUrl, { width: 256, margin: 1, errorCorrectionLevel: "M" })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl("");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [quoteLinkUrl]);
+
+  const copyQuoteLink = React.useCallback(async () => {
+    if (!quoteLinkUrl) return;
+    await navigator.clipboard.writeText(quoteLinkUrl);
+    toast({ title: "Link copied" });
+  }, [quoteLinkUrl]);
+
+  const downloadQr = React.useCallback(() => {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = "fieldflow-quote-qr.png";
+    a.click();
+  }, [qrDataUrl]);
+
+  const shareQrOrLink = React.useCallback(async () => {
+    if (!quoteLinkUrl) return;
+
+    const navAny = navigator as any;
+    const share = navAny?.share as ((data: any) => Promise<void>) | undefined;
+    const canShare = navAny?.canShare as ((data: any) => boolean) | undefined;
+
+    if (!share) {
+      await copyQuoteLink();
+      return;
+    }
+
+    try {
+      if (qrDataUrl) {
+        const blob = await (await fetch(qrDataUrl)).blob();
+        const file = new File([blob], "fieldflow-quote-qr.png", { type: blob.type || "image/png" });
+        if (canShare?.({ files: [file] })) {
+          await share({
+            title: "Quote request QR",
+            text: "Scan to request a quote.",
+            files: [file],
+          });
+          return;
+        }
+      }
+
+      await share({
+        title: "Quote request link",
+        text: "Open this link to request a quote.",
+        url: quoteLinkUrl,
+      });
+    } catch {
+      // user cancelled or share failed
+    }
+  }, [copyQuoteLink, qrDataUrl, quoteLinkUrl]);
+
   const embedSnippet = publicKey
     ? `<div id="fieldflow-quote"></div>
 <script
@@ -254,6 +359,84 @@ export default function QuoteRequests() {
             <p className="text-sm text-muted-foreground">
               No widget installations yet. Quotes from any domain will be accepted.
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* QR Code / Shareable Link */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">QR Quote Form</CardTitle>
+          <CardDescription>
+            Print or share a QR code that opens a branded quote request form.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {quoteLinkLoading ? (
+            <div className="grid gap-4 md:grid-cols-[280px_1fr]">
+              <Skeleton className="h-[280px] w-[280px] rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-2/3" />
+                <Skeleton className="h-8 w-1/2" />
+              </div>
+            </div>
+          ) : quoteLinkUrl ? (
+            <div className="grid gap-4 md:grid-cols-[280px_1fr] items-start">
+              <div className="rounded-xl border border-border/60 bg-background p-4 shadow-sm">
+                <div className="rounded-lg bg-white p-3">
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} alt="Quote request QR code" className="h-[232px] w-[232px]" />
+                  ) : (
+                    <div className="flex h-[232px] w-[232px] items-center justify-center text-sm text-muted-foreground">
+                      Generating…
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 text-xs text-muted-foreground">
+                  Scans open:{" "}
+                  <a className="text-primary underline" href={quoteLinkUrl} target="_blank" rel="noreferrer">
+                    Quote request form
+                  </a>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+                  <div className="text-xs text-muted-foreground mb-1">Share link</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <code className="text-xs bg-muted px-2 py-1 rounded break-all">{quoteLinkUrl}</code>
+                    <Button size="icon" variant="ghost" onClick={copyQuoteLink} title="Copy link">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={shareQrOrLink}>
+                    <Share2 className="h-4 w-4 mr-2" /> Share
+                  </Button>
+                  <Button variant="outline" onClick={downloadQr} disabled={!qrDataUrl}>
+                    <Download className="h-4 w-4 mr-2" /> Download QR
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => rotateQuoteLinkToken.mutate()}
+                    disabled={rotateQuoteLinkToken.isPending}
+                    title="Regenerate the token (old QR codes stop working)"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    {rotateQuoteLinkToken.isPending ? "Regenerating…" : "Regenerate"}
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Tip: use this on business cards, vehicles, job cards, or invoices. Regenerating will invalidate previously shared QR codes.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Unable to generate a QR link for this company.</p>
           )}
         </CardContent>
       </Card>

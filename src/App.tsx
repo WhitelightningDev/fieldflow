@@ -50,6 +50,7 @@ import TechMessages from "./pages/tech/TechMessages";
 import TechNotFound from "./pages/tech/TechNotFound";
 import NotFound from "./pages/NotFound";
 import Subscribe from "./pages/Subscribe";
+import QuoteRequestPublic from "./pages/QuoteRequestPublic";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/plan-wizard" element={<PlanWizard />} />
             <Route path="/company-signup" element={<CompanySignup />} />
             <Route path="/subscribe" element={<Subscribe />} />
+            <Route path="/quote/:token" element={<QuoteRequestPublic />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
 	            <Route path="/dashboard" element={<Dashboard />}>
 	              <Route index element={<DashboardHome />} />

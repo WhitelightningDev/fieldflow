@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
   }
 
   const companyPublicKey = String(body.company_public_key ?? "").trim();
+  const quoteLinkToken = String(body.quote_link_token ?? "").trim();
   const name = String(body.name ?? "").trim();
   const email = String(body.email ?? "").trim();
   const phone = typeof body.phone === "string" ? body.phone.trim() : null;
@@ -66,7 +67,9 @@ Deno.serve(async (req) => {
   const message = typeof body.message === "string" ? body.message.trim() : null;
 
   // Validate required fields
-  if (!companyPublicKey) return jsonResponse({ error: "Missing company_public_key" }, 400, origin);
+  if (!companyPublicKey && !quoteLinkToken) {
+    return jsonResponse({ error: "Missing company_public_key or quote_link_token" }, 400, origin);
+  }
   if (!name || name.length > 200) return jsonResponse({ error: "Name is required (max 200 chars)" }, 400, origin);
   if (!email || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResponse({ error: "Valid email is required" }, 400, origin);
@@ -87,66 +90,85 @@ Deno.serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // 1. Lookup company by public_key
-  const { data: company, error: companyError } = await supabase
-    .from("companies")
-    .select("id")
-    .eq("public_key", companyPublicKey)
-    .maybeSingle();
+  // 1. Resolve company (either by public_key or by quote_link_token)
+  let companyId: string | null = null;
 
-  if (companyError || !company) {
-    return jsonResponse({ error: "Invalid company key" }, 404, origin);
+  if (quoteLinkToken) {
+    const { data: link, error: linkError } = await supabase
+      .from("quote_links")
+      .select("company_id, is_active")
+      .eq("token", quoteLinkToken)
+      .maybeSingle();
+
+    if (linkError || !link || !link.is_active) {
+      return jsonResponse({ error: "Invalid quote link" }, 404, origin);
+    }
+
+    companyId = link.company_id;
+  } else {
+    const { data: company, error: companyError } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("public_key", companyPublicKey)
+      .maybeSingle();
+
+    if (companyError || !company) {
+      return jsonResponse({ error: "Invalid company key" }, 404, origin);
+    }
+
+    companyId = company.id;
   }
 
-  const companyId = company.id;
-
-  // 2. Validate domain against widget_installations
-  const { data: widgets } = await supabase
-    .from("widget_installations")
-    .select("id, allowed_domains")
-    .eq("company_id", companyId)
-    .eq("is_active", true);
-
+  // 2. Validate domain against widget_installations (only for embeddable widget installs).
+  // Quote-link (QR) submissions are intended to be public and do not use domain restrictions.
   let matchedWidgetId: string | null = null;
 
-  if (widgets && widgets.length > 0) {
-    // Extract hostname from origin
-    let originHost = "";
-    try {
-      originHost = new URL(origin).hostname;
-    } catch {
-      // origin might be empty for non-browser requests
-    }
+  if (!quoteLinkToken) {
+    const { data: widgets } = await supabase
+      .from("widget_installations")
+      .select("id, allowed_domains")
+      .eq("company_id", companyId)
+      .eq("is_active", true);
 
-    for (const w of widgets) {
-      const domains = Array.isArray(w.allowed_domains) ? w.allowed_domains : [];
-      // If no domains configured, allow all
-      if (domains.length === 0) {
-        matchedWidgetId = w.id;
-        break;
+    if (widgets && widgets.length > 0) {
+      // Extract hostname from origin
+      let originHost = "";
+      try {
+        originHost = new URL(origin).hostname;
+      } catch {
+        // origin might be empty for non-browser requests
       }
-      // Check if origin matches any allowed domain
-      const match = domains.some((d: string) => {
-        const clean = d.replace(/^https?:\/\//, "").replace(/\/+$/, "").toLowerCase();
-        return originHost.toLowerCase() === clean || originHost.toLowerCase().endsWith("." + clean);
-      });
-      if (match) {
-        matchedWidgetId = w.id;
-        break;
+
+      for (const w of widgets) {
+        const domains = Array.isArray(w.allowed_domains) ? w.allowed_domains : [];
+        // If no domains configured, allow all
+        if (domains.length === 0) {
+          matchedWidgetId = w.id;
+          break;
+        }
+        // Check if origin matches any allowed domain
+        const match = domains.some((d: string) => {
+          const clean = d.replace(/^https?:\/\//, "").replace(/\/+$/, "").toLowerCase();
+          return originHost.toLowerCase() === clean || originHost.toLowerCase().endsWith("." + clean);
+        });
+        if (match) {
+          matchedWidgetId = w.id;
+          break;
+        }
+      }
+
+      // If widgets exist but none match the domain, block
+      if (!matchedWidgetId && originHost) {
+        return jsonResponse({ error: "Domain not authorized for this widget" }, 403, origin);
+      }
+
+      // If no origin (e.g. server-side), use first active widget
+      if (!matchedWidgetId) {
+        matchedWidgetId = widgets[0].id;
       }
     }
-
-    // If widgets exist but none match the domain, block
-    if (!matchedWidgetId && originHost) {
-      return jsonResponse({ error: "Domain not authorized for this widget" }, 403, origin);
-    }
-
-    // If no origin (e.g. server-side), use first active widget
-    if (!matchedWidgetId) {
-      matchedWidgetId = widgets[0].id;
-    }
+    // If no widget installations exist at all, still allow (company hasn't configured restrictions)
   }
-  // If no widget installations exist at all, still allow (company hasn't configured restrictions)
 
   // 3. Insert quote request
   const { data: quoteRow, error: insertError } = await supabase
