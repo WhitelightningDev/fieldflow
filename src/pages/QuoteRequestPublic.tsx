@@ -60,6 +60,74 @@ export default function QuoteRequestPublic() {
 
   const canSubmit = !submitting && !!token && !!name.trim() && !!email.trim();
 
+  React.useEffect(() => {
+    const title = companyName ? `Request a Quote | ${companyName} (FieldFlow)` : "Request a Quote | FieldFlow";
+    const description = companyName
+      ? `Send a quote request to ${companyName}. Powered by FieldFlow.`
+      : "Send a quote request. Powered by FieldFlow.";
+
+    try {
+      document.title = title;
+    } catch {
+      // ignore
+    }
+
+    const coverImage = (() => {
+      try {
+        return new URL("/FieldFlow-request-a-quote.png", window.location.origin).toString();
+      } catch {
+        return "/FieldFlow-request-a-quote.png";
+      }
+    })();
+
+    const setMeta = (attr: "name" | "property", key: string, content: string) => {
+      try {
+        const selector = `meta[${attr}="${key}"]`;
+        let el = document.querySelector(selector) as HTMLMetaElement | null;
+        if (!el) {
+          el = document.createElement("meta");
+          el.setAttribute(attr, key);
+          document.head.appendChild(el);
+        }
+        el.setAttribute("content", content);
+      } catch {
+        // ignore
+      }
+    };
+
+    const setCanonical = (url: string) => {
+      try {
+        let el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+        if (!el) {
+          el = document.createElement("link");
+          el.setAttribute("rel", "canonical");
+          document.head.appendChild(el);
+        }
+        el.setAttribute("href", url);
+      } catch {
+        // ignore
+      }
+    };
+
+    setMeta("name", "description", description);
+    setMeta("property", "og:type", "website");
+    setMeta("property", "og:title", title);
+    setMeta("property", "og:description", description);
+    setMeta("property", "og:image", coverImage);
+    setMeta("property", "og:image:alt", "FieldFlow quote request");
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", title);
+    setMeta("name", "twitter:description", description);
+    setMeta("name", "twitter:image", coverImage);
+
+    try {
+      setCanonical(window.location.href);
+      setMeta("property", "og:url", window.location.href);
+    } catch {
+      // ignore
+    }
+  }, [companyName]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
