@@ -41,6 +41,7 @@ const SHARED_NAV: NavItem[] = [
   { to: "/dashboard/technicians", label: "Technicians", icon: Wrench },
   { to: "/dashboard/teams", label: "Teams", icon: Users2 },
   { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
+  { to: "/dashboard/quotes", label: "Quote requests", icon: FileText },
   { to: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { to: "/dashboard/ai", label: "AI Assistant", icon: Sparkles },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
