@@ -20,7 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { useAiAssist } from "@/features/ai/ai-assist-context";
 
 type Insight = {
   type: "alert" | "suggestion" | "warning" | "tip";
@@ -115,6 +115,7 @@ function buildContext(data: DashboardData): string {
 
 export function AiInsightsCard({ data }: { data: DashboardData }) {
   const gate = useFeatureGate(data.company?.subscription_tier as any);
+  const { openAssist } = useAiAssist();
   const [insights, setInsights] = React.useState<Insight[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -203,8 +204,14 @@ export function AiInsightsCard({ data }: { data: DashboardData }) {
             >
               <RefreshCcw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-xs">
-              <Link to="/dashboard/ai">Open AI Chat</Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => openAssist({ prompt: "Give me a short owner briefing for today based on my dashboard." })}
+            >
+              Open chat
             </Button>
           </div>
         </CardTitle>

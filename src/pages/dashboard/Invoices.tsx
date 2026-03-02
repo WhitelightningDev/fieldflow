@@ -12,6 +12,7 @@ import { FileText } from "lucide-react";
 import * as React from "react";
 import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
 import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
+import { AiAssistTrigger } from "@/features/ai/components/ai-assist-trigger";
 
 type Invoice = Tables<"invoices">;
 
@@ -82,6 +83,12 @@ export default function Invoices() {
       <PageHeader
         title="Invoices"
         subtitle="Track invoice status, record payments, and keep customer billing organised."
+        actions={
+          <AiAssistTrigger
+            label="Ask AI"
+            prompt="Review my invoices and suggest what I should follow up on today. Draft a short, polite follow-up message for the most urgent unpaid invoices."
+          />
+        }
       />
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
@@ -229,4 +236,3 @@ export default function Invoices() {
     </div>
   );
 }
-

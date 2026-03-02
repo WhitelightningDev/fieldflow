@@ -7,6 +7,7 @@ export type PlanFeatureKey =
   | "mobile_app"
   | "invoicing"
   | "customer_portal"
+  | "quote_requests"
   | "priority_support"
   | "ai_job_summaries"
   | "accounting_integrations"
@@ -82,6 +83,7 @@ export const PLANS: PlanDefinition[] = [
       "mobile_app",
       "invoicing",
       "customer_portal",
+      "quote_requests",
       "priority_support",
       "ai_job_summaries",
       "accounting_integrations",
@@ -91,6 +93,7 @@ export const PLANS: PlanDefinition[] = [
     featureLabels: [
       "2 technicians included",
       "All Pro features",
+      "Quote requests + QR form",
       "AI job summaries",
       "Accounting integrations",
       "API & webhook access",

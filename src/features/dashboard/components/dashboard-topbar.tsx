@@ -6,17 +6,19 @@ import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import TradeFilterSelect from "@/features/dashboard/components/trade-filter-select";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import NotificationBell from "@/components/notification-bell";
-import { Building2, LayoutGrid } from "lucide-react";
+import { Building2, LayoutGrid, Sparkles } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import ComplianceStatusIcon from "@/features/compliance/components/compliance-status-icon";
 import { useTrialStatus } from "@/features/trial/hooks/use-trial-status";
 import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
 import TrialDaysIconButton from "@/features/trial/components/trial-days-icon-button";
+import { useAiAssist } from "@/features/ai/ai-assist-context";
 
 export default function DashboardTopbar({ onOpenCompliance }: { onOpenCompliance?: () => void }) {
   const { profile, roles, loading: authLoading, profileLoading } = useAuth();
   const { data } = useDashboardData();
+  const { openAssist } = useAiAssist();
   const company = data.company as any;
   const canCreateCompany = roles.includes("owner") || roles.includes("admin");
   const trialStatus = useTrialStatus(company);
@@ -49,6 +51,17 @@ export default function DashboardTopbar({ onOpenCompliance }: { onOpenCompliance
                 onClick={trialDismissal.restore}
               />
             ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => openAssist()}
+              aria-label="Open AI Assistant"
+              title="AI Assistant"
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
             <NotificationBell basePath="/dashboard" />
             {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
             {!authLoading && !profileLoading && profile?.company_id ? (

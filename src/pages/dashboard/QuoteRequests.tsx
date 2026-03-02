@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import PageHeader from "@/features/dashboard/components/page-header";
+import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
+import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -175,15 +177,17 @@ async function buildQrPosterPngDataUrl({
 }
 
 export default function QuoteRequests() {
-  const { data: dashData } = useDashboardData();
+  const { data: dashData, companyState } = useDashboardData();
   const companyId = dashData.company?.id;
   const publicKey = (dashData.company as any)?.public_key as string | undefined;
   const queryClient = useQueryClient();
+  const gate = useFeatureGate(dashData.company?.subscription_tier as any);
+  const canUseQuotes = gate.hasFeature("quote_requests");
 
   // Fetch quote requests
   const { data: quotes, isLoading: quotesLoading } = useQuery({
     queryKey: ["quote_requests", companyId],
-    enabled: !!companyId,
+    enabled: canUseQuotes && !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quote_requests")
@@ -198,7 +202,7 @@ export default function QuoteRequests() {
   // Fetch widget installations
   const { data: widgets, isLoading: widgetsLoading } = useQuery({
     queryKey: ["widget_installations", companyId],
-    enabled: !!companyId,
+    enabled: canUseQuotes && !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("widget_installations")
@@ -268,7 +272,7 @@ export default function QuoteRequests() {
   // QR / shareable quote link (token is opaque and can be printed/shared publicly)
   const { data: quoteLinkToken, isLoading: quoteLinkLoading } = useQuery({
     queryKey: ["quote_link_token", companyId],
-    enabled: !!companyId,
+    enabled: canUseQuotes && !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_or_create_quote_link_token" as any);
       if (error) throw error;
@@ -481,6 +485,23 @@ export default function QuoteRequests() {
   data-mount="#fieldflow-quote">
 </script>`
     : "";
+
+  const showLoadingShell = companyState.kind === "loading" && !dashData.company;
+  const showUpgrade = !!dashData.company && !canUseQuotes;
+
+  if (showLoadingShell) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (showUpgrade) {
+    return <UpgradePrompt feature="Quote requests" requiredTier="business" currentTier={gate.tier as any} />;
+  }
 
   return (
     <div className="space-y-6">

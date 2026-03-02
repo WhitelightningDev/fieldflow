@@ -32,6 +32,27 @@ function isRateLimited(key: string): boolean {
   return entry.count > RATE_LIMIT;
 }
 
+function quoteEligibilityError(company: {
+  subscription_tier?: string | null;
+  subscription_status?: string | null;
+  trial_ends_at?: string | null;
+}): string | null {
+  const tier = String(company.subscription_tier ?? "").toLowerCase();
+  const status = String(company.subscription_status ?? "").toLowerCase();
+
+  if (tier !== "business") return "Quote requests are available on the Business plan.";
+
+  if (status === "active" || status === "paid") return null;
+
+  if (status === "trialing") {
+    const endsAtRaw = company.trial_ends_at ?? null;
+    const endsAtMs = endsAtRaw ? new Date(endsAtRaw).getTime() : NaN;
+    if (Number.isFinite(endsAtMs) && endsAtMs > Date.now()) return null;
+  }
+
+  return "This business is not currently accepting quote requests.";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -92,6 +113,11 @@ Deno.serve(async (req) => {
 
   // 1. Resolve company (either by public_key or by quote_link_token)
   let companyId: string | null = null;
+  let companyEligibilityRow: {
+    subscription_tier?: string | null;
+    subscription_status?: string | null;
+    trial_ends_at?: string | null;
+  } | null = null;
 
   if (quoteLinkToken) {
     const { data: link, error: linkError } = await supabase
@@ -105,10 +131,22 @@ Deno.serve(async (req) => {
     }
 
     companyId = link.company_id;
+
+    const { data: companyRow, error: companyError } = await supabase
+      .from("companies")
+      .select("subscription_tier, subscription_status, trial_ends_at")
+      .eq("id", companyId)
+      .maybeSingle();
+
+    if (companyError || !companyRow) {
+      return jsonResponse({ error: "Invalid quote link" }, 404, origin);
+    }
+
+    companyEligibilityRow = companyRow as any;
   } else {
     const { data: company, error: companyError } = await supabase
       .from("companies")
-      .select("id")
+      .select("id, subscription_tier, subscription_status, trial_ends_at")
       .eq("public_key", companyPublicKey)
       .maybeSingle();
 
@@ -117,6 +155,13 @@ Deno.serve(async (req) => {
     }
 
     companyId = company.id;
+    companyEligibilityRow = company as any;
+  }
+
+  // 1.5 Enforce Business-only access (and valid subscription status)
+  const eligibilityError = companyEligibilityRow ? quoteEligibilityError(companyEligibilityRow) : "Server error";
+  if (eligibilityError) {
+    return jsonResponse({ error: eligibilityError }, 403, origin);
   }
 
   // 2. Validate domain against widget_installations (only for embeddable widget installs).

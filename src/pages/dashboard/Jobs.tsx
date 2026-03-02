@@ -14,6 +14,7 @@ import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
 import { computeJobProfitability } from "@/features/dashboard/lib/profitability";
 import PageHeader from "@/features/dashboard/components/page-header";
+import { AiAssistTrigger } from "@/features/ai/components/ai-assist-trigger";
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -142,7 +143,15 @@ export default function Jobs() {
       <PageHeader
         title="Job cards"
         subtitle="Create, assign, and track job cards across all service trades. Search, group, and update jobs fast."
-        actions={<CreateJobCardDialog defaultTradeId={defaultTradeId} allowedTradeIds={allowedTradeIds} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <AiAssistTrigger
+              label="Ask AI"
+              prompt="Review my open job cards and suggest dispatch priorities, risks, and the top next actions for today."
+            />
+            <CreateJobCardDialog defaultTradeId={defaultTradeId} allowedTradeIds={allowedTradeIds} />
+          </div>
+        }
       />
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">

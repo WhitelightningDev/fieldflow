@@ -16,6 +16,8 @@ import { useTrialStatus, shouldShowTrialWarning } from "@/features/trial/hooks/u
 import TrialBanner from "@/features/trial/components/trial-banner";
 import TrialPaywall from "@/features/trial/components/trial-paywall";
 import { useTrialBannerDismissal } from "@/features/trial/hooks/use-trial-banner-dismissal";
+import { AiAssistFab } from "@/features/ai/components/ai-assist-fab";
+import { AiAssistSheet } from "@/features/ai/components/ai-assist-sheet";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data, companyState, actions } = useDashboardData();
@@ -122,6 +124,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         company={company}
         canEdit={canCreateCompany}
       />
+      <AiAssistSheet />
+      <AiAssistFab />
     </SidebarProvider>
   );
 }

@@ -50,6 +50,7 @@ export default function QuoteRequestPublic() {
 
   const [submitting, setSubmitting] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
+  const [unavailable, setUnavailable] = React.useState(false);
   const [errorText, setErrorText] = React.useState<string>("");
 
   const companyName = resolved?.company_name ?? null;
@@ -132,6 +133,7 @@ export default function QuoteRequestPublic() {
     e.preventDefault();
     if (!token) return;
     setErrorText("");
+    setUnavailable(false);
 
     const cleanName = name.trim();
     const cleanEmail = email.trim();
@@ -159,6 +161,10 @@ export default function QuoteRequestPublic() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 403) {
+          setUnavailable(true);
+          return;
+        }
         throw new Error((data as any)?.error || "Something went wrong. Please try again.");
       }
 
@@ -207,8 +213,8 @@ export default function QuoteRequestPublic() {
             <CardContent>
               {!token ? (
                 <div className="text-sm text-muted-foreground">Invalid quote link.</div>
-              ) : linkInvalid ? (
-                <div className="text-sm text-muted-foreground">This quote link is inactive or invalid.</div>
+              ) : linkInvalid || unavailable ? (
+                <div className="text-sm text-muted-foreground">This quote form is unavailable.</div>
               ) : success ? (
                 <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-5 text-center">
                   <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 text-xl font-black">

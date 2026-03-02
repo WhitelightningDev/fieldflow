@@ -167,6 +167,9 @@
               "<p class=\"ff-success-sub\">We've received your request and will be in touch soon.</p>" +
               "</div>";
           } else {
+            if (result.status === 403) {
+              throw new Error("This business is not currently accepting quote requests.");
+            }
             throw new Error(result.data.error || "Something went wrong");
           }
         })
