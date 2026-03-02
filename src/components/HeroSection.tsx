@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
 import { Link } from "react-router-dom";
+import { useActiveCompanyCount } from "@/hooks/use-active-company-count";
 
 const HeroSection = () => {
+  const { count } = useActiveCompanyCount();
   const benefits = [
     "14-day free trial",
     "No credit card required",
@@ -79,7 +81,7 @@ const HeroSection = () => {
                   <Sparkles className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">2,500+</div>
+                  <div className="text-2xl font-bold tabular-nums">{count == null ? "…" : count.toLocaleString()}</div>
                   <div className="text-sm text-muted-foreground">Active Companies</div>
                 </div>
               </div>
