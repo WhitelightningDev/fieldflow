@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
+import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
 import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
 import type { DashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import * as React from "react";
@@ -131,20 +132,13 @@ export function AiInsightsCard({ data }: { data: DashboardData }) {
       });
 
       if (fnError) {
-        let details = fnError.message;
         const ctx: any = (fnError as any).context;
         const res: Response | undefined = ctx?.response;
-        if (res) {
-          try {
-            const raw = await res.text();
-            const parsed = raw ? JSON.parse(raw) : null;
-            details = parsed?.error ?? parsed?.hint ?? raw ?? details;
-          } catch { /* ignore */ }
-          if (res.status === 403) {
-            setError("Business plan required");
-            return;
-          }
+        if (res?.status === 403) {
+          setError("Business plan required");
+          return;
         }
+        const details = await getFunctionsInvokeErrorMessage(fnError, { functionName: "ai-assistant" });
         setError(details);
         return;
       }

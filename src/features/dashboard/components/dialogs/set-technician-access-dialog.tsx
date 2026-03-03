@@ -8,6 +8,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -85,18 +86,7 @@ export default function SetTechnicianAccessDialog({
     });
 
     if (fnError) {
-      let details = fnError.message;
-      const ctx: any = (fnError as any).context;
-      const res: Response | undefined = ctx?.response;
-      if (res) {
-        try {
-          const text = await res.text();
-          const parsed = text ? JSON.parse(text) : null;
-          details = parsed?.error ?? text ?? details;
-        } catch {
-          // ignore
-        }
-      }
+      const details = await getFunctionsInvokeErrorMessage(fnError, { functionName: "invite-technician" });
       toast({ title: "Access update failed", description: details, variant: "destructive" });
       return;
     }

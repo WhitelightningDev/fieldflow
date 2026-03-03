@@ -22,6 +22,7 @@ import { formatZar, getPlan, type PlanTier } from "@/features/subscription/plans
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -156,19 +157,9 @@ export default function CreateTechnicianDialog(props: CreateTechnicianDialogProp
           },
         });
         if (fnError) {
-          let details = fnError.message;
-          const ctx: any = (fnError as any).context;
-          const res: Response | undefined = ctx?.response;
-          if (res) {
-            try {
-              const text = await res.text();
-              const parsed = text ? JSON.parse(text) : null;
-              details = parsed?.error ?? text ?? details;
-            } catch {
-              // ignore
-            }
-            if (res.status === 404) details = 'Edge function "invite-technician" is not deployed.';
-            if (res.status === 401) details = "Not authorized to create technician access. Please re-login and try again.";
+          let details = await getFunctionsInvokeErrorMessage(fnError, { functionName: "invite-technician" });
+          if (details === "Not authorized. Please re-login and try again.") {
+            details = "Not authorized to create technician access. Please re-login and try again.";
           }
           if (details.toLowerCase().includes("supabasekey is required")) {
             details =

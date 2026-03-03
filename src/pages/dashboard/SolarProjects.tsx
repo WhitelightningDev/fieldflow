@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -902,49 +903,90 @@ export default function SolarProjects() {
         actions={<CreateSolarProjectDialog onCreated={refresh} />}
       />
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Project</TableHead>
-              <TableHead>Site</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Updated</TableHead>
-              <TableHead className="w-[120px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                  Loading…
-                </TableCell>
-              </TableRow>
-            ) : projects.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                  No solar projects yet.
-                </TableCell>
-              </TableRow>
-            ) : null}
-            {projects.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <div className="font-medium">{p.title}</div>
-                  <div className="text-xs text-muted-foreground">{p.notes ?? "—"}</div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{p.site_id ? sitesById.get(p.site_id)?.name ?? "—" : "—"}</TableCell>
-                <TableCell className="capitalize">{p.status.replace("-", " ")}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatDistanceToNowStrict(new Date(p.updated_at), { addSuffix: true })}
-                </TableCell>
-                <TableCell className="text-right">
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="sm:hidden p-3 space-y-3">
+          {loading ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : projects.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No solar projects yet.</div>
+          ) : null}
+
+          {projects.map((p) => (
+            <Card key={p.id} className="bg-background/50">
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold whitespace-normal break-words">{p.title}</div>
+                    <div className="text-xs text-muted-foreground whitespace-normal break-words">{p.notes ?? "—"}</div>
+                  </div>
                   <ManageSolarProjectDialog project={p} onChanged={refresh} />
-                </TableCell>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Site</div>
+                    <div className="font-medium truncate">{p.site_id ? sitesById.get(p.site_id)?.name ?? "—" : "—"}</div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Status</div>
+                    <div className="font-medium capitalize">{String(p.status ?? "").replace("-", " ")}</div>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  Updated {formatDistanceToNowStrict(new Date(p.updated_at), { addSuffix: true })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Project</TableHead>
+                <TableHead>Site</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Updated</TableHead>
+                <TableHead className="w-[120px] text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                    Loading…
+                  </TableCell>
+                </TableRow>
+              ) : projects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                    No solar projects yet.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {projects.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <div className="font-medium">{p.title}</div>
+                    <div className="text-xs text-muted-foreground">{p.notes ?? "—"}</div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{p.site_id ? sitesById.get(p.site_id)?.name ?? "—" : "—"}</TableCell>
+                  <TableCell className="capitalize">{p.status.replace("-", " ")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDistanceToNowStrict(new Date(p.updated_at), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ManageSolarProjectDialog project={p} onChanged={refresh} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

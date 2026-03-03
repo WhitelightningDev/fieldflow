@@ -31,6 +31,7 @@ import {
 import { format } from "date-fns";
 import * as QRCode from "qrcode";
 import { useNavigate } from "react-router-dom";
+import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
 
 type QuoteRequest = {
   id: string;
@@ -245,20 +246,7 @@ export default function QuoteRequests() {
         body: { quoteRequestId },
       });
       if (error) {
-        let details = error.message;
-        const ctx: any = (error as any).context;
-        const res: Response | undefined = ctx?.response;
-        if (res) {
-          try {
-            const text = await res.text();
-            const parsed = text ? JSON.parse(text) : null;
-            details = parsed?.error ?? text ?? details;
-          } catch {
-            // ignore
-          }
-          if (res.status === 404) details = 'Edge function "provision-quote-requester" is not deployed.';
-          if (res.status === 401) details = "Not authorized. Please re-login and try again.";
-        }
+        const details = await getFunctionsInvokeErrorMessage(error, { functionName: "provision-quote-requester" });
         throw new Error(details);
       }
       return data as any;
@@ -284,20 +272,7 @@ export default function QuoteRequests() {
         body: { quoteRequestId },
       });
       if (error) {
-        let details = error.message;
-        const ctx: any = (error as any).context;
-        const res: Response | undefined = ctx?.response;
-        if (res) {
-          try {
-            const text = await res.text();
-            const parsed = text ? JSON.parse(text) : null;
-            details = parsed?.error ?? text ?? details;
-          } catch {
-            // ignore
-          }
-          if (res.status === 404) details = 'Edge function "request-quote-callout" is not deployed.';
-          if (res.status === 401) details = "Not authorized. Please re-login and try again.";
-        }
+        const details = await getFunctionsInvokeErrorMessage(error, { functionName: "request-quote-callout" });
         throw new Error(details);
       }
       return data as any;
@@ -921,7 +896,7 @@ export default function QuoteRequests() {
 
       {/* Quote Requests Table */}
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-lg">Incoming Requests</CardTitle>
             <CardDescription>
@@ -944,25 +919,46 @@ export default function QuoteRequests() {
               ))}
             </div>
           ) : quotes && quotes.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Trade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {quotes.map((q) => (
-                    <TableRow key={q.id}>
-                      <TableCell className="font-medium">{q.name}</TableCell>
-                      <TableCell>{q.email}</TableCell>
-                      <TableCell>{q.trade ?? "—"}</TableCell>
-                      <TableCell>
+            <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+              {/* Mobile: cards */}
+              <div className="sm:hidden p-3 space-y-3">
+                {quotes.map((q) => (
+                  <Card key={q.id} className="bg-background/50">
+                    <CardContent className="py-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{q.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{q.email}</div>
+                          {q.phone ? <div className="text-xs text-muted-foreground truncate">{q.phone}</div> : null}
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => setSelectedQuote(q)} aria-label="View quote request">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => deleteQuote.mutate(q.id)}
+                            aria-label="Delete quote request"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-lg border bg-background/40 p-2">
+                          <div className="text-muted-foreground">Trade</div>
+                          <div className="font-medium truncate">{q.trade ?? "—"}</div>
+                        </div>
+                        <div className="rounded-lg border bg-background/40 p-2">
+                          <div className="text-muted-foreground">Date</div>
+                          <div className="font-medium truncate">{format(new Date(q.created_at), "dd MMM yyyy")}</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-xs text-muted-foreground">Status</div>
                         <Select
                           value={q.status}
                           onValueChange={(val) =>
@@ -973,7 +969,7 @@ export default function QuoteRequests() {
                                 : updateStatus.mutate({ id: q.id, status: val })
                           }
                         >
-                          <SelectTrigger className="h-8 w-[120px]">
+                          <SelectTrigger className="h-9 w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -988,32 +984,76 @@ export default function QuoteRequests() {
                             ))}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {format(new Date(q.created_at), "dd MMM yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setSelectedQuote(q)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => deleteQuote.mutate(q.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Trade</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {quotes.map((q) => (
+                      <TableRow key={q.id}>
+                        <TableCell className="font-medium">{q.name}</TableCell>
+                        <TableCell>{q.email}</TableCell>
+                        <TableCell>{q.trade ?? "—"}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={q.status}
+                            onValueChange={(val) =>
+                              val === "quoted"
+                                ? provisionRequester.mutate(q.id)
+                                : val === "callout-requested"
+                                  ? requestCallout.mutate(q.id)
+                                  : updateStatus.mutate({ id: q.id, status: val })
+                            }
+                          >
+                            <SelectTrigger className="h-8 w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((s) => (
+                                <SelectItem
+                                  key={s.value}
+                                  value={s.value}
+                                  disabled={s.value === "callout-paid" || s.value === "callout-declined"}
+                                >
+                                  {s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(q.created_at), "dd MMM yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => setSelectedQuote(q)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => deleteQuote.mutate(q.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">

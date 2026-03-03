@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
 
 const VAPID_PUBLIC_KEY = (import.meta as any).env?.VITE_WEB_PUSH_VAPID_PUBLIC_KEY as string | undefined;
 
@@ -153,7 +154,6 @@ export async function sendTestBackgroundPush(payload?: { title?: string; body?: 
       url: payload?.url ?? "/tech",
     },
   });
-  if (error) return { ok: false as const, error: error.message ?? "Failed to send test push." };
+  if (error) return { ok: false as const, error: await getFunctionsInvokeErrorMessage(error, { functionName: "push-test" }) };
   return { ok: true as const, data };
 }
-

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
+import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
 
 export type AiChatMessage = { role: "user" | "assistant"; text: string };
 
@@ -33,19 +34,7 @@ export function useAiAssistantChat({
       });
 
       if (fnError) {
-        let details = fnError.message;
-        const ctx: any = (fnError as any).context;
-        const res: Response | undefined = ctx?.response;
-        if (res) {
-          try {
-            const raw = await res.text();
-            const parsed = raw ? JSON.parse(raw) : null;
-            details = parsed?.error ?? parsed?.hint ?? raw ?? details;
-          } catch {
-            // ignore
-          }
-          if (res.status === 404) details = 'Edge function "ai-assistant" is not deployed.';
-        }
+        const details = await getFunctionsInvokeErrorMessage(fnError, { functionName: "ai-assistant" });
         toastError("AI request failed", details);
         setMessages((prev) => [...prev, { role: "assistant", text: "Sorry — I couldn’t complete that request." }]);
         return;
@@ -63,4 +52,3 @@ export function useAiAssistantChat({
 
   return { messages, loading, send, clear };
 }
-

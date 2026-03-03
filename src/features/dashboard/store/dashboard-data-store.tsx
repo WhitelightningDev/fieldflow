@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { toast } from "@/components/ui/use-toast";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { getPostgrestErrorMessage } from "@/lib/supabase-error";
 
 type Customer = Tables<"customers">;
 type Technician = Tables<"technicians">;
@@ -412,7 +413,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ ...c, company_id: companyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => {
         if (prev.customers.some((x) => x.id === row.id)) return prev;
         return { ...prev, customers: [row, ...prev.customers] };
@@ -433,7 +434,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
           .insert(chunk.map((c) => ({ ...c, company_id: companyId })) as any)
           .select();
         if (error) {
-          toast({ title: "Error", description: error.message, variant: "destructive" });
+          toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" });
           return inserted;
         }
         inserted.push(...((created ?? []) as Customer[]));
@@ -452,7 +453,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .eq("id", customerId)
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({
         ...prev,
         customers: prev.customers.map((x) => (x.id === customerId ? row : x)),
@@ -465,7 +466,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .delete()
         .eq("id", customerId);
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" });
         return;
       }
       setData((prev) => ({
@@ -487,7 +488,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .eq("company_id", companyId)
         .in("id", ids);
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" });
         return;
       }
 
@@ -508,7 +509,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ ...t, company_id: companyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, technicians: [row, ...prev.technicians] }));
       return row;
     },
@@ -526,7 +527,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
           .insert(chunk.map((t) => ({ ...t, company_id: companyId })) as any)
           .select();
         if (error) {
-          toast({ title: "Error", description: error.message, variant: "destructive" });
+          toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" });
           return inserted;
         }
         inserted.push(...((created ?? []) as Technician[]));
@@ -545,7 +546,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .eq("id", technicianId)
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({
         ...prev,
         technicians: prev.technicians.map((x) => (x.id === technicianId ? row : x)),
@@ -558,7 +559,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .delete()
         .eq("id", technicianId);
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" });
         return;
       }
       setData((prev) => ({
@@ -577,7 +578,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ ...j, company_id: companyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       // Deduplicate against realtime INSERT events (which can arrive before this promise resolves).
       setData((prev) => ({ ...prev, jobCards: mergeById([row], prev.jobCards) }));
       return row;
@@ -589,7 +590,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .eq("id", id)
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({
         ...prev,
         jobCards: prev.jobCards.map((j) => (j.id === id ? row : j)),
@@ -601,7 +602,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("job_cards")
         .update({ status: status as any })
         .eq("id", id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         jobCards: prev.jobCards.map((j) => (j.id === id ? { ...j, status: status as any, updated_at: new Date().toISOString() } : j)),
@@ -612,7 +613,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("job_cards")
         .update({ site_id: siteId })
         .eq("id", id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         jobCards: prev.jobCards.map((j) => (j.id === id ? { ...j, site_id: siteId, updated_at: new Date().toISOString() } : j)),
@@ -623,7 +624,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("job_cards")
         .update({ technician_id: technicianId })
         .eq("id", id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         jobCards: prev.jobCards.map((j: any) => (j.id === id ? { ...j, technician_id: technicianId, updated_at: new Date().toISOString() } : j)),
@@ -634,7 +635,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("job_cards")
         .update({ revenue_cents: revenueCents })
         .eq("id", id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         jobCards: prev.jobCards.map((j: any) => (j.id === id ? { ...j, revenue_cents: revenueCents, updated_at: new Date().toISOString() } : j)),
@@ -647,7 +648,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ ...i, company_id: companyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       // Realtime INSERT can arrive before this resolves; dedupe by id to avoid duplicates.
       setData((prev) => ({ ...prev, inventoryItems: mergeById([row], prev.inventoryItems) }));
       return row;
@@ -664,7 +665,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("inventory_items")
         .update({ quantity_on_hand: newQty })
         .eq("id", itemId);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         inventoryItems: prev.inventoryItems.map((i) => (i.id === itemId ? { ...i, quantity_on_hand: newQty } : i)),
@@ -675,7 +676,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("inventory_items")
         .update({ unit_cost_cents: unitCostCents })
         .eq("id", itemId);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         inventoryItems: prev.inventoryItems.map((i: any) => (i.id === itemId ? { ...i, unit_cost_cents: unitCostCents } : i)),
@@ -688,7 +689,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ ...s, company_id: companyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, sites: [row, ...prev.sites] }));
       return row;
     },
@@ -699,7 +700,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .eq("id", siteId)
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({
         ...prev,
         sites: prev.sites.map((x) => (x.id === siteId ? row : x)),
@@ -712,7 +713,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .delete()
         .eq("id", siteId);
       if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" });
         return;
       }
       setData((prev) => ({
@@ -731,7 +732,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ ...t, company_id: companyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => {
         if (prev.teams.some((x) => x.id === row.id)) return prev;
         return { ...prev, teams: [row, ...prev.teams] };
@@ -743,7 +744,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("technicians")
         .update({ hourly_cost_cents: hourlyCostCents, hourly_bill_rate_cents: hourlyBillRateCents })
         .eq("id", technicianId);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         technicians: prev.technicians.map((t: any) =>
@@ -766,7 +767,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .insert({ team_id: teamId, full_name: tech.name, email: tech.email, phone: tech.phone, company_id: currentCompanyId })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => {
         if (prev.teamMembers.some((x) => x.id === row.id)) return prev;
         return { ...prev, teamMembers: [row, ...prev.teamMembers] };
@@ -778,7 +779,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .from("team_members")
         .delete()
         .eq("id", teamMemberId);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({ ...prev, teamMembers: prev.teamMembers.filter((m) => m.id !== teamMemberId) }));
     },
     assignTeamToSite: async ({ siteId, company_id, teamId, startsAt, endsAt, notes }) => {
@@ -794,7 +795,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         })
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return null; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return null; }
       setData((prev) => ({ ...prev, siteTeamAssignments: [row, ...prev.siteTeamAssignments] }));
       return row;
     },
@@ -805,7 +806,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         .eq("id", assignmentId)
         .select()
         .single();
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+      if (error) { toast({ title: "Error", description: getPostgrestErrorMessage(error), variant: "destructive" }); return; }
       setData((prev) => ({
         ...prev,
         siteTeamAssignments: prev.siteTeamAssignments.map((a) => (a.id === assignmentId ? row : a)),
