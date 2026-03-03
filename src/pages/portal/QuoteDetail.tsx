@@ -96,6 +96,16 @@ function calloutBadgeText(status: string) {
   return s || "—";
 }
 
+function isMissingRpcFunctionError(err: unknown) {
+  const code = String((err as any)?.code ?? "");
+  const message = String((err as any)?.message ?? "");
+  return (
+    code === "PGRST202" ||
+    message.includes("Could not find the function") ||
+    message.includes("get_my_quote_request_detail")
+  );
+}
+
 export default function QuoteDetail() {
   const { quoteRequestId } = useParams();
   const navigate = useNavigate();
@@ -104,14 +114,57 @@ export default function QuoteDetail() {
     data,
     isLoading,
     isError,
+    error: queryError,
     refetch,
   } = useQuery({
     queryKey: ["portal_quote_request_detail", quoteRequestId],
     enabled: Boolean(quoteRequestId),
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_my_quote_request_detail" as any, { _quote_request_id: quoteRequestId! });
-      if (error) throw error;
-      return data as Payload;
+      const { data, error } = await supabase.rpc("get_my_quote_request_detail" as any, {
+        _quote_request_id: quoteRequestId!,
+      });
+      if (!error) return data as Payload;
+
+      if (isMissingRpcFunctionError(error)) {
+        const fallback = await supabase.rpc("get_my_quote_requests" as any);
+        if (fallback.error) throw error;
+        const row = ((fallback.data ?? []) as any[]).find((r) => String(r?.id) === String(quoteRequestId));
+        if (!row) throw error;
+
+        return {
+          quote: {
+            id: String(row.id),
+            company_id: "",
+            company_name: row.company_name ?? null,
+            company_logo_url: row.company_logo_url ?? null,
+            name: "",
+            email: "",
+            phone: null,
+            trade: row.trade ?? null,
+            address: null,
+            message: row.message ?? null,
+            status: String(row.status ?? ""),
+            created_at: String(row.created_at ?? ""),
+            job_card_id: row.job_card_id ?? null,
+          },
+          callout: null,
+          job: row.job_card_id
+            ? {
+                id: String(row.job_card_id),
+                status: String(row.job_status ?? ""),
+                scheduled_at: row.scheduled_at ?? null,
+                technician_id: null,
+                technician_name: row.technician_name ?? null,
+                title: "Job",
+                description: null,
+                updated_at: String(row.created_at ?? ""),
+              }
+            : null,
+          invoice: null,
+        } satisfies Payload;
+      }
+
+      throw error;
     },
     retry: false,
   });
@@ -183,7 +236,9 @@ export default function QuoteDetail() {
         <Card className="border-border/60">
           <CardHeader>
             <CardTitle className="text-base">Couldn’t load this quote</CardTitle>
-            <CardDescription>Please try again.</CardDescription>
+            <CardDescription>
+              {String((queryError as any)?.message ?? "").trim() || "Please try again."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" onClick={() => void refetch()}>Retry</Button>
@@ -224,7 +279,7 @@ export default function QuoteDetail() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Contact</div>
-                  <div className="font-medium">{quote.email}</div>
+                  <div className="font-medium">{quote.email.trim() ? quote.email : "—"}</div>
                 </div>
               </div>
               {quote.message?.trim() ? (
