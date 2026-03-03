@@ -190,6 +190,7 @@ export default function Login() {
       <AuthLayout
         title="FieldFlow Tech"
         subtitle="Sign in with your technician credentials."
+        centerContentOnMobile
         topRight={null}
         side={
           <div className="flex flex-col items-center gap-6">
@@ -226,6 +227,7 @@ export default function Login() {
     <AuthLayout
       title="Welcome back."
       subtitle={meta.subtitle}
+      centerContentOnMobile
       topRight={
         <Link to="/signup" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           Need an account? <span className="text-primary">Sign up</span>

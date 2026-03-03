@@ -10,15 +10,24 @@ type Props = {
   children: React.ReactNode;
   side?: React.ReactNode;
   topRight?: React.ReactNode;
+  centerContentOnMobile?: boolean;
   className?: string;
 };
 
-export default function AuthLayout({ title, subtitle, children, side, topRight, className }: Props) {
+export default function AuthLayout({
+  title,
+  subtitle,
+  children,
+  side,
+  topRight,
+  centerContentOnMobile = false,
+  className,
+}: Props) {
   return (
-    <div className={cn("min-h-screen bg-background", className)}>
+    <div className={cn("relative min-h-[100dvh] bg-background", className)}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(199_89%_48%/0.08),transparent_55%)]" />
-      <div className="container mx-auto px-4 relative">
-        <div className="flex items-center justify-between py-6">
+      <div className="container mx-auto px-4 relative flex min-h-[100dvh] flex-col">
+        <div className="flex items-center justify-between gap-4 pt-[max(env(safe-area-inset-top),1.5rem)] pb-4 lg:py-6">
           <Link to="/" className="flex items-center gap-2 group">
             <BrandIcon size={36} className="transition-all duration-300 group-hover:shadow-lg" />
             <BrandWordmark className="text-xl" />
@@ -26,7 +35,12 @@ export default function AuthLayout({ title, subtitle, children, side, topRight, 
           {topRight}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-10 items-start pb-16">
+        <div
+          className={cn(
+            "grid flex-1 lg:grid-cols-2 gap-10 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-16",
+            centerContentOnMobile ? "items-center lg:items-start" : "items-start",
+          )}
+        >
           <div className="hidden lg:block pt-6">
             <div className="max-w-lg">
               <h1 className="text-4xl font-bold leading-tight">{title}</h1>
