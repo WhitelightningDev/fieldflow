@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import PageHeader from "@/features/dashboard/components/page-header";
+import { KpiCard, DensityProvider } from "@/features/dashboard/components/dashboard-kpi-utils";
 import CreateServiceCallDialog from "@/features/dashboard/components/dialogs/create-service-call-dialog";
 import ServiceCallDispatchDialog from "@/features/dashboard/components/dialogs/service-call-dispatch-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
@@ -16,7 +17,7 @@ import { isAfterHours, isLast24h, isThisMonth } from "@/features/dashboard/compo
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
-import { RefreshCcw, Timer } from "lucide-react";
+import { AlertTriangle, Flame, Gauge, Phone, RefreshCcw, Shield, Timer, UserX } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -148,56 +149,16 @@ export default function ServiceCalls() {
         />
       </div>
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-6" data-tour="servicecalls-stats">
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Service calls</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Emergency (24h)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.emergencyToday}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">In progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inProgress}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Unassigned</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.unassigned}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Gas CoC (open)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.gasCocOpen}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Pressure tests (open)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pressureOpen}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <DensityProvider>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-6" data-tour="servicecalls-stats">
+          <KpiCard icon={Phone} label="Service calls" value={stats.total} />
+          <KpiCard icon={Flame} label="Emergency (24h)" value={stats.emergencyToday} accent={stats.emergencyToday > 0 ? "destructive" : undefined} />
+          <KpiCard icon={Gauge} label="In progress" value={stats.inProgress} />
+          <KpiCard icon={UserX} label="Unassigned" value={stats.unassigned} accent={stats.unassigned > 0 ? "warning" : undefined} />
+          <KpiCard icon={Shield} label="Gas CoC (open)" value={stats.gasCocOpen} accent={stats.gasCocOpen > 0 ? "warning" : undefined} />
+          <KpiCard icon={AlertTriangle} label="Pressure tests" value={stats.pressureOpen} accent={stats.pressureOpen > 0 ? "warning" : undefined} />
+        </div>
+      </DensityProvider>
 
       <Card className="bg-card/70 backdrop-blur-sm" data-tour="servicecalls-filters">
         <CardHeader className="pb-3">
