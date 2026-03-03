@@ -72,16 +72,16 @@ function DashboardHeader({ companyName }: { companyName?: string }) {
   const today = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">
           Manage and track your operations
         </p>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground mt-1">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground mt-1 truncate">
           {greeting}{companyName ? `, ${companyName}` : ""}
         </h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
           <CalendarClock className="h-3.5 w-3.5" />
           {today}
@@ -121,17 +121,17 @@ function QuickStat({
 
   const content = (
     <div className={cn(
-      "flex items-center gap-3 rounded-2xl border border-border/40 bg-card p-3.5 shadow-sm transition-all",
+      "flex items-center gap-2.5 sm:gap-3 rounded-2xl border border-border/40 bg-card p-2.5 sm:p-3.5 shadow-sm transition-all",
       href && "hover:shadow-md hover:-translate-y-0.5 cursor-pointer group",
       className,
     )}>
-      <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", iconColor)}>
-        <Icon className="h-4.5 w-4.5" />
+      <div className={cn("h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0", iconColor)}>
+        <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
-        <p className="text-lg font-bold text-foreground leading-tight">{value}</p>
-        {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
+        <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase tracking-wider font-medium truncate">{label}</p>
+        <p className="text-base sm:text-lg font-bold text-foreground leading-tight">{value}</p>
+        {sub && <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{sub}</p>}
       </div>
     </div>
   );
@@ -366,7 +366,7 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
       <DashboardHeader companyName={data.company?.name} />
 
       {/* Quick stats row */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         <QuickStat
           icon={Flame}
           label="Emergency"
@@ -438,7 +438,7 @@ function DashboardSkeleton() {
         <div className="h-3 w-40 rounded bg-muted animate-pulse" />
         <div className="h-7 w-56 rounded-lg bg-muted animate-pulse" />
       </div>
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="rounded-2xl border border-border/40 bg-card p-3.5 shadow-sm">
             <div className="flex items-center gap-3">
@@ -451,7 +451,7 @@ function DashboardSkeleton() {
           </div>
         ))}
       </div>
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="rounded-2xl border border-border/40 bg-card p-6 shadow-sm h-64 animate-pulse" />
         ))}
