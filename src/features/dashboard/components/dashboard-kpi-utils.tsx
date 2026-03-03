@@ -3,7 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LayoutGrid, List } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
@@ -35,10 +35,18 @@ export function isAfterHours(dateStr: string) {
 export type DashboardSurface = "default" | "subtle" | "warning" | "critical";
 
 const surfaceClasses: Record<DashboardSurface, string> = {
-  default: "bg-card border-border shadow-sm",
-  subtle: "bg-muted/40 border-border/60 shadow-none",
-  warning: "bg-amber-500/5 border-amber-500/30 shadow-sm",
-  critical: "bg-destructive/5 border-destructive/30 shadow-sm",
+  default: "bg-card border-border/50",
+  subtle: "bg-muted/30 border-border/40",
+  warning: "bg-card border-border/50",
+  critical: "bg-card border-border/50",
+};
+
+/* Accent strip colors for left border */
+const accentStrip: Record<DashboardSurface, string> = {
+  default: "border-l-primary/60",
+  subtle: "border-l-muted-foreground/30",
+  warning: "border-l-[hsl(38_92%_50%)]",
+  critical: "border-l-destructive",
 };
 
 /* ─── Density context ─── */
@@ -139,14 +147,14 @@ export function computeTechMetrics(allJobs: any[], technicians: any[]) {
 
 /* ─── Chart colors (consistent across app) ─── */
 export const CHART_COLORS = {
-  profit: "hsl(var(--chart-3))",   // green
-  loss: "hsl(var(--destructive))", // red
-  neutral: "hsl(var(--chart-1))",  // blue/primary
-  accent: "hsl(var(--chart-2))",   // violet
-  warn: "hsl(var(--chart-4))",     // amber
+  profit: "hsl(var(--chart-3))",
+  loss: "hsl(var(--destructive))",
+  neutral: "hsl(var(--chart-1))",
+  accent: "hsl(var(--chart-2))",
+  warn: "hsl(var(--chart-4))",
 } as const;
 
-/* ─── KPI Card (redesigned) ─── */
+/* ─── KPI Card (Yellowfin-inspired) ─── */
 export function KpiCard({
   icon: Icon,
   label,
@@ -158,6 +166,7 @@ export function KpiCard({
   sparkColor,
   href,
   children,
+  trend,
 }: {
   icon: LucideIcon;
   label: string;
@@ -169,6 +178,7 @@ export function KpiCard({
   sparkColor?: string;
   href?: string;
   children?: React.ReactNode;
+  trend?: { value: string; positive?: boolean };
 }) {
   const { density } = useDensity();
   const isCompact = density === "compact";
@@ -177,12 +187,12 @@ export function KpiCard({
     surface ??
     (accent === "destructive" ? "critical" : accent === "warning" ? "warning" : "default");
 
-  const accentClass =
+  const iconBg =
     accent === "destructive"
-      ? "text-destructive"
+      ? "bg-destructive/10 text-destructive"
       : accent === "warning"
-        ? "text-amber-600 dark:text-amber-400"
-        : "";
+        ? "bg-[hsl(38_92%_50%/0.1)] text-[hsl(38_92%_40%)] dark:text-[hsl(38_92%_65%)]"
+        : "bg-primary/10 text-primary";
 
   const sparkPoints = React.useMemo(() => {
     if (!sparkData || sparkData.length < 2) return null;
@@ -190,44 +200,58 @@ export function KpiCard({
   }, [sparkData]);
 
   const content = (
-    <Card
+    <div
       className={cn(
+        "rounded-xl border border-l-[3px] shadow-sm transition-all duration-200 overflow-hidden",
         surfaceClasses[resolvedSurface],
-        "rounded-xl transition-all duration-200",
+        accentStrip[resolvedSurface],
         href && "cursor-pointer hover:shadow-md hover:-translate-y-0.5 group",
       )}
       data-tour="kpi-card"
     >
-      <CardContent className={cn("relative", isCompact ? "p-3" : "p-4 pt-4")}>
-        {/* Icon + label row */}
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Icon className="h-3.5 w-3.5 shrink-0" />
-            <span className="text-[11px] font-medium uppercase tracking-wider leading-none">{label}</span>
+      <div className={cn("relative", isCompact ? "p-3" : "px-5 py-4")}>
+        {/* Top row: icon + label + trend */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2.5">
+            <div className={cn("rounded-lg p-1.5", iconBg)}>
+              <Icon className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
           </div>
-          {href && (
-            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0" />
+          {trend && (
+            <span className={cn(
+              "text-[11px] font-semibold px-1.5 py-0.5 rounded",
+              trend.positive ? "bg-[hsl(142_71%_45%/0.1)] text-[hsl(142_71%_35%)] dark:text-[hsl(142_71%_60%)]" : "bg-destructive/10 text-destructive",
+            )}>
+              {trend.value}
+            </span>
+          )}
+          {!trend && href && (
+            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors shrink-0" />
           )}
         </div>
 
-        {/* Big value */}
-        <div className={cn("font-bold tracking-tight", accentClass, isCompact ? "text-xl" : "text-2xl lg:text-3xl")}>
+        {/* Value */}
+        <div className={cn(
+          "font-bold tracking-tight text-foreground",
+          isCompact ? "text-2xl" : "text-3xl",
+        )}>
           {value}
         </div>
 
         {/* Sub text */}
-        {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+        {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
 
         {/* Sparkline */}
         {sparkPoints && (
-          <div className={cn("mt-1", isCompact ? "h-6" : "h-8")}>
+          <div className={cn("mt-2", isCompact ? "h-7" : "h-9")}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sparkPoints}>
                 <Line
                   type="monotone"
                   dataKey="v"
                   stroke={sparkColor ?? CHART_COLORS.neutral}
-                  strokeWidth={1.5}
+                  strokeWidth={2}
                   dot={false}
                   isAnimationActive={false}
                 />
@@ -237,8 +261,8 @@ export function KpiCard({
         )}
 
         {children}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 
   if (href) {
@@ -252,22 +276,28 @@ export function KpiCardSkeleton() {
   const { density } = useDensity();
   const isCompact = density === "compact";
   return (
-    <Card className="bg-card border-border shadow-sm rounded-xl">
-      <CardContent className={cn(isCompact ? "p-3" : "p-4 pt-4")}>
-        <Skeleton className="h-3 w-20 mb-2" />
-        <Skeleton className={cn(isCompact ? "h-6 w-16" : "h-8 w-24")} />
-        <Skeleton className="h-2.5 w-28 mt-1.5" />
-      </CardContent>
-    </Card>
+    <div className="rounded-xl border border-l-[3px] border-l-muted-foreground/20 bg-card shadow-sm">
+      <div className={cn(isCompact ? "p-3" : "px-5 py-4")}>
+        <div className="flex items-center gap-2.5 mb-2">
+          <Skeleton className="h-7 w-7 rounded-lg" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+        <Skeleton className={cn(isCompact ? "h-7 w-20" : "h-9 w-28")} />
+        <Skeleton className="h-2.5 w-24 mt-2" />
+      </div>
+    </div>
   );
 }
 
-/* ─── Section header (cleaned up) ─── */
+/* ─── Section header (Yellowfin-style with colored accent bar) ─── */
 export function SectionHeader({ title, question }: { title: string; question: string }) {
   return (
-    <div className="mb-3">
-      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{title}</h2>
-      <p className="text-[11px] text-muted-foreground/70 italic">{question}</p>
+    <div className="mb-4 flex items-end gap-3">
+      <div className="flex items-center gap-2.5">
+        <div className="w-1 h-5 rounded-full gradient-bg" />
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      </div>
+      <p className="text-xs text-muted-foreground">{question}</p>
     </div>
   );
 }
@@ -275,7 +305,7 @@ export function SectionHeader({ title, question }: { title: string; question: st
 /* ─── Dashboard card skeleton ─── */
 export function DashboardCardSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <Card className="bg-card border-border shadow-sm rounded-xl">
+    <Card className="bg-card border-border/50 shadow-sm rounded-xl">
       <CardHeader className="pb-3">
         <Skeleton className="h-4 w-32" />
       </CardHeader>
@@ -311,10 +341,10 @@ export function DashboardEmptyState({
   onAction?: () => void;
 }) {
   return (
-    <Card className="bg-muted/30 border-dashed border-2 border-border/60 rounded-xl">
-      <CardContent className="py-10 text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-          <Icon className="h-5 w-5 text-muted-foreground" />
+    <div className="rounded-xl border-2 border-dashed border-border/50 bg-muted/20">
+      <div className="py-8 text-center px-4">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+          <Icon className="h-5 w-5 text-primary" />
         </div>
         <div className="font-medium text-foreground text-sm">{title}</div>
         <div className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">{description}</div>
@@ -336,35 +366,37 @@ export function DashboardEmptyState({
             </button>
           )
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
-/* ─── Density toggle (compact / comfortable) ─── */
+/* ─── Density toggle (Yellowfin-style icon toggle) ─── */
 export function DensityToggle() {
   const { density, setDensity } = useDensity();
   return (
-    <div className="inline-flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs">
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/50 bg-muted/30 p-0.5">
       <button
         type="button"
         className={cn(
-          "rounded-md px-2.5 py-1 font-medium transition-colors",
-          density === "compact" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+          "rounded-md p-1.5 transition-colors",
+          density === "compact" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
         )}
         onClick={() => setDensity("compact")}
+        title="Compact"
       >
-        Compact
+        <List className="h-3.5 w-3.5" />
       </button>
       <button
         type="button"
         className={cn(
-          "rounded-md px-2.5 py-1 font-medium transition-colors",
-          density === "comfortable" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+          "rounded-md p-1.5 transition-colors",
+          density === "comfortable" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
         )}
         onClick={() => setDensity("comfortable")}
+        title="Comfortable"
       >
-        Comfortable
+        <LayoutGrid className="h-3.5 w-3.5" />
       </button>
     </div>
   );
