@@ -31,8 +31,8 @@ export default function Portal() {
     <RequireAuth allowedRoles={["customer"]}>
       <div className="min-h-[100dvh] bg-gradient-to-b from-background via-background to-muted/30">
         {/* M3 top app bar */}
-        <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-lg shadow-sm">
-          <div className="mx-auto max-w-5xl px-4 py-2.5 flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-lg shadow-sm pt-[max(env(safe-area-inset-top),0.25rem)]">
+          <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-3">
             <Link to="/portal" className="flex items-center gap-2.5">
               <BrandMark iconSize={28} />
               <span className="text-sm font-semibold tracking-tight">Quote Portal</span>
@@ -56,7 +56,7 @@ export default function Portal() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
+        <main className="mx-auto max-w-5xl px-4 py-5 sm:py-8">
           <Outlet />
         </main>
       </div>
