@@ -16,6 +16,7 @@ import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
 import { computeJobProfitability } from "@/features/dashboard/lib/profitability";
 import PageHeader from "@/features/dashboard/components/page-header";
+import { KpiCard, DensityProvider } from "@/features/dashboard/components/dashboard-kpi-utils";
 import { AiAssistTrigger } from "@/features/ai/components/ai-assist-trigger";
 import { useDashboardSelectors } from "@/features/dashboard/hooks/use-dashboard-selectors";
 import { useTradeFilter } from "@/features/dashboard/hooks/use-trade-filter";
@@ -23,7 +24,7 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import type { Database } from "@/integrations/supabase/types";
 import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { format } from "date-fns";
-import { MapPin, RotateCcw, Search } from "lucide-react";
+import { Briefcase, CheckCircle2, FileText, MapPin, Plus, RotateCcw, Search } from "lucide-react";
 import * as React from "react";
 
 type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
@@ -163,40 +164,14 @@ export default function Jobs() {
         }
       />
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">New</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.newCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completedCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Invoiced</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.invoicedCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <DensityProvider>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <KpiCard icon={Plus} label="New" value={stats.newCount} accent={stats.newCount > 0 ? "warning" : undefined} href="/dashboard/jobs" />
+          <KpiCard icon={CheckCircle2} label="Completed" value={stats.completedCount} />
+          <KpiCard icon={FileText} label="Invoiced" value={stats.invoicedCount} />
+          <KpiCard icon={Briefcase} label="Total" value={stats.total} />
+        </div>
+      </DensityProvider>
 
       <Card className="bg-card/70 backdrop-blur-sm">
         <CardHeader className="pb-3">

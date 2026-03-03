@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import PageHeader from "@/features/dashboard/components/page-header";
+import { KpiCard, DensityProvider } from "@/features/dashboard/components/dashboard-kpi-utils";
 import CreateMaintenancePlanDialog from "@/features/dashboard/components/dialogs/create-maintenance-plan-dialog";
 import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
 import RowActionsMenu from "@/components/row-actions-menu";
@@ -21,7 +22,7 @@ import {
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { toast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
-import { ArrowUpRight, CalendarClock, RefreshCcw } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, CalendarClock, CheckCircle2, ClipboardList, RefreshCcw } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router-dom";
 
@@ -199,40 +200,14 @@ export default function MaintenanceSchedules() {
         />
       </div>
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4" data-tour="maintenance-stats">
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Plans</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Overdue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${stats.overdue ? "text-destructive" : ""}`}>{stats.overdue}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Due next 7 days</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.due7}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Completed (month)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completedMonth}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <DensityProvider>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4" data-tour="maintenance-stats">
+          <KpiCard icon={ClipboardList} label="Plans" value={stats.total} />
+          <KpiCard icon={AlertTriangle} label="Overdue" value={stats.overdue} accent={stats.overdue > 0 ? "destructive" : undefined} />
+          <KpiCard icon={CalendarClock} label="Due next 7 days" value={stats.due7} accent={stats.due7 > 0 ? "warning" : undefined} />
+          <KpiCard icon={CheckCircle2} label="Completed (month)" value={stats.completedMonth} />
+        </div>
+      </DensityProvider>
 
       <Card className="bg-card/70 backdrop-blur-sm" data-tour="maintenance-view">
         <CardHeader className="pb-3">

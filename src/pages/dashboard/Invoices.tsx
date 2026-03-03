@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import PageHeader from "@/features/dashboard/components/page-header";
+import { KpiCard, DensityProvider } from "@/features/dashboard/components/dashboard-kpi-utils";
 import ManageInvoiceDialog from "@/features/dashboard/components/dialogs/manage-invoice-dialog";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatZarFromCents } from "@/lib/money";
-import { FileText } from "lucide-react";
+import { CheckCircle2, Clock, DollarSign, FileText, Send, Wallet } from "lucide-react";
 import * as React from "react";
 import { useFeatureGate } from "@/features/subscription/hooks/use-feature-gate";
 import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
@@ -74,11 +75,8 @@ export default function Invoices() {
     return { draft, sent, partial, paid, outstandingCents, collectedCents };
   }, [filtered]);
 
-  if (!gate.hasFeature("invoicing")) {
-    return <UpgradePrompt feature="Invoicing" requiredTier="pro" currentTier={gate.tier} />;
-  }
-
   const invoiceRows = React.useMemo(() => {
+    if (!gate.hasFeature("invoicing")) return [];
     return filtered.map((inv) => {
       const customer = inv.customer_id ? customersById.get(inv.customer_id) : null;
       const job = jobsById.get(inv.job_card_id) as any;
@@ -88,7 +86,11 @@ export default function Invoices() {
       const balance = Math.max(0, total - paid);
       return { inv, customer, job, site, total, paid, balance };
     });
-  }, [customersById, filtered, jobsById, sitesById]);
+  }, [customersById, filtered, gate, jobsById, sitesById]);
+
+  if (!gate.hasFeature("invoicing")) {
+    return <UpgradePrompt feature="Invoicing" requiredTier="pro" currentTier={gate.tier} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -103,52 +105,16 @@ export default function Invoices() {
         }
       />
 
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Draft</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.draft}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Sent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.sent}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Partial</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.partial}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Paid</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.paid}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/70 backdrop-blur-sm col-span-2 lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Collected / Outstanding</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm">
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatZarFromCents(stats.collectedCents)}</span>
-              <span className="text-muted-foreground"> / </span>
-              <span className="font-semibold text-destructive">{formatZarFromCents(stats.outstandingCents)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <DensityProvider>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
+          <KpiCard icon={FileText} label="Draft" value={stats.draft} />
+          <KpiCard icon={Send} label="Sent" value={stats.sent} accent={stats.sent > 0 ? "warning" : undefined} />
+          <KpiCard icon={Clock} label="Partial" value={stats.partial} accent={stats.partial > 0 ? "warning" : undefined} />
+          <KpiCard icon={CheckCircle2} label="Paid" value={stats.paid} />
+          <KpiCard icon={Wallet} label="Collected" value={formatZarFromCents(stats.collectedCents)} />
+          <KpiCard icon={DollarSign} label="Outstanding" value={formatZarFromCents(stats.outstandingCents)} accent={stats.outstandingCents > 0 ? "destructive" : undefined} />
+        </div>
+      </DensityProvider>
 
       <Card className="bg-card/70 backdrop-blur-sm">
         <CardHeader className="pb-3">
