@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/hooks/use-auth";
 import AuthRedirectHandler from "@/features/auth/components/auth-redirect-handler";
 import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
+import PwaInstallPrompt from "@/components/pwa-install-prompt";
+import NotificationPermissionPrompt from "@/components/notification-permission-prompt";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -65,6 +67,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PwaUpdatePrompt />
+      <PwaInstallPrompt />
+      <NotificationPermissionPrompt />
       <BrowserRouter>
         <AuthRedirectHandler />
         <AuthProvider>

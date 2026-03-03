@@ -11,6 +11,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
+import { Mail } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -18,6 +19,14 @@ const loginSchema = z.object({
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
+
+type LoginFormProps = {
+  heading?: string;
+  description?: string;
+  showMagicLink?: boolean;
+  showCreateAccount?: boolean;
+  callbackNext?: string;
+};
 
 function getRecentSignupEmail(): string | null {
   try {
@@ -27,16 +36,20 @@ function getRecentSignupEmail(): string | null {
     const ts = Date.parse(at);
     if (!Number.isFinite(ts)) return null;
     const ageMs = Date.now() - ts;
-    if (ageMs < 0) return null;
-    // Only nudge for ~24 hours after signup.
-    if (ageMs > 24 * 60 * 60 * 1000) return null;
+    if (ageMs < 0 || ageMs > 24 * 60 * 60 * 1000) return null;
     return email.trim();
   } catch {
     return null;
   }
 }
 
-export default function LoginForm() {
+export default function LoginForm({
+  heading = "Log in",
+  description = "Access your FieldFlow workspace.",
+  showMagicLink = false,
+  showCreateAccount = true,
+  callbackNext = "/dashboard",
+}: LoginFormProps) {
   const recentSignupEmail = React.useMemo(() => getRecentSignupEmail(), []);
 
   const form = useForm<LoginValues>({
@@ -49,22 +62,14 @@ export default function LoginForm() {
 
   const resendConfirmation = React.useCallback(async () => {
     const valid = await form.trigger("email");
-    if (!valid) {
-      toastError("Resend failed", "Enter a valid email first.");
-      return;
-    }
-
+    if (!valid) { toastError("Resend failed", "Enter a valid email first."); return; }
     const email = form.getValues("email").trim();
     try {
       const { error } = await withTimeout(
         supabase.auth.resend({ type: "signup", email }),
-        15000,
-        "Resend timed out. Check your connection and try again.",
+        15000, "Resend timed out.",
       );
-      if (error) {
-        toastError("Resend failed", error.message);
-        return;
-      }
+      if (error) { toastError("Resend failed", error.message); return; }
       toastSuccess("Confirmation email sent", "Check your inbox (and spam folder), then try signing in again.");
     } catch (e: any) {
       toastError("Resend failed", e?.message ?? "Network error");
@@ -73,49 +78,37 @@ export default function LoginForm() {
 
   const emailLoginLink = React.useCallback(async () => {
     const valid = await form.trigger("email");
-    if (!valid) {
-      toastError("Email login failed", "Enter a valid email first.");
-      return;
-    }
-
+    if (!valid) { toastError("Email login failed", "Enter a valid email first."); return; }
     const email = form.getValues("email").trim();
     try {
       const { error } = await withTimeout(
         supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: `${getPublicSiteUrl()}/auth/callback?next=/portal`,
+            emailRedirectTo: `${getPublicSiteUrl()}/auth/callback?next=${encodeURIComponent(callbackNext)}`,
             shouldCreateUser: false,
           },
         }),
-        15000,
-        "Request timed out. Check your connection and try again.",
+        15000, "Request timed out.",
       );
-      if (error) {
-        toastError("Email login failed", error.message);
-        return;
-      }
+      if (error) { toastError("Email login failed", error.message); return; }
       toastSuccess("Login link sent", "Check your inbox (and spam folder).");
     } catch (e: any) {
       toastError("Email login failed", e?.message ?? "Network error");
     }
-  }, [form]);
+  }, [form, callbackNext]);
 
   const submit = form.handleSubmit(async (values) => {
     try {
       const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email: values.email,
-          password: values.password,
-        }),
-        15000,
-        "Sign-in timed out. Check your connection and try again.",
+        supabase.auth.signInWithPassword({ email: values.email, password: values.password }),
+        15000, "Sign-in timed out.",
       );
       if (error) {
         const msg = String(error.message ?? "");
         const lower = msg.toLowerCase();
         if (lower.includes("email not confirmed")) {
-          toastError("Login failed", "Confirm your email first, then sign in. Use “Resend confirmation email” if you need a new link.");
+          toastError("Login failed", 'Confirm your email first, then sign in. Use "Resend confirmation" if you need a new link.');
           return;
         }
         if (lower.includes("invalid login credentials")) {
@@ -125,16 +118,11 @@ export default function LoginForm() {
         toastError("Login failed", msg || "Sign-in failed");
         return;
       }
-      if (!data.session) {
-        toastError("Login failed", "No session returned. Try again.");
-        return;
-      }
+      if (!data.session) { toastError("Login failed", "No session returned. Try again."); return; }
       try {
         localStorage.removeItem("ff-last-signup-email");
         localStorage.removeItem("ff-last-signup-at");
-      } catch {
-        // ignore
-      }
+      } catch {}
       toastSuccess("Logged in successfully");
     } catch (e: any) {
       toastError("Login failed", e?.message ?? "Network error");
@@ -142,10 +130,10 @@ export default function LoginForm() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <div className="text-2xl font-bold">Log in</div>
-        <div className="text-sm text-muted-foreground">Access your FieldFlow workspace.</div>
+        <div className="text-xl font-bold">{heading}</div>
+        <div className="text-sm text-muted-foreground">{description}</div>
       </div>
 
       {recentSignupEmail ? (
@@ -153,10 +141,10 @@ export default function LoginForm() {
           <AlertTitle>Just created an account?</AlertTitle>
           <AlertDescription>
             <p>
-              Your email may need to be confirmed before you can sign in. If you didn’t get the email, resend it to{" "}
+              Your email may need to be confirmed. Resend to{" "}
               <span className="font-medium text-foreground">{recentSignupEmail}</span>.
             </p>
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3">
               <Button type="button" variant="outline" size="sm" onClick={resendConfirmation} disabled={form.formState.isSubmitting}>
                 Resend confirmation email
               </Button>
@@ -180,15 +168,12 @@ export default function LoginForm() {
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Password</FormLabel>
-                </div>
+                <FormLabel>Password</FormLabel>
                 <FormControl>
                   <Input type="password" autoComplete="current-password" {...field} />
                 </FormControl>
@@ -197,7 +182,7 @@ export default function LoginForm() {
             )}
           />
 
-          <Button type="submit" className="w-full gradient-bg hover:opacity-90 shadow-glow" disabled={form.formState.isSubmitting}>
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
 
@@ -216,25 +201,32 @@ export default function LoginForm() {
         </form>
       </Form>
 
-      <div className="rounded-md border border-border/60 bg-muted/20 px-4 py-3">
-        <div className="text-sm font-medium">Prefer an email login link?</div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          We'll email you a login button. This is the recommended way to access the quote portal.
+      {showMagicLink && (
+        <div className="rounded-lg border border-border/40 bg-muted/20 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Mail className="h-4 w-4 text-primary" />
+            Prefer a passwordless login?
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            We'll email you a one-click login button. No password needed.
+          </div>
+          <div className="mt-3">
+            <Button type="button" variant="outline" size="sm" onClick={emailLoginLink} disabled={form.formState.isSubmitting || !emailValue}>
+              Email me a login link
+            </Button>
+          </div>
         </div>
-        <div className="mt-3">
-          <Button type="button" variant="outline" size="sm" onClick={emailLoginLink} disabled={form.formState.isSubmitting || !emailValue}>
-            Email me a login link
-          </Button>
-        </div>
-      </div>
+      )}
 
-      <div className="text-sm text-muted-foreground">
-        New here?{" "}
-        <Link to="/plan-wizard" className="text-primary hover:underline">
-          Create your company account
-        </Link>
-        .
-      </div>
+      {showCreateAccount && (
+        <div className="text-sm text-muted-foreground">
+          New here?{" "}
+          <Link to="/plan-wizard" className="text-primary hover:underline">
+            Create your company account
+          </Link>
+          .
+        </div>
+      )}
     </div>
   );
 }
