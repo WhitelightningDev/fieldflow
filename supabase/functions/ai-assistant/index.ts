@@ -37,8 +37,13 @@ Deno.serve(async (req) => {
     });
 
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    const { data: { user }, error: userError } = await callerClient.auth.getUser(token);
-    if (userError || !user) {
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("getClaims error:", claimsError?.message ?? "no claims");
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const userId = claimsData.claims.sub as string;
+    if (!userId) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
@@ -46,7 +51,7 @@ Deno.serve(async (req) => {
     const { data: profile } = await callerClient
       .from("profiles")
       .select("company_id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .maybeSingle();
     const companyId = (profile as any)?.company_id as string | null;
     if (!companyId) {
@@ -68,7 +73,7 @@ Deno.serve(async (req) => {
     const { data: roleRows } = await callerClient
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
     const allowedRoles = new Set(["owner", "admin", "office_staff"]);
     const canUse = (Array.isArray(roleRows) ? roleRows : []).some((row: any) =>
       allowedRoles.has(String(row?.role ?? ""))
