@@ -74,7 +74,7 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile topbar + drawer nav */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="xl:hidden sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-xl pt-[max(env(safe-area-inset-top),0.5rem)]">
+        <div className="xl:hidden sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-xl pt-[max(env(safe-area-inset-top),0.75rem)]">
           <div className="h-12 px-3 flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />

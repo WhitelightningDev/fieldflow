@@ -86,5 +86,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         // TODO: Navigate to a specific screen based on payload if needed.
         completionHandler()
     }
+    
+    // MARK: - Background/Silent Push Handling
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable : Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        print("[Push] didReceiveRemoteNotification (background): \(userInfo)")
+
+        // If this is a silent push (content-available:1), perform background work here.
+        // Example: Kick off a quick network refresh. Replace with your own logic.
+        if let aps = userInfo["aps"] as? [String: Any], aps["content-available"] as? Int == 1 {
+            // Simulate async work; ensure you call completionHandler when done.
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+                // TODO: Fetch from your API and update local data
+                completionHandler(.newData)
+            }
+        } else {
+            // Not a silent push; nothing to fetch in background.
+            completionHandler(.noData)
+        }
+    }
 
 }
