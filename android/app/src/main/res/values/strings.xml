@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">FieldFlow</string>
-    <string name="title_activity_main">FieldFlow</string>
-    <string name="package_name">com.fieldflow.app</string>
-    <string name="custom_url_scheme">com.fieldflow.app</string>
+    <string name="app_name">FieldFlow Tech</string>
+    <string name="title_activity_main">FieldFlow Tech</string>
+    <string name="package_name">com.fieldflow.tech</string>
+    <string name="custom_url_scheme">com.fieldflow.tech</string>
 </resources>

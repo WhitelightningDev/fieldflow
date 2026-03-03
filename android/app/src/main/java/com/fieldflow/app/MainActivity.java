@@ -1,4 +1,4 @@
-package com.fieldflow.app;
+package com.fieldflow.tech;
 
 import com.getcapacitor.BridgeActivity;
 
