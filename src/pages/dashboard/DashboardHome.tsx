@@ -190,6 +190,11 @@ function GenericDashboard({ data, allJobs }: { data: any; allJobs: any[] }) {
         technicianLocations={data.technicianLocations}
         jobTimeEntries={data.jobTimeEntries}
         siteMaterialUsage={data.siteMaterialUsage}
+        labourOverheadPercent={(() => {
+          const raw: any = (data.company as any)?.labour_overhead_percent;
+          const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+          return Number.isFinite(n) ? n : undefined;
+        })()}
       />
 
       {/* FINANCIAL */}

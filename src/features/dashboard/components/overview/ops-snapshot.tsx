@@ -35,6 +35,7 @@ export function OpsSnapshot({
   technicianLocations,
   jobTimeEntries,
   siteMaterialUsage,
+  labourOverheadPercent,
   title = "Overview",
 }: {
   inventoryItems: InventoryItem[];
@@ -44,6 +45,7 @@ export function OpsSnapshot({
   technicianLocations: TechnicianLocation[];
   jobTimeEntries: JobTimeEntry[];
   siteMaterialUsage: SiteMaterialUsage[];
+  labourOverheadPercent?: number;
   title?: string;
 }) {
   return (
@@ -58,6 +60,7 @@ export function OpsSnapshot({
             inventoryItems={inventoryItems}
             jobTimeEntries={jobTimeEntries}
             siteMaterialUsage={siteMaterialUsage}
+            labourOverheadPercent={labourOverheadPercent}
           />
         </div>
         <div className="lg:col-span-5 space-y-4">
@@ -632,15 +635,19 @@ function FinancialTrendsCard({
   inventoryItems,
   jobTimeEntries,
   siteMaterialUsage,
+  labourOverheadPercent,
 }: {
   jobs: JobCard[];
   technicians: Technician[];
   inventoryItems: InventoryItem[];
   jobTimeEntries: JobTimeEntry[];
   siteMaterialUsage: SiteMaterialUsage[];
+  labourOverheadPercent?: number;
 }) {
   const techniciansById = React.useMemo(() => new Map(technicians.map((t) => [t.id, t])), [technicians]);
   const inventoryById = React.useMemo(() => new Map(inventoryItems.map((i) => [i.id, i])), [inventoryItems]);
+  const jobsById = React.useMemo(() => new Map(jobs.map((j) => [j.id, j])), [jobs]);
+  const overheadPct = typeof labourOverheadPercent === "number" && Number.isFinite(labourOverheadPercent) ? labourOverheadPercent : 15;
 
   const timeByJobId = React.useMemo(() => {
     const m = new Map<string, JobTimeEntry[]>();
@@ -719,6 +726,7 @@ function FinancialTrendsCard({
         materials: materialsByJobId.get(j.id) ?? [],
         techniciansById,
         inventoryById,
+        labourOverheadPercent: overheadPct,
       });
       add(margin, j.updated_at, p.grossMarginCents ?? 0);
     }
@@ -726,12 +734,16 @@ function FinancialTrendsCard({
     for (const e of jobTimeEntries ?? []) {
       const mins = minutesForEntry(e);
       if (mins === 0) continue;
-      const techId = e.technician_id ?? null;
+      const job = jobsById.get(e.job_card_id ?? "");
+      const techId = e.technician_id ?? job?.technician_id ?? null;
       if (!techId) continue;
       const tech: any = techniciansById.get(techId);
-      const rate = typeof tech?.hourly_cost_cents === "number" ? tech.hourly_cost_cents : null;
+      const costRate = typeof tech?.hourly_cost_cents === "number" ? tech.hourly_cost_cents : null;
+      const billRate = typeof tech?.hourly_bill_rate_cents === "number" ? tech.hourly_bill_rate_cents : null;
+      const rate = costRate && costRate > 0 ? costRate : billRate && billRate > 0 ? billRate : costRate;
       if (rate == null) continue;
-      const cents = Math.round((mins * rate) / 60);
+      const baseCents = Math.round((mins * rate) / 60);
+      const cents = Math.round(baseCents * (1 + overheadPct / 100));
       add(labor, e.ended_at ?? e.started_at, cents);
     }
 
@@ -751,7 +763,7 @@ function FinancialTrendsCard({
       labor: toChart(labor),
       materials: toChart(materials),
     };
-  }, [inventoryById, jobTimeEntries, jobs, materialsByJobId, minutesForEntry, siteMaterialUsage, techniciansById, timeByJobId]);
+  }, [inventoryById, jobTimeEntries, jobsById, jobs, materialsByJobId, minutesForEntry, overheadPct, siteMaterialUsage, techniciansById, timeByJobId]);
 
   const summarize = (points: { value: number }[]) => {
     const total = points.reduce((s, p) => s + (p.value ?? 0), 0);
@@ -800,7 +812,7 @@ function FinancialTrendsCard({
           ))}
         </div>
         <div className="mt-3 text-[11px] text-muted-foreground">
-          Revenue/margin are based on jobs marked Completed/Invoiced; costs are based on time entries and material usage activity.
+          Revenue/margin are based on jobs marked Completed/Invoiced; costs are based on time entries and material usage activity (labor includes overhead).
         </div>
       </CardContent>
     </Card>
