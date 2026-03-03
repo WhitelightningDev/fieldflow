@@ -100,6 +100,11 @@ CREATE TRIGGER trg_set_invoice_warranty_defaults
 -- 4) Customer portal RPCs
 
 -- List quote requests for the authenticated requester (extended fields).
+-- NOTE: Postgres cannot `CREATE OR REPLACE` a function when the OUT/RETURN TABLE shape changes.
+-- This function was originally created in `20260302150000_quote_request_customer_portal.sql`,
+-- so we must drop it before re-creating with the new return columns.
+DROP FUNCTION IF EXISTS public.get_my_quote_requests();
+
 CREATE OR REPLACE FUNCTION public.get_my_quote_requests()
 RETURNS TABLE (
   id uuid,
