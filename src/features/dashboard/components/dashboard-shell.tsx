@@ -68,7 +68,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         <DashboardTopbar onOpenCompliance={() => setComplianceOpen(true)} />
         {showProfileBanner ? <ProfileCompletionBanner onOpen={() => setDialogOpen(true)} /> : null}
         {showTrialBanner ? <TrialBanner status={trialStatus} dismissible onDismiss={trialDismissal.dismiss} /> : null}
-        <div className="mx-auto px-2 py-3 sm:px-4 sm:py-6 max-w-[1600px] w-full overflow-x-hidden">
+        <div className="mx-auto px-3 py-4 sm:px-4 sm:py-6 max-w-[1600px] w-full overflow-x-hidden">
           {trialStatus.state === "expired" ? (
             <TrialPaywall />
           ) : shouldGate ? (

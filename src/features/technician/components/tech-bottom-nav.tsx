@@ -15,8 +15,8 @@ export default function TechBottomNav({ industry }: { industry: string | null })
   const tabs = navItems.slice(0, 5);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] xl:hidden">
-      <div className="flex items-stretch justify-around h-14">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-lg pb-[max(env(safe-area-inset-bottom),0.25rem)] xl:hidden">
+      <div className="flex items-stretch justify-around h-16">
         {tabs.map((item) => {
           const isActive =
             item.to === "/tech"
