@@ -141,7 +141,7 @@ export default function QuoteRequestPublic() {
     const cleanEmail = email.trim();
 
     if (!cleanName) return setErrorText("Please enter your full name.");
-    if (!cleanEmail || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) {
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return setErrorText("Please enter a valid email address.");
     }
     if (!profileConsent) {
