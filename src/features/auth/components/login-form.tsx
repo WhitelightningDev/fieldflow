@@ -83,8 +83,10 @@ export default function LoginForm() {
       const { error } = await withTimeout(
         supabase.auth.signInWithOtp({
           email,
-          shouldCreateUser: false,
-          options: { emailRedirectTo: `${getPublicSiteUrl()}/auth/callback?next=/portal` },
+          options: {
+            emailRedirectTo: `${getPublicSiteUrl()}/auth/callback?next=/portal`,
+            shouldCreateUser: false,
+          },
         }),
         15000,
         "Request timed out. Check your connection and try again.",

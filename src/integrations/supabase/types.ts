@@ -211,8 +211,8 @@ export type Database = {
           trial_started_at: string
           updated_at: string
           vat_number: string | null
-          website: string | null
           warranty_terms: string | null
+          website: string | null
         }
         Insert: {
           address?: string | null
@@ -240,8 +240,8 @@ export type Database = {
           trial_started_at?: string
           updated_at?: string
           vat_number?: string | null
-          website?: string | null
           warranty_terms?: string | null
+          website?: string | null
         }
         Update: {
           address?: string | null
@@ -269,8 +269,8 @@ export type Database = {
           trial_started_at?: string
           updated_at?: string
           vat_number?: string | null
-          website?: string | null
           warranty_terms?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -829,6 +829,120 @@ export type Database = {
           },
         ]
       }
+      quote_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_request_callouts: {
+        Row: {
+          applied_at: string | null
+          applied_invoice_id: string | null
+          callout_fee_cents: number
+          company_id: string
+          id: string
+          metadata: Json
+          paid_at: string | null
+          payment_provider: string
+          payment_reference: string | null
+          quote_request_id: string
+          requested_at: string
+          requested_by: string | null
+          requester_user_id: string
+          status: string
+          total_cents: number
+          vat_percent: number
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_invoice_id?: string | null
+          callout_fee_cents: number
+          company_id: string
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          payment_provider?: string
+          payment_reference?: string | null
+          quote_request_id: string
+          requested_at?: string
+          requested_by?: string | null
+          requester_user_id: string
+          status: string
+          total_cents: number
+          vat_percent?: number
+        }
+        Update: {
+          applied_at?: string | null
+          applied_invoice_id?: string | null
+          callout_fee_cents?: number
+          company_id?: string
+          id?: string
+          metadata?: Json
+          paid_at?: string | null
+          payment_provider?: string
+          payment_reference?: string | null
+          quote_request_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          requester_user_id?: string
+          status?: string
+          total_cents?: number
+          vat_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_request_callouts_applied_invoice_id_fkey"
+            columns: ["applied_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_request_callouts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_request_callouts_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: true
+            referencedRelation: "quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_requests: {
         Row: {
           address: string | null
@@ -910,85 +1024,6 @@ export type Database = {
             columns: ["widget_installation_id"]
             isOneToOne: false
             referencedRelation: "widget_installations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quote_request_callouts: {
-        Row: {
-          applied_at: string | null
-          applied_invoice_id: string | null
-          callout_fee_cents: number
-          company_id: string
-          id: string
-          metadata: Json
-          paid_at: string | null
-          payment_provider: string
-          payment_reference: string | null
-          quote_request_id: string
-          requested_at: string
-          requested_by: string | null
-          requester_user_id: string
-          status: string
-          total_cents: number
-          vat_percent: number
-        }
-        Insert: {
-          applied_at?: string | null
-          applied_invoice_id?: string | null
-          callout_fee_cents: number
-          company_id: string
-          id?: string
-          metadata?: Json
-          paid_at?: string | null
-          payment_provider?: string
-          payment_reference?: string | null
-          quote_request_id: string
-          requested_at?: string
-          requested_by?: string | null
-          requester_user_id: string
-          status: string
-          total_cents: number
-          vat_percent?: number
-        }
-        Update: {
-          applied_at?: string | null
-          applied_invoice_id?: string | null
-          callout_fee_cents?: number
-          company_id?: string
-          id?: string
-          metadata?: Json
-          paid_at?: string | null
-          payment_provider?: string
-          payment_reference?: string | null
-          quote_request_id?: string
-          requested_at?: string
-          requested_by?: string | null
-          requester_user_id?: string
-          status?: string
-          total_cents?: number
-          vat_percent?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quote_request_callouts_applied_invoice_id_fkey"
-            columns: ["applied_invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quote_request_callouts_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quote_request_callouts_quote_request_id_fkey"
-            columns: ["quote_request_id"]
-            isOneToOne: false
-            referencedRelation: "quote_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1823,9 +1858,14 @@ export type Database = {
     }
     Functions: {
       can_create_company: { Args: { _user_id: string }; Returns: boolean }
+      can_use_quote_requests: { Args: never; Returns: boolean }
       create_company_for_current_user: {
         Args: { _industry: string; _name: string; _team_size?: string }
         Returns: string
+      }
+      decline_quote_request_callout: {
+        Args: { _quote_request_id: string }
+        Returns: boolean
       }
       ensure_user_role: {
         Args: never
@@ -1835,6 +1875,37 @@ export type Database = {
         Args: { _company_id: string }
         Returns: string
       }
+      get_active_company_count: { Args: never; Returns: number }
+      get_my_quote_request_detail: {
+        Args: { _quote_request_id: string }
+        Returns: Json
+      }
+      get_my_quote_requests: {
+        Args: never
+        Returns: {
+          callout_paid_at: string
+          callout_requested_at: string
+          callout_status: string
+          callout_total_cents: number
+          company_logo_url: string
+          company_name: string
+          created_at: string
+          id: string
+          invoice_amount_paid_cents: number
+          invoice_id: string
+          invoice_number: string
+          invoice_status: string
+          invoice_total_cents: number
+          job_card_id: string
+          job_status: Database["public"]["Enums"]["job_card_status"]
+          message: string
+          scheduled_at: string
+          status: string
+          technician_name: string
+          trade: string
+        }[]
+      }
+      get_or_create_quote_link_token: { Args: never; Returns: string }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_technician_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -1844,6 +1915,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      pay_quote_request_callout_mock: {
+        Args: { _quote_request_id: string }
+        Returns: string
+      }
+      resolve_quote_link: {
+        Args: { _token: string }
+        Returns: {
+          company_logo_url: string
+          company_name: string
+        }[]
+      }
+      rotate_quote_link_token: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "owner" | "admin" | "office_staff" | "technician" | "customer"
