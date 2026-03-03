@@ -349,7 +349,7 @@ export default function QuoteDetail() {
           <Skeleton className="h-40 w-full" />
         </div>
       ) : isError || !quote ? (
-        <Card className="border-border/60">
+        <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="text-base">Couldn’t load this quote</CardTitle>
             <CardDescription>
@@ -362,7 +362,7 @@ export default function QuoteDetail() {
         </Card>
       ) : (
         <>
-          <Card className="border-border/60">
+          <Card className="border-border/40">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Tracking</CardTitle>
               <CardDescription>Follow your request from payment to completion.</CardDescription>
@@ -372,17 +372,17 @@ export default function QuoteDetail() {
                 {timeline.map((it, idx) => {
                   const dot =
                     it.state === "done"
-                      ? "bg-emerald-500"
+                      ? "bg-primary"
                       : it.state === "current"
-                        ? "bg-primary"
+                        ? "bg-primary ring-4 ring-primary/20"
                         : it.state === "blocked"
                           ? "bg-destructive"
                           : "bg-muted-foreground/30";
                   return (
                     <li key={it.key} className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className={cn("mt-1.5 h-2.5 w-2.5 rounded-full", dot)} />
-                        {idx < timeline.length - 1 ? <div className="w-px flex-1 bg-border/70 mt-2" /> : null}
+                        <div className={cn("mt-1.5 h-3 w-3 rounded-full transition-all", dot)} />
+                        {idx < timeline.length - 1 ? <div className="w-px flex-1 bg-border/40 mt-2" /> : null}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
@@ -402,7 +402,7 @@ export default function QuoteDetail() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60">
+          <Card className="border-border/40">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center justify-between gap-3">
                 <span className="min-w-0 truncate">Request</span>
@@ -450,7 +450,7 @@ export default function QuoteDetail() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60">
+          <Card className="border-border/40">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Call-out fee</CardTitle>
               <CardDescription>
@@ -460,7 +460,7 @@ export default function QuoteDetail() {
             <CardContent className="space-y-4 text-sm">
               {callout ? (
                 <>
-                  <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-4 flex items-center justify-between gap-4">
+                  <div className="rounded-2xl border border-border/40 bg-muted/20 px-4 py-4 flex items-center justify-between gap-4 shadow-sm">
                     <div>
                       <div className="text-xs text-muted-foreground">Amount (incl VAT)</div>
                       <div className="text-2xl font-bold">{formatZarFromCents(callout.total_cents ?? 0)}</div>
@@ -500,7 +500,7 @@ export default function QuoteDetail() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60">
+          <Card className="border-border/40">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Job tracking</CardTitle>
               <CardDescription>
@@ -542,7 +542,7 @@ export default function QuoteDetail() {
           </Card>
 
           {invoice ? (
-            <Card className="border-border/60">
+            <Card className="border-border/40">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Invoice</CardTitle>
                 <CardDescription>

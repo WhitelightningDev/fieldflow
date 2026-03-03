@@ -21,19 +21,24 @@ export default function Portal() {
   };
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `text-sm ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`;
+    `text-sm px-3 py-1.5 rounded-xl transition-colors duration-200 ${
+      isActive
+        ? "bg-primary/10 text-primary font-medium"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+    }`;
 
   return (
     <RequireAuth allowedRoles={["customer"]}>
       <div className="min-h-[100dvh] bg-gradient-to-b from-background via-background to-muted/30">
-        <header className="border-b border-border/60 bg-background/70 backdrop-blur">
-          <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-3">
-            <Link to="/portal" className="flex items-center gap-2">
+        {/* M3 top app bar */}
+        <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-lg shadow-sm">
+          <div className="mx-auto max-w-5xl px-4 py-2.5 flex items-center justify-between gap-3">
+            <Link to="/portal" className="flex items-center gap-2.5">
               <BrandMark iconSize={28} />
-              <div className="text-sm font-semibold">Quote Portal</div>
+              <span className="text-sm font-semibold tracking-tight">Quote Portal</span>
             </Link>
 
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center gap-1">
               <NavLink to="/portal" end className={linkClass}>
                 My quotes
               </NavLink>
@@ -44,14 +49,14 @@ export default function Portal() {
 
             <div className="flex items-center gap-2">
               <NotificationBell basePath="/portal" />
-              <Button type="button" variant="outline" size="sm" onClick={() => void doSignOut()} disabled={signingOut}>
-                {signingOut ? "Signing out..." : "Sign out"}
+              <Button type="button" variant="tonal" size="sm" onClick={() => void doSignOut()} disabled={signingOut}>
+                {signingOut ? "Signing out…" : "Sign out"}
               </Button>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-5xl px-4 py-8">
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
           <Outlet />
         </main>
       </div>

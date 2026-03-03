@@ -36,6 +36,8 @@ type MyQuoteRow = {
   invoice_amount_paid_cents: number | null;
 };
 
+/* ── Badge helpers ────────────────────────────────────── */
+
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   new: { label: "New", variant: "secondary" },
   contacted: { label: "Contacted", variant: "secondary" },
@@ -70,6 +72,85 @@ function invoiceBadge(status: string) {
   return <Badge variant="outline">Invoice {s}</Badge>;
 }
 
+/* ── Quote card ───────────────────────────────────────── */
+
+function QuoteCard({ q, onClick }: { q: MyQuoteRow; onClick: () => void }) {
+  const actionRequired = q.callout_status === "requested";
+
+  return (
+    <Card
+      className="group border-border/40 hover:shadow-md hover:border-border/60 transition-all duration-200 cursor-pointer"
+      onClick={onClick}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {q.company_logo_url ? (
+              <img
+                src={q.company_logo_url}
+                alt={q.company_name ? `${q.company_name} logo` : "Company logo"}
+                className="h-10 w-10 rounded-xl object-contain border border-border/40 bg-background shadow-sm"
+                loading="lazy"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-xl border border-border/40 bg-muted/30 shadow-sm" />
+            )}
+            <div className="min-w-0">
+              <div className="font-semibold truncate">{q.company_name ?? "—"}</div>
+              <div className="text-xs text-muted-foreground">
+                {q.created_at ? format(new Date(q.created_at), "dd MMM yyyy") : "—"}
+                {q.trade ? <span className="mx-1">·</span> : null}
+                {q.trade ? <span className="capitalize">{q.trade}</span> : null}
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground mt-1 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-3 text-sm">
+        <div className="flex flex-wrap gap-1.5 items-center">
+          {statusBadge(q.status)}
+          {q.callout_status ? calloutBadge(q.callout_status) : null}
+          {q.job_status ? <JobStatusBadge status={q.job_status as any} /> : null}
+          {q.invoice_status ? invoiceBadge(q.invoice_status) : null}
+        </div>
+
+        {actionRequired && typeof q.callout_total_cents === "number" ? (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 flex items-center justify-between gap-3">
+            <div className="text-xs text-muted-foreground">
+              Action required: pay call-out fee
+              <div className="text-sm font-semibold text-foreground mt-0.5">
+                {formatZarFromCents(q.callout_total_cents)}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              Pay
+            </Button>
+          </div>
+        ) : null}
+
+        {q.technician_name ? (
+          <div className="text-xs text-muted-foreground">
+            Technician: <span className="text-foreground font-medium">{q.technician_name}</span>
+          </div>
+        ) : null}
+
+        <div className="text-xs text-muted-foreground line-clamp-2">
+          {q.message?.trim() ? q.message.trim() : "—"}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Page ──────────────────────────────────────────────── */
+
 export default function MyQuotes() {
   const navigate = useNavigate();
   const [query, setQuery] = React.useState("");
@@ -89,18 +170,10 @@ export default function MyQuotes() {
     if (!q) return quotes;
     return quotes.filter((row) => {
       const blob = [
-        row.company_name,
-        row.trade,
-        row.status,
-        row.message,
-        row.callout_status,
-        row.job_status,
-        row.technician_name,
-        row.invoice_number,
-        row.invoice_status,
-      ]
-        .map((v) => String(v ?? "").toLowerCase())
-        .join(" ");
+        row.company_name, row.trade, row.status, row.message,
+        row.callout_status, row.job_status, row.technician_name,
+        row.invoice_number, row.invoice_status,
+      ].map((v) => String(v ?? "").toLowerCase()).join(" ");
       return blob.includes(q);
     });
   }, [quotes, query]);
@@ -109,116 +182,42 @@ export default function MyQuotes() {
     <div className="space-y-6">
       <PageHeader title="My Quotes" subtitle="Track the status of your quote requests." />
 
-      <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quote requests</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
-            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search company, trade, status, invoice…"
-              className="pl-9"
-            />
-          </div>
+      {/* Search bar — M3 filled search field */}
+      <div className="relative">
+        <Search className="h-4 w-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search company, trade, status, invoice…"
+          className="pl-10"
+        />
+      </div>
 
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          ) : isError ? (
-            <div className="text-sm text-muted-foreground">
-              Couldn’t load your quote requests. Please try again.
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              No quote requests found.
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {filtered.map((q) => {
-                const actionRequired = q.callout_status === "requested";
-                return (
-                  <Card
-                    key={q.id}
-                    className="border-border/60 hover:bg-muted/20 transition cursor-pointer"
-                    onClick={() => navigate(`/portal/quotes/${q.id}`)}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          {q.company_logo_url ? (
-                            <img
-                              src={q.company_logo_url}
-                              alt={q.company_name ? `${q.company_name} logo` : "Company logo"}
-                              className="h-9 w-9 rounded-md object-contain border border-border/60 bg-background"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="h-9 w-9 rounded-md border border-border/60 bg-muted/30" />
-                          )}
-                          <div className="min-w-0">
-                            <div className="font-semibold truncate">{q.company_name ?? "—"}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {q.created_at ? format(new Date(q.created_at), "dd MMM yyyy") : "—"}
-                              {q.trade ? <span className="mx-1">•</span> : null}
-                              {q.trade ? <span className="capitalize">{q.trade}</span> : null}
-                            </div>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="space-y-3 text-sm">
-                      <div className="flex flex-wrap gap-2 items-center">
-                        {statusBadge(q.status)}
-                        {q.callout_status ? calloutBadge(q.callout_status) : null}
-                        {q.job_status ? <JobStatusBadge status={q.job_status as any} /> : null}
-                        {q.invoice_status ? invoiceBadge(q.invoice_status) : null}
-                      </div>
-
-                      {actionRequired && typeof q.callout_total_cents === "number" ? (
-                        <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 flex items-center justify-between gap-3">
-                          <div className="text-xs text-muted-foreground">
-                            Action required: pay call-out fee
-                            <div className="text-sm font-semibold text-foreground">
-                              {formatZarFromCents(q.callout_total_cents)}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/portal/quotes/${q.id}`);
-                            }}
-                          >
-                            Pay
-                          </Button>
-                        </div>
-                      ) : null}
-
-                      {q.technician_name ? (
-                        <div className="text-xs text-muted-foreground">
-                          Technician: <span className="text-foreground font-medium">{q.technician_name}</span>
-                        </div>
-                      ) : null}
-
-                      <div className="text-xs text-muted-foreground">
-                        {q.message?.trim() ? q.message.trim() : "—"}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-36 w-full rounded-2xl" />
+          ))}
+        </div>
+      ) : isError ? (
+        <Card className="border-border/40">
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Couldn't load your quote requests. Please try again.
+          </CardContent>
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card className="border-border/40">
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            No quote requests found.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {filtered.map((q) => (
+            <QuoteCard key={q.id} q={q} onClick={() => navigate(`/portal/quotes/${q.id}`)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
