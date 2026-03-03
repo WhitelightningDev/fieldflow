@@ -106,7 +106,7 @@ export default function Invoices() {
       />
 
       <DensityProvider>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <KpiCard icon={FileText} label="Draft" value={stats.draft} />
           <KpiCard icon={Send} label="Sent" value={stats.sent} accent={stats.sent > 0 ? "warning" : undefined} />
           <KpiCard icon={Clock} label="Partial" value={stats.partial} accent={stats.partial > 0 ? "warning" : undefined} />

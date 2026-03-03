@@ -126,33 +126,31 @@ export function WidgetGrid({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={editing ? "default" : "outline"}
-            size="sm"
-            onClick={() => setEditing(!editing)}
-            className="gap-1.5"
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            {editing ? "Done" : "Customize"}
-          </Button>
-          {editing && (
-            <>
-              <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Add widget
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs text-muted-foreground">
-                Reset layout
-              </Button>
-            </>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={editing ? "default" : "outline"}
+          size="sm"
+          onClick={() => setEditing(!editing)}
+          className="gap-1.5"
+        >
+          <LayoutDashboard className="h-3.5 w-3.5" />
+          {editing ? "Done" : "Customize"}
+        </Button>
+        {editing && (
+          <>
+            <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Add widget
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs text-muted-foreground">
+              Reset
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Widget grid */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {activeWidgets.map((widget, idx) => (
           <div
             key={widget.id}

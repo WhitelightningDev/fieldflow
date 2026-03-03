@@ -76,16 +76,16 @@ function QuickStat({
 
   const content = (
     <div className={cn(
-      "flex items-center gap-3 rounded-xl border border-border/30 bg-card p-3 shadow-sm transition-all",
+      "flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border/30 bg-card p-2.5 sm:p-3 shadow-sm transition-all",
       href && "hover:shadow-md hover:-translate-y-0.5 cursor-pointer",
     )}>
-      <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", iconColor)}>
+      <div className={cn("h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center shrink-0", iconColor)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
-        <p className="text-base font-bold text-foreground leading-tight">{value}</p>
-        {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium truncate">{label}</p>
+        <p className="text-sm sm:text-base font-bold text-foreground leading-tight">{value}</p>
+        {sub && <p className="text-[10px] text-muted-foreground hidden sm:block">{sub}</p>}
       </div>
     </div>
   );
@@ -166,18 +166,18 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="space-y-6">
-      {/* Panze-style header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">
             Manage and track your operations
           </p>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground mt-0.5">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground mt-0.5 truncate">
             Electrical Dashboard
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
             <CalendarClock className="h-3.5 w-3.5" />
             {today}
@@ -187,7 +187,7 @@ export default function ElectricalDashboard({ data, allJobs }: Props) {
       </div>
 
       {/* Quick stats row */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <QuickStat icon={Flame} label="Emergency" value={emergencyToday.length} accent={emergencyToday.length > 0 ? "destructive" : undefined} href="/dashboard/jobs" />
         <QuickStat icon={ShieldCheck} label="COC Pending" value={cocPending.length} accent={cocPending.length > 0 ? "warning" : undefined} href="/dashboard/coc-certificates" />
         <QuickStat icon={Sun} label="Solar Jobs" value={solarJobs.length} sub={formatZarFromCents(solarRevenue)} href="/dashboard/jobs" />
