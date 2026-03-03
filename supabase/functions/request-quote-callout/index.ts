@@ -247,6 +247,9 @@ Deno.serve(async (req) => {
     const { error: upErr } = await adminClient
       .from("quote_request_callouts")
       .update({
+        callout_fee_cents: feeCents,
+        vat_percent: VAT_PERCENT,
+        total_cents: totalCents,
         status: "requested",
         requested_at: new Date().toISOString(),
         requested_by: caller.id,

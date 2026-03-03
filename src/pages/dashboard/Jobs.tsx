@@ -1,15 +1,17 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
 import { isTradeId, type TradeId, TRADES } from "@/features/company-signup/content/trades";
 import CreateJobCardDialog from "@/features/dashboard/components/dialogs/create-job-card-dialog";
 import SchedulingBoard from "@/features/dashboard/components/dispatch/scheduling-board";
 import DispatchRouteMap from "@/features/dashboard/components/dispatch/dispatch-route-map";
-import JobSiteControlsDialog from "@/features/dashboard/components/dialogs/job-site-controls-dialog";
+import JobCardDetailSheet from "@/features/dashboard/components/job-card-detail-sheet";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import ProfitabilityPill from "@/features/dashboard/components/profitability-pill";
 import { computeJobProfitability } from "@/features/dashboard/lib/profitability";
@@ -21,7 +23,7 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import type { Database } from "@/integrations/supabase/types";
 import { distanceMeters, formatDistance, getLatLngFromAny, isArrived } from "@/lib/geo";
 import { format } from "date-fns";
-import { MapPin } from "lucide-react";
+import { MapPin, RotateCcw, Search } from "lucide-react";
 import * as React from "react";
 
 type JobCardStatus = Database["public"]["Enums"]["job_card_status"];
@@ -41,6 +43,13 @@ export default function Jobs() {
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<JobCardStatus | "all">("all");
   const [view, setView] = React.useState<"list" | "by-site" | "schedule" | "map">("list");
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [selectedJobId, setSelectedJobId] = React.useState<string | null>(null);
+
+  const openJob = React.useCallback((jobId: string) => {
+    setSelectedJobId(jobId);
+    setDetailOpen(true);
+  }, []);
 
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
   const inventoryById = React.useMemo(() => new Map(data.inventoryItems.map((i) => [i.id, i])), [data.inventoryItems]);
@@ -191,39 +200,63 @@ export default function Jobs() {
 
       <Card className="bg-card/70 backdrop-blur-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">View</CardTitle>
+          <CardTitle className="text-sm">Jobs</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search job, site, address, customer, technician…"
-            />
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             <Select value={view} onValueChange={(v) => setView(v as any)}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="list">All jobs</SelectItem>
-                <SelectItem value="by-site">Jobs by site</SelectItem>
-                <SelectItem value="schedule">Dispatch board</SelectItem>
-                <SelectItem value="map">Route map</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="overflow-x-auto">
+              <Tabs
+                value={view}
+                onValueChange={(v) => {
+                  if (v === "list" || v === "by-site" || v === "schedule" || v === "map") setView(v);
+                }}
+              >
+                <TabsList className="h-9 w-max">
+                  <TabsTrigger value="list">All jobs</TabsTrigger>
+                  <TabsTrigger value="by-site">By site</TabsTrigger>
+                  <TabsTrigger value="schedule">Dispatch</TabsTrigger>
+                  <TabsTrigger value="map">Map</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3 lg:flex lg:items-center lg:gap-2">
+              <div className="relative">
+                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search jobs, sites, customers…"
+                  className="h-9 pl-9 lg:w-[360px]"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as JobCardStatus | "all")}>
+                <SelectTrigger className="h-9 lg:w-[180px]">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 justify-start lg:justify-center"
+                disabled={!query.trim() && statusFilter === "all"}
+                onClick={() => {
+                  setQuery("");
+                  setStatusFilter("all");
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
+            </div>
           </div>
 
           <div className="text-xs text-muted-foreground">
@@ -312,21 +345,9 @@ export default function Jobs() {
 
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <ProfitabilityPill value={profitability} />
-                      <div className="flex items-center gap-2">
-                        <Select value={job.status} onValueChange={(v) => actions.setJobCardStatus(job.id, v as JobCardStatus)}>
-                          <SelectTrigger className="h-9 w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUSES.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <JobSiteControlsDialog jobId={job.id} />
-                      </div>
+                      <Button size="sm" variant="outline" onClick={() => openJob(job.id)}>
+                        Open
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -348,7 +369,7 @@ export default function Jobs() {
                     <TableHead>Technician</TableHead>
                     <TableHead>Scheduled</TableHead>
                     <TableHead>Gross margin</TableHead>
-                    <TableHead className="w-[240px]">Update</TableHead>
+                    <TableHead className="w-[120px]">Open</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -372,7 +393,11 @@ export default function Jobs() {
                       inventoryById,
                     });
                     return (
-                      <TableRow key={job.id} className="align-top">
+                      <TableRow
+                        key={job.id}
+                        className="align-top cursor-pointer hover:bg-muted/30"
+                        onClick={() => openJob(job.id)}
+                      >
                         <TableCell>
                           <div className="font-medium whitespace-normal break-words">{job.title}</div>
                           <div className="text-xs text-muted-foreground whitespace-normal break-words mt-1">{job.description || "—"}</div>
@@ -414,21 +439,16 @@ export default function Jobs() {
                           <ProfitabilityPill value={profitability} />
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Select value={job.status} onValueChange={(v) => actions.setJobCardStatus(job.id, v as JobCardStatus)}>
-                              <SelectTrigger className="h-9 w-[140px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUSES.map((s) => (
-                                  <SelectItem key={s} value={s}>
-                                    {s}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <JobSiteControlsDialog jobId={job.id} />
-                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openJob(job.id);
+                            }}
+                          >
+                            Open
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -486,7 +506,7 @@ export default function Jobs() {
                                     <TableHead>Technician</TableHead>
                                     <TableHead>Scheduled</TableHead>
                                     <TableHead>Gross margin</TableHead>
-                                    <TableHead className="w-[240px]">Update</TableHead>
+                                    <TableHead className="w-[120px]">Open</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -500,7 +520,11 @@ export default function Jobs() {
                                       inventoryById,
                                     });
                                     return (
-                                      <TableRow key={job.id} className="align-top">
+                                      <TableRow
+                                        key={job.id}
+                                        className="align-top cursor-pointer hover:bg-muted/30"
+                                        onClick={() => openJob(job.id)}
+                                      >
                                         <TableCell>
                                           <div className="font-medium whitespace-normal break-words">{job.title}</div>
                                           <div className="text-xs text-muted-foreground whitespace-normal break-words mt-1">{job.description || "—"}</div>
@@ -512,21 +536,16 @@ export default function Jobs() {
                                         </TableCell>
                                         <TableCell><ProfitabilityPill value={profitability} /></TableCell>
                                         <TableCell>
-                                          <div className="flex items-center gap-2">
-                                            <Select value={job.status} onValueChange={(v) => actions.setJobCardStatus(job.id, v as JobCardStatus)}>
-                                              <SelectTrigger className="h-9 w-[140px]">
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {STATUSES.map((s) => (
-                                                  <SelectItem key={s} value={s}>
-                                                    {s}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                            <JobSiteControlsDialog jobId={job.id} />
-                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openJob(job.id);
+                                            }}
+                                          >
+                                            Open
+                                          </Button>
                                         </TableCell>
                                       </TableRow>
                                     );
@@ -563,21 +582,9 @@ export default function Jobs() {
                                     </div>
                                     <div className="flex items-center justify-between gap-2 pt-1">
                                       <ProfitabilityPill value={profitability} />
-                                      <div className="flex items-center gap-2">
-                                        <Select value={job.status} onValueChange={(v) => actions.setJobCardStatus(job.id, v as JobCardStatus)}>
-                                          <SelectTrigger className="h-9 w-[140px]">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {STATUSES.map((s) => (
-                                              <SelectItem key={s} value={s}>
-                                                {s}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <JobSiteControlsDialog jobId={job.id} />
-                                      </div>
+                                      <Button size="sm" variant="outline" onClick={() => openJob(job.id)}>
+                                        Open
+                                      </Button>
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -593,6 +600,15 @@ export default function Jobs() {
           </CardContent>
         </Card>
       )}
+
+      <JobCardDetailSheet
+        jobId={selectedJobId}
+        open={detailOpen}
+        onOpenChange={(o) => {
+          setDetailOpen(o);
+          if (!o) setSelectedJobId(null);
+        }}
+      />
     </div>
   );
 }
