@@ -7,6 +7,7 @@ import PageHeader from "@/features/dashboard/components/page-header";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import { supabase } from "@/integrations/supabase/client";
 import { formatZarFromCents } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as React from "react";
@@ -106,6 +107,120 @@ function isMissingRpcFunctionError(err: unknown) {
   );
 }
 
+type TimelineState = "done" | "current" | "todo" | "blocked";
+type TimelineItem = { key: string; label: string; description?: string; at?: string | null; state: TimelineState };
+
+function buildTimeline({
+  quote,
+  callout,
+  job,
+  invoice,
+}: {
+  quote: Payload["quote"];
+  callout: Payload["callout"];
+  job: Payload["job"];
+  invoice: Payload["invoice"];
+}): TimelineItem[] {
+  const items: TimelineItem[] = [];
+
+  items.push({
+    key: "quote_submitted",
+    label: "Quote submitted",
+    description: "We received your request.",
+    at: quote.created_at,
+    state: "done",
+  });
+
+  if (!callout) {
+    items.push({
+      key: "callout_waiting",
+      label: "Call-out fee",
+      description: "Waiting for the business to request a call-out fee (if required).",
+      state: "todo",
+    });
+  } else {
+    const blocked = callout.status === "declined" || callout.status === "cancelled";
+    items.push({
+      key: "callout_requested",
+      label: "Call-out requested",
+      description: "A call-out fee is required before a technician can be dispatched.",
+      at: callout.requested_at,
+      state: blocked ? "blocked" : callout.status === "paid" ? "done" : "current",
+    });
+
+    items.push({
+      key: "callout_paid",
+      label: "Call-out paid",
+      description: callout.status === "paid" ? "Payment received." : blocked ? "Call-out declined/cancelled." : "Pay the call-out fee to continue.",
+      at: callout.paid_at,
+      state: callout.status === "paid" ? "done" : blocked ? "blocked" : "todo",
+    });
+  }
+
+  items.push({
+    key: "job_created",
+    label: "Job created",
+    description: job ? "A job card was created for tracking." : "A job will be created after payment.",
+    state: job ? "done" : "todo",
+  });
+
+  if (job) {
+    const scheduled = Boolean(job.scheduled_at);
+    items.push({
+      key: "job_scheduled",
+      label: "Job scheduled",
+      description: scheduled ? "A technician visit has been scheduled." : "Scheduling pending.",
+      at: job.scheduled_at,
+      state: scheduled ? "done" : job.status === "new" ? "current" : "todo",
+    });
+
+    const inProgress = job.status === "in-progress";
+    const completed = job.status === "completed" || job.status === "invoiced";
+
+    items.push({
+      key: "job_in_progress",
+      label: "Job in progress",
+      description: inProgress ? "Work has started." : completed ? "Work completed." : "Work will start after dispatch.",
+      at: inProgress || completed ? job.updated_at : null,
+      state: completed ? "done" : inProgress ? "current" : "todo",
+    });
+
+    items.push({
+      key: "job_completed",
+      label: "Job completed",
+      description: completed ? "Work completed." : "Completion pending.",
+      at: completed ? job.updated_at : null,
+      state: completed ? "done" : "todo",
+    });
+  }
+
+  if (invoice) {
+    const paid = invoice.status === "paid" || (invoice.amount_paid_cents ?? 0) >= (invoice.total_cents ?? 0);
+    items.push({
+      key: "invoice_issued",
+      label: "Invoice issued",
+      description: invoice.invoice_number,
+      at: invoice.created_at,
+      state: "done",
+    });
+    items.push({
+      key: "invoice_paid",
+      label: "Invoice paid",
+      description: paid ? "Payment complete." : "Payment pending.",
+      state: paid ? "done" : "current",
+    });
+  } else {
+    items.push({
+      key: "invoice_pending",
+      label: "Invoice",
+      description: "An invoice will appear here once the job is invoiced.",
+      state: job && (job.status === "invoiced" || job.status === "completed") ? "current" : "todo",
+    });
+  }
+
+  return items;
+}
+
 export default function QuoteDetail() {
   const { quoteRequestId } = useParams();
   const navigate = useNavigate();
@@ -203,6 +318,7 @@ export default function QuoteDetail() {
   const callout = data?.callout ?? null;
   const job = data?.job ?? null;
   const invoice = data?.invoice ?? null;
+  const timeline = quote ? buildTimeline({ quote, callout, job, invoice }) : [];
 
   const lineItems = React.useMemo(() => parseLineItems(invoice?.line_items), [invoice?.line_items]);
   const balanceCents = invoice ? Math.max(0, (invoice.total_cents ?? 0) - (invoice.amount_paid_cents ?? 0)) : null;
@@ -246,6 +362,46 @@ export default function QuoteDetail() {
         </Card>
       ) : (
         <>
+          <Card className="border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Tracking</CardTitle>
+              <CardDescription>Follow your request from payment to completion.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-4">
+                {timeline.map((it, idx) => {
+                  const dot =
+                    it.state === "done"
+                      ? "bg-emerald-500"
+                      : it.state === "current"
+                        ? "bg-primary"
+                        : it.state === "blocked"
+                          ? "bg-destructive"
+                          : "bg-muted-foreground/30";
+                  return (
+                    <li key={it.key} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={cn("mt-1.5 h-2.5 w-2.5 rounded-full", dot)} />
+                        {idx < timeline.length - 1 ? <div className="w-px flex-1 bg-border/70 mt-2" /> : null}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="font-medium">{it.label}</div>
+                          {it.at ? (
+                            <div className="text-xs text-muted-foreground shrink-0">
+                              {format(new Date(it.at), "dd MMM yyyy")}
+                            </div>
+                          ) : null}
+                        </div>
+                        {it.description ? <div className="text-xs text-muted-foreground mt-0.5">{it.description}</div> : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+
           <Card className="border-border/60">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center justify-between gap-3">
@@ -301,26 +457,39 @@ export default function QuoteDetail() {
                 {callout ? calloutBadgeText(callout.status) : "No call-out fee requested yet."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+            <CardContent className="space-y-4 text-sm">
               {callout ? (
                 <>
-                  <div className="flex items-center justify-between">
-                    <div className="text-muted-foreground">Amount (incl VAT)</div>
-                    <div className="font-semibold">{formatZarFromCents(callout.total_cents ?? 0)}</div>
+                  <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-4 flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Amount (incl VAT)</div>
+                      <div className="text-2xl font-bold">{formatZarFromCents(callout.total_cents ?? 0)}</div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      {callout.status === "paid" && callout.paid_at ? (
+                        <>Paid {format(new Date(callout.paid_at), "dd MMM yyyy, HH:mm")}</>
+                      ) : callout.status === "requested" ? (
+                        <>Payment required</>
+                      ) : callout.status === "declined" ? (
+                        <>Declined</>
+                      ) : callout.status === "cancelled" ? (
+                        <>Cancelled</>
+                      ) : (
+                        <>{String(callout.status)}</>
+                      )}
+                    </div>
                   </div>
                   {callout.status === "requested" ? (
                     <div className="flex flex-wrap gap-2 justify-end">
                       <Button onClick={() => pay.mutate()} disabled={pay.isPending}>
-                        {pay.isPending ? "Processing…" : "Accept & Pay"}
+                        {pay.isPending ? "Processing…" : `Pay ${formatZarFromCents(callout.total_cents ?? 0)}`}
                       </Button>
                       <Button variant="outline" onClick={() => decline.mutate()} disabled={decline.isPending || pay.isPending}>
                         {decline.isPending ? "Declining…" : "Decline"}
                       </Button>
                     </div>
                   ) : callout.status === "paid" ? (
-                    <div className="text-xs text-muted-foreground">
-                      Paid {callout.paid_at ? format(new Date(callout.paid_at), "dd MMM yyyy, HH:mm") : "—"}.
-                    </div>
+                    <div className="text-xs text-muted-foreground">Thanks — the business will schedule your call-out.</div>
                   ) : null}
                 </>
               ) : (
@@ -349,6 +518,12 @@ export default function QuoteDetail() {
                     <div className="text-muted-foreground">Scheduled</div>
                     <div className="font-medium">
                       {job.scheduled_at ? format(new Date(job.scheduled_at), "dd MMM yyyy, HH:mm") : "Not scheduled yet"}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-muted-foreground">Last update</div>
+                    <div className="font-medium">
+                      {job.updated_at ? format(new Date(job.updated_at), "dd MMM yyyy, HH:mm") : "—"}
                     </div>
                   </div>
                   {job.technician_name ? (
