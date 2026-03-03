@@ -11,6 +11,7 @@ type Props = {
   side?: React.ReactNode;
   topRight?: React.ReactNode;
   centerContentOnMobile?: boolean;
+  brandInContentOnMobile?: boolean;
   className?: string;
 };
 
@@ -21,13 +22,20 @@ export default function AuthLayout({
   side,
   topRight,
   centerContentOnMobile = false,
+  brandInContentOnMobile = false,
   className,
 }: Props) {
   return (
     <div className={cn("relative min-h-[100dvh] bg-background", className)}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(199_89%_48%/0.08),transparent_55%)]" />
       <div className="container mx-auto px-4 relative flex min-h-[100dvh] flex-col">
-        <div className="flex items-center justify-between gap-4 pt-[max(env(safe-area-inset-top),1.5rem)] pb-4 lg:py-6">
+        {brandInContentOnMobile ? <div className="lg:hidden h-[env(safe-area-inset-top)]" /> : null}
+        <div
+          className={cn(
+            "flex items-center justify-between gap-4 pt-[max(env(safe-area-inset-top),1.5rem)] pb-4 lg:py-6",
+            brandInContentOnMobile ? "hidden lg:flex" : null,
+          )}
+        >
           <Link to="/" className="flex items-center gap-2 group">
             <BrandIcon size={36} className="transition-all duration-300 group-hover:shadow-lg" />
             <BrandWordmark className="text-xl" />
@@ -50,6 +58,15 @@ export default function AuthLayout({
           </div>
 
           <div className="lg:pt-12">
+            {brandInContentOnMobile ? (
+              <div className="lg:hidden flex flex-col items-center gap-3 pb-6">
+                <Link to="/" className="flex items-center gap-2">
+                  <BrandIcon size={44} />
+                  <BrandWordmark className="text-2xl" />
+                </Link>
+                {topRight ? <div className="text-center">{topRight}</div> : null}
+              </div>
+            ) : null}
             <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
               <CardContent className="p-6 sm:p-8">{children}</CardContent>
             </Card>

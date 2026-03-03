@@ -75,7 +75,7 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
       {/* Mobile topbar + drawer nav */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <div className="xl:hidden sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-xl pt-[max(env(safe-area-inset-top),0.5rem)]">
-          <div className="h-14 px-4 flex items-center gap-2">
+          <div className="h-12 px-3 flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
@@ -102,12 +102,14 @@ export default function TechShell({ children }: { children: React.ReactNode }) {
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetContent side="left" className="p-0 w-[85vw] max-w-72">
               <SheetTitle className="sr-only">Technician menu</SheetTitle>
-              <TechSidebar
-                onNavigate={() => setMobileOpen(false)}
-                trialDaysLeft={trialStatus.state === "trialing" ? trialStatus.daysLeft : undefined}
-                showTrialDaysIcon={trialStatus.state === "trialing" && trialDismissal.dismissed}
-                onRestoreTrialBanner={trialDismissal.restore}
-              />
+              <div className="h-full pt-[max(env(safe-area-inset-top),0.5rem)] pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+                <TechSidebar
+                  onNavigate={() => setMobileOpen(false)}
+                  trialDaysLeft={trialStatus.state === "trialing" ? trialStatus.daysLeft : undefined}
+                  showTrialDaysIcon={trialStatus.state === "trialing" && trialDismissal.dismissed}
+                  onRestoreTrialBanner={trialDismissal.restore}
+                />
+              </div>
             </SheetContent>
           </Sheet>
         </div>

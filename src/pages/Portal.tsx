@@ -41,7 +41,7 @@ export default function Portal() {
       <div className="min-h-[100dvh] bg-gradient-to-b from-background via-background to-muted/30">
         {/* M3 top app bar */}
         <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-lg shadow-sm pt-[max(env(safe-area-inset-top),0.25rem)]">
-          <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-3">
+          <div className="mx-auto max-w-5xl px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-3">
             {/* Mobile burger */}
             <Button
               variant="ghost"
@@ -81,7 +81,7 @@ export default function Portal() {
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetContent side="left" className="p-0 w-[85vw] max-w-72">
             <SheetTitle className="sr-only">Menu</SheetTitle>
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full pt-[max(env(safe-area-inset-top),0.5rem)] pb-[max(env(safe-area-inset-bottom),0.5rem)]">
               <div className="p-4 border-b border-border">
                 <Link to="/portal" className="flex items-center gap-2.5">
                   <BrandMark iconSize={28} />
