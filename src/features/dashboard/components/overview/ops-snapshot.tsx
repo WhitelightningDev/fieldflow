@@ -96,7 +96,7 @@ function LowStockOverviewCard({ items }: { items: InventoryItem[] }) {
   }, [lowStock]);
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-low-stock">
+    <Card className="shadow-sm border-border/30" data-tour="ops-low-stock">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -223,7 +223,7 @@ function TechnicianStatusOverviewCard({
   }, [rows]);
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-tech-status">
+    <Card className="shadow-sm border-border/30" data-tour="ops-tech-status">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -440,7 +440,7 @@ function DispatchBoardCard({
   };
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-dispatch-board">
+    <Card className="shadow-sm border-border/30" data-tour="ops-dispatch-board">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -547,7 +547,7 @@ function TechnicianLiveLocationsOverviewCard({
   const liveCount = rows.filter((r) => r.isLive).length;
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-tech-locations">
+    <Card className="shadow-sm border-border/30" data-tour="ops-tech-locations">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
@@ -788,7 +788,7 @@ function FinancialTrendsCard({
   }, [series]);
 
   return (
-    <Card className="bg-card/70 backdrop-blur-sm" data-tour="ops-financial-trends">
+    <Card className="shadow-sm border-border/30" data-tour="ops-financial-trends">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2">
