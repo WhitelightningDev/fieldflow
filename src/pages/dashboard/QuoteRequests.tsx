@@ -402,6 +402,8 @@ export default function QuoteRequests() {
     }
   }, [quoteLinkToken]);
 
+  const quoteAppUrl = quoteLinkUrl;
+
   const [qrDataUrl, setQrDataUrl] = React.useState<string>("");
   const [posterDataUrl, setPosterDataUrl] = React.useState<string>("");
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);

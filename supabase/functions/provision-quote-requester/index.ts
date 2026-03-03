@@ -194,8 +194,10 @@ Deno.serve(async (req) => {
 
     const { error: otpError } = await adminClient.auth.signInWithOtp({
       email: normalizedEmail,
-      options: emailRedirectTo ? { emailRedirectTo } : undefined,
-      shouldCreateUser: false,
+      options: {
+        ...(emailRedirectTo ? { emailRedirectTo } : {}),
+        shouldCreateUser: false,
+      },
     });
     if (otpError) {
       return jsonResponse({ error: otpError.message }, 400, origin);
