@@ -101,6 +101,19 @@ export default function RepairHistory() {
     return { total, completed, callbacks, collectedCents };
   }, [filtered, invoicesByJobId, isCallback]);
 
+  const rows = React.useMemo(() => {
+    return filtered.map((j) => {
+      const customer = j.customer_id ? customersById.get(j.customer_id) : null;
+      const site = j.site_id ? sitesById.get(j.site_id) : null;
+      const tech = j.technician_id ? techsById.get(j.technician_id) : null;
+      const inv = invoicesByJobId.get(j.id) ?? null;
+      const revenue = typeof (j as any).revenue_cents === "number" ? (j as any).revenue_cents : null;
+      const updatedLabel = formatDistanceToNowStrict(new Date(j.updated_at), { addSuffix: true });
+      const isCb = isCallback(j);
+      return { j, customer, site, tech, inv, revenue, updatedLabel, isCb };
+    });
+  }, [customersById, filtered, invoicesByJobId, isCallback, sitesById, techsById]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -186,45 +199,120 @@ export default function RepairHistory() {
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Job</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Site</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Invoice</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-              <TableHead className="w-[180px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <FileText className="h-6 w-6 opacity-60" />
-                    No repairs found for this filter.
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : null}
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="sm:hidden p-3 space-y-3">
+          {rows.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                <FileText className="h-6 w-6 opacity-60" />
+                No repairs found for this filter.
+              </div>
+            </div>
+          ) : null}
 
-            {filtered.map((j) => {
-              const customer = j.customer_id ? customersById.get(j.customer_id) : null;
-              const site = j.site_id ? sitesById.get(j.site_id) : null;
-              const tech = j.technician_id ? techsById.get(j.technician_id) : null;
-              const inv = invoicesByJobId.get(j.id) ?? null;
-              const revenue = typeof (j as any).revenue_cents === "number" ? (j as any).revenue_cents : null;
-              return (
+          {rows.map(({ j, customer, site, tech, inv, revenue, updatedLabel, isCb }) => (
+            <Card key={j.id} className="bg-background/50">
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="font-semibold leading-tight whitespace-normal break-words">{j.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Updated {updatedLabel}
+                      {tech?.name ? ` • ${tech.name}` : ""}
+                      {isCb ? (
+                        <>
+                          {" "}
+                          • <Badge variant="secondary" className="text-[10px]">callback</Badge>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <JobStatusBadge status={j.status} />
+                    <RowActionsMenu label="Job actions">
+                      <JobSiteControlsDialog jobId={j.id} trigger={<DropdownMenuItem>Job controls</DropdownMenuItem>} />
+                      {inv ? (
+                        <ManageInvoiceDialog invoiceId={inv.id} trigger={<DropdownMenuItem>Invoice</DropdownMenuItem>} />
+                      ) : (
+                        <DropdownMenuItem disabled>Invoice</DropdownMenuItem>
+                      )}
+                    </RowActionsMenu>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Customer</div>
+                    <div className="font-medium truncate">{customer?.name ?? "—"}</div>
+                    {customer?.email ? <div className="text-[11px] text-muted-foreground truncate">{customer.email}</div> : null}
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Site</div>
+                    <div className="font-medium truncate">{site?.name ?? "—"}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Invoice</div>
+                    {inv ? (
+                      <div className="space-y-1">
+                        <div className="font-medium truncate">{inv.invoice_number}</div>
+                        <Badge variant={inv.status === "paid" ? "default" : inv.status === "partial" ? "secondary" : "outline"} className="text-[10px] w-fit">
+                          {inv.status}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground">No invoice</div>
+                    )}
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Revenue</div>
+                    <div className="font-medium">
+                      {revenue != null ? formatZarFromCents(revenue) : inv ? formatZarFromCents(inv.amount_paid_cents ?? 0) : "—"}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Job</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Site</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Invoice</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="w-[180px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="h-6 w-6 opacity-60" />
+                      No repairs found for this filter.
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : null}
+
+              {rows.map(({ j, customer, site, tech, inv, revenue, updatedLabel, isCb }) => (
                 <TableRow key={j.id}>
                   <TableCell>
                     <div className="font-medium">{j.title}</div>
                     <div className="text-xs text-muted-foreground">
-                      Updated {formatDistanceToNowStrict(new Date(j.updated_at), { addSuffix: true })}
+                      Updated {updatedLabel}
                       {tech?.name ? ` • ${tech.name}` : ""}
-                      {isCallback(j) ? (
+                      {isCb ? (
                         <>
                           {" "}
                           • <Badge variant="secondary" className="text-[10px]">callback</Badge>
@@ -268,10 +356,10 @@ export default function RepairHistory() {
                     </div>
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

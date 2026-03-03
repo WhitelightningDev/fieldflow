@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
 import CreateCustomerDialog from "@/features/dashboard/components/dialogs/create-customer-dialog";
 import DeleteCustomerAlertDialog from "@/features/dashboard/components/dialogs/delete-customer-alert-dialog";
 import DeleteCustomersAlertDialog from "@/features/dashboard/components/dialogs/delete-customers-alert-dialog";
@@ -93,80 +94,163 @@ export default function Customers() {
       />
 
       <div className="rounded-xl border bg-card/70 backdrop-blur-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                  onCheckedChange={(v) => toggleAll(Boolean(v))}
-                  aria-label="Select all customers"
-                />
-              </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead className="w-[140px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.customers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                  No customers yet.
-                </TableCell>
-              </TableRow>
-            ) : null}
-            {data.customers.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>
+        {/* Mobile: cards */}
+        <div className="sm:hidden p-3 space-y-3">
+          {data.customers.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No customers yet.</div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-sm">
                   <Checkbox
-                    checked={selectedIds.has(c.id)}
-                    onCheckedChange={(v) => toggleOne(c.id, Boolean(v))}
-                    aria-label={`Select ${c.name}`}
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={(v) => toggleAll(Boolean(v))}
+                    aria-label="Select all customers"
                   />
-                </TableCell>
-                <TableCell className="font-medium">{c.name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{c.phone || "—"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{c.address || "—"}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end">
-                    <RowActionsMenu label="Customer actions">
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          setManageCustomerId(c.id);
-                          setManageOpen(true);
-                        }}
-                      >
-                        Manage
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          setEditCustomerId(c.id);
-                          setEditOpen(true);
-                        }}
-                      >
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onSelect={() => {
-                          setDeleteCustomerId(c.id);
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </RowActionsMenu>
+                  <span>Select all</span>
+                </label>
+                {selectedCount ? (
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{selectedCount}</span> selected
                   </div>
-                </TableCell>
+                ) : null}
+              </div>
+
+              {data.customers.map((c) => (
+                <Card key={c.id} className="bg-background/40 border-border/60">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <label className="flex items-start gap-3 min-w-0">
+                        <Checkbox
+                          checked={selectedIds.has(c.id)}
+                          onCheckedChange={(v) => toggleOne(c.id, Boolean(v))}
+                          aria-label={`Select ${c.name}`}
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{c.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {c.phone || "—"} • {c.email || "—"}
+                          </div>
+                        </div>
+                      </label>
+                      <RowActionsMenu label="Customer actions">
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setManageCustomerId(c.id);
+                            setManageOpen(true);
+                          }}
+                        >
+                          Manage
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setEditCustomerId(c.id);
+                            setEditOpen(true);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => {
+                            setDeleteCustomerId(c.id);
+                            setDeleteOpen(true);
+                          }}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </RowActionsMenu>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {c.address || "—"}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={(v) => toggleAll(Boolean(v))}
+                    aria-label="Select all customers"
+                  />
+                </TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead className="w-[140px] text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {data.customers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                    No customers yet.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {data.customers.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.has(c.id)}
+                      onCheckedChange={(v) => toggleOne(c.id, Boolean(v))}
+                      aria-label={`Select ${c.name}`}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{c.phone || "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{c.email || "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{c.address || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end">
+                      <RowActionsMenu label="Customer actions">
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setManageCustomerId(c.id);
+                            setManageOpen(true);
+                          }}
+                        >
+                          Manage
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setEditCustomerId(c.id);
+                            setEditOpen(true);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => {
+                            setDeleteCustomerId(c.id);
+                            setDeleteOpen(true);
+                          }}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </RowActionsMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

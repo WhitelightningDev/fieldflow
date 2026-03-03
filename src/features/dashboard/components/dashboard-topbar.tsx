@@ -63,9 +63,13 @@ export default function DashboardTopbar({ onOpenCompliance }: { onOpenCompliance
               <Sparkles className="h-4 w-4" />
             </Button>
             <NotificationBell basePath="/dashboard" />
-            {options.length > 1 ? <TradeFilterSelect value={trade} onChange={setTrade} options={options} /> : null}
+            {options.length > 1 ? (
+              <div className="hidden sm:block">
+                <TradeFilterSelect value={trade} onChange={setTrade} options={options} />
+              </div>
+            ) : null}
             {!authLoading && !profileLoading && profile?.company_id ? (
-              <div className="flex items-center gap-2 max-w-[50vw] sm:max-w-[20rem]">
+              <div className="hidden sm:flex items-center gap-2 max-w-[20rem]">
                 {company?.logo_url ? (
                   <img
                     src={company.logo_url}

@@ -78,6 +78,18 @@ export default function Invoices() {
     return <UpgradePrompt feature="Invoicing" requiredTier="pro" currentTier={gate.tier} />;
   }
 
+  const invoiceRows = React.useMemo(() => {
+    return filtered.map((inv) => {
+      const customer = inv.customer_id ? customersById.get(inv.customer_id) : null;
+      const job = jobsById.get(inv.job_card_id) as any;
+      const site = job?.site_id ? sitesById.get(job.site_id) : null;
+      const total = inv.total_cents ?? 0;
+      const paid = inv.amount_paid_cents ?? 0;
+      const balance = Math.max(0, total - paid);
+      return { inv, customer, job, site, total, paid, balance };
+    });
+  }, [customersById, filtered, jobsById, sitesById]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -168,39 +180,93 @@ export default function Invoices() {
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Invoice</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Job / Site</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Paid</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-              <TableHead className="w-[120px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <FileText className="h-6 w-6 opacity-60" />
-                    No invoices found.
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="sm:hidden p-3 space-y-3">
+          {invoiceRows.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                <FileText className="h-6 w-6 opacity-60" />
+                No invoices found.
+              </div>
+            </div>
+          ) : null}
+
+          {invoiceRows.map(({ inv, customer, job, site, total, paid, balance }) => (
+            <Card key={inv.id} className="bg-background/50">
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{inv.invoice_number}</div>
+                    <div className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString()}</div>
                   </div>
-                </TableCell>
+                  <Badge variant={inv.status === "paid" ? "default" : inv.status === "partial" ? "secondary" : "outline"}>{inv.status}</Badge>
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="truncate">
+                    <span className="font-medium text-foreground">Customer:</span> {customer?.name ?? "—"}
+                  </div>
+                  {customer?.email ? <div className="truncate">{customer.email}</div> : null}
+                  <div className="truncate">
+                    <span className="font-medium text-foreground">Job:</span> {job?.title ?? "—"}
+                  </div>
+                  <div className="truncate">
+                    <span className="font-medium text-foreground">Site:</span> {site?.name ?? "No site"}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Total</div>
+                    <div className="font-medium">{formatZarFromCents(total)}</div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Paid</div>
+                    <div className="font-medium text-emerald-600 dark:text-emerald-400">{formatZarFromCents(paid)}</div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Balance</div>
+                    <div className={`font-medium ${balance > 0 ? "text-destructive" : ""}`}>{balance > 0 ? formatZarFromCents(balance) : "—"}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <ManageInvoiceDialog invoiceId={inv.id} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Job / Site</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Paid</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
+                <TableHead className="w-[120px] text-right">Actions</TableHead>
               </TableRow>
-            ) : null}
-            {filtered.map((inv) => {
-              const customer = inv.customer_id ? customersById.get(inv.customer_id) : null;
-              const job = jobsById.get(inv.job_card_id) as any;
-              const site = job?.site_id ? sitesById.get(job.site_id) : null;
-              const total = inv.total_cents ?? 0;
-              const paid = inv.amount_paid_cents ?? 0;
-              const balance = Math.max(0, total - paid);
-              return (
+            </TableHeader>
+            <TableBody>
+              {invoiceRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="h-6 w-6 opacity-60" />
+                      No invoices found.
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : null}
+
+              {invoiceRows.map(({ inv, customer, job, site, total, paid, balance }) => (
                 <TableRow key={inv.id}>
                   <TableCell>
                     <div className="font-medium">{inv.invoice_number}</div>
@@ -228,10 +294,10 @@ export default function Invoices() {
                     <ManageInvoiceDialog invoiceId={inv.id} />
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

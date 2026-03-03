@@ -10,6 +10,7 @@ import { useDashboardData } from "@/features/dashboard/store/dashboard-data-stor
 import { Button } from "@/components/ui/button";
 import RowActionsMenu from "@/components/row-actions-menu";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -40,8 +41,8 @@ export default function Sites() {
   const [deleteSiteId, setDeleteSiteId] = React.useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-  const customersById = new Map(data.customers.map((c) => [c.id, c]));
-  const teamsById = new Map(data.teams.map((t) => [t.id, t]));
+  const customersById = React.useMemo(() => new Map(data.customers.map((c) => [c.id, c] as const)), [data.customers]);
+  const teamsById = React.useMemo(() => new Map(data.teams.map((t) => [t.id, t] as const)), [data.teams]);
 
   const techniciansById = React.useMemo(() => new Map(data.technicians.map((t) => [t.id, t])), [data.technicians]);
   const inventoryById = React.useMemo(() => new Map(data.inventoryItems.map((i) => [i.id, i])), [data.inventoryItems]);
@@ -78,6 +79,39 @@ export default function Sites() {
     }
     return m;
   }, [data.siteMaterialUsage]);
+
+  const siteRows = React.useMemo(() => {
+    return data.sites.map((site) => {
+      const customer = (site as any).customer_id ? customersById.get((site as any).customer_id) : undefined;
+      const assignments = data.siteTeamAssignments.filter((a) => a.site_id === site.id);
+      const current = getCurrentAssignment(assignments);
+      const currentTeam = current ? teamsById.get(current.team_id) : undefined;
+      const currentEndsAt = current?.ends_at ?? null;
+
+      const jobs = jobsBySiteId.get(site.id) ?? [];
+      const timeEntries = jobs.flatMap((j: any) => timeByJobId.get(j.id) ?? []);
+      const materials = materialsBySiteId.get(site.id) ?? [];
+      const profitability = computeSiteProfitability({
+        jobs,
+        timeEntries,
+        materials,
+        techniciansById,
+        inventoryById,
+      });
+
+      return { site, customer, current, currentTeam, currentEndsAt, profitability };
+    });
+  }, [
+    customersById,
+    data.siteTeamAssignments,
+    data.sites,
+    inventoryById,
+    jobsBySiteId,
+    materialsBySiteId,
+    teamsById,
+    techniciansById,
+    timeByJobId,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -119,45 +153,120 @@ export default function Sites() {
         actions={<CreateSiteDialog onboardingDialogKey="create-site" />}
       />
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Site</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Current team</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Profitability</TableHead>
-              <TableHead className="w-[260px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.sites.length === 0 ? (
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="sm:hidden p-3 space-y-3">
+          {siteRows.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No sites yet.</div>
+          ) : null}
+
+          {siteRows.map(({ site, customer, current, currentTeam, currentEndsAt, profitability }) => (
+            <Card key={site.id} className="bg-background/50">
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{site.name}</div>
+                    {(site as any).scope_of_work ? (
+                      <div className="text-xs text-muted-foreground line-clamp-2">{(site as any).scope_of_work}</div>
+                    ) : null}
+                    <div className="text-xs text-muted-foreground">
+                      Updated {formatDistanceToNowStrict(new Date(site.updated_at), { addSuffix: true })}
+                    </div>
+                  </div>
+                  <RowActionsMenu label="Site actions">
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setManageSiteId(site.id);
+                        setManageOpen(true);
+                      }}
+                    >
+                      Manage
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setEditSiteId(site.id);
+                        setEditOpen(true);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setAssignSiteId(site.id);
+                        setAssignOpen(true);
+                      }}
+                    >
+                      Assign team
+                    </DropdownMenuItem>
+                    {current ? (
+                      <DropdownMenuItem onSelect={() => void actions.endSiteAssignment(current.id, new Date().toISOString())}>
+                        End now
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onSelect={() => {
+                        setDeleteSiteId(site.id);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </RowActionsMenu>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Customer</div>
+                    <div className="font-medium truncate">{customer?.name ?? "—"}</div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Team</div>
+                    <div className="font-medium truncate">{currentTeam?.name ?? "Unassigned"}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {currentTeam ? (currentEndsAt ? `Ends ${formatDistanceToNowStrict(new Date(currentEndsAt), { addSuffix: true })}` : "Active") : ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-background/40 p-3 space-y-2">
+                  <div className="text-xs text-muted-foreground">Address</div>
+                  <div className="text-sm whitespace-normal break-words">{site.address ?? "—"}</div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs text-muted-foreground">Profitability</div>
+                  <ProfitabilityPill value={profitability} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                  No sites yet.
-                </TableCell>
+                <TableHead>Site</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Current team</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Profitability</TableHead>
+                <TableHead className="w-[260px] text-right">Actions</TableHead>
               </TableRow>
-            ) : null}
+            </TableHeader>
+            <TableBody>
+              {siteRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                    No sites yet.
+                  </TableCell>
+                </TableRow>
+              ) : null}
 
-            {data.sites.map((site) => {
-              const customer = (site as any).customer_id ? customersById.get((site as any).customer_id) : undefined;
-              const assignments = data.siteTeamAssignments.filter((a) => a.site_id === site.id);
-              const current = getCurrentAssignment(assignments);
-              const currentTeam = current ? teamsById.get(current.team_id) : undefined;
-              const currentEndsAt = current?.ends_at ?? null;
-
-              const jobs = jobsBySiteId.get(site.id) ?? [];
-              const timeEntries = jobs.flatMap((j: any) => timeByJobId.get(j.id) ?? []);
-              const materials = materialsBySiteId.get(site.id) ?? [];
-              const profitability = computeSiteProfitability({
-                jobs,
-                timeEntries,
-                materials,
-                techniciansById,
-                inventoryById,
-              });
-              return (
+              {siteRows.map(({ site, customer, current, currentTeam, currentEndsAt, profitability }) => (
                 <TableRow key={site.id}>
                   <TableCell>
                     <div className="font-medium">{site.name}</div>
@@ -231,10 +340,10 @@ export default function Sites() {
                     </div>
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

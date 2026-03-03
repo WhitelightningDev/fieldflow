@@ -49,6 +49,17 @@ export default function Inventory() {
     });
   }, [lastAddedName, selectors.inventoryItems, tradeId]);
 
+  const inventoryRows = React.useMemo(() => {
+    return selectors.inventoryItems.map((item) => {
+      const isLow = item.quantity_on_hand <= item.reorder_point;
+      const tradeLabel = TRADES.find((t) => t.id === item.trade_id)?.shortName ?? item.trade_id;
+      const unitCost =
+        typeof (item as any).unit_cost_cents === "number" ? formatZarFromCents((item as any).unit_cost_cents) : "—";
+      const expiryLabel = item.expiry_date ? format(new Date(item.expiry_date), "PP") : "—";
+      return { item, isLow, tradeLabel, unitCost, expiryLabel };
+    });
+  }, [selectors.inventoryItems]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -170,60 +181,116 @@ export default function Inventory() {
         </Card>
       )}
 
-      <div className="rounded-xl border bg-card/70 backdrop-blur-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead>Trade</TableHead>
-              <TableHead>Qty</TableHead>
-              <TableHead>Unit cost</TableHead>
-              <TableHead>Reorder at</TableHead>
-              <TableHead>Perishable</TableHead>
-              <TableHead>Expiry</TableHead>
-              <TableHead className="w-[160px]">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {selectors.inventoryItems.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
-                  No inventory items yet for this trade filter.
-                </TableCell>
-              </TableRow>
-            ) : null}
-            {selectors.inventoryItems.map((i) => {
-              const isLow = i.quantity_on_hand <= i.reorder_point;
-              return (
-                <TableRow key={i.id}>
-                  <TableCell>
-                    <div className="font-medium flex items-center gap-2">
-                      {i.name}
+      <div className="rounded-xl border bg-card/70 backdrop-blur-sm overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="sm:hidden p-3 space-y-3">
+          {inventoryRows.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              No inventory items yet for this trade filter.
+            </div>
+          ) : null}
+
+          {inventoryRows.map(({ item, isLow, tradeLabel, unitCost, expiryLabel }) => (
+            <Card key={item.id} className="bg-background/50">
+              <CardContent className="py-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold flex items-center gap-2 min-w-0">
+                      <span className="truncate">{item.name}</span>
                       {isLow ? <Badge variant="destructive">Low</Badge> : null}
                     </div>
-                    <div className="text-xs text-muted-foreground">{i.sku ? `SKU: ${i.sku}` : "—"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{item.sku ? `SKU: ${item.sku}` : "—"}</div>
+                  </div>
+                  <RowActionsMenu label="Inventory actions">
+                    <EditInventoryCostDialog itemId={item.id} trigger={<DropdownMenuItem>Unit cost</DropdownMenuItem>} />
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setAdjustItemId(item.id);
+                        setAdjustOpen(true);
+                      }}
+                    >
+                      Adjust quantity
+                    </DropdownMenuItem>
+                  </RowActionsMenu>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">{tradeLabel}</Badge>
+                  {item.perishable ? <Badge>Perishable</Badge> : <Badge variant="outline">Non-perishable</Badge>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Qty</div>
+                    <div className="font-medium">
+                      {item.quantity_on_hand} <span className="text-muted-foreground">{item.unit}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Reorder at</div>
+                    <div className="font-medium">{item.reorder_point}</div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Unit cost</div>
+                    <div className="font-medium">{unitCost}</div>
+                  </div>
+                  <div className="rounded-lg border bg-background/40 p-2">
+                    <div className="text-muted-foreground">Expiry</div>
+                    <div className="font-medium">{expiryLabel}</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Trade</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead>Unit cost</TableHead>
+                <TableHead>Reorder at</TableHead>
+                <TableHead>Perishable</TableHead>
+                <TableHead>Expiry</TableHead>
+                <TableHead className="w-[160px]">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {inventoryRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
+                    No inventory items yet for this trade filter.
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {TRADES.find((t) => t.id === i.trade_id)?.shortName ?? i.trade_id}
-                  </TableCell>
+                </TableRow>
+              ) : null}
+              {inventoryRows.map(({ item, isLow, tradeLabel, unitCost, expiryLabel }) => (
+                <TableRow key={item.id}>
                   <TableCell>
-                    <span className="font-medium">{i.quantity_on_hand}</span>{" "}
-                    <span className="text-sm text-muted-foreground">{i.unit}</span>
+                    <div className="font-medium flex items-center gap-2">
+                      {item.name}
+                      {isLow ? <Badge variant="destructive">Low</Badge> : null}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{item.sku ? `SKU: ${item.sku}` : "—"}</div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {typeof (i as any).unit_cost_cents === "number" ? formatZarFromCents((i as any).unit_cost_cents) : "—"}
+                  <TableCell className="text-sm text-muted-foreground">{tradeLabel}</TableCell>
+                  <TableCell>
+                    <span className="font-medium">{item.quantity_on_hand}</span>{" "}
+                    <span className="text-sm text-muted-foreground">{item.unit}</span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{i.reorder_point}</TableCell>
-                  <TableCell>{i.perishable ? <Badge>Yes</Badge> : <Badge variant="outline">No</Badge>}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {i.expiry_date ? format(new Date(i.expiry_date), "PP") : "—"}
-                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{unitCost}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{item.reorder_point}</TableCell>
+                  <TableCell>{item.perishable ? <Badge>Yes</Badge> : <Badge variant="outline">No</Badge>}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{expiryLabel}</TableCell>
                   <TableCell>
                     <RowActionsMenu label="Inventory actions">
-                      <EditInventoryCostDialog itemId={i.id} trigger={<DropdownMenuItem>Unit cost</DropdownMenuItem>} />
+                      <EditInventoryCostDialog itemId={item.id} trigger={<DropdownMenuItem>Unit cost</DropdownMenuItem>} />
                       <DropdownMenuItem
                         onSelect={() => {
-                          setAdjustItemId(i.id);
+                          setAdjustItemId(item.id);
                           setAdjustOpen(true);
                         }}
                       >
@@ -232,10 +299,10 @@ export default function Inventory() {
                     </RowActionsMenu>
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <AdjustInventoryDialog item={adjustItem} open={adjustOpen} onOpenChange={setAdjustOpen} />
