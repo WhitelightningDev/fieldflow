@@ -6,6 +6,7 @@ const variantIcons = {
   default: null,
   destructive: AlertCircle,
   success: CheckCircle2,
+  warning: AlertTriangle,
   info: Info,
 } as const;
 
@@ -19,8 +20,8 @@ export function Toaster() {
         return (
           <Toast key={id} variant={variant} {...props}>
             <div className="flex gap-3 items-start">
-              {Icon && <Icon className="h-5 w-5 shrink-0 mt-0.5" />}
-              <div className="grid gap-1">
+              {Icon && <Icon className="h-4 w-4 shrink-0 mt-0.5" />}
+              <div className="grid gap-0.5">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && <ToastDescription>{description}</ToastDescription>}
               </div>

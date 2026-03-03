@@ -1,12 +1,11 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { RefreshCw, X } from "lucide-react";
 import { applyPwaUpdate, isPwaUpdateAvailable, subscribePwaUpdate } from "@/pwa";
 
 function isStandalone() {
-  // iOS Safari (added to home screen) uses navigator.standalone.
   const navAny = navigator as any;
   if (typeof navAny?.standalone === "boolean") return Boolean(navAny.standalone);
-  // Most modern browsers.
   return window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
 }
 
@@ -17,10 +16,8 @@ export default function PwaUpdatePrompt() {
 
   React.useEffect(() => {
     setStandalone(isStandalone());
-    // Initial check (covers refresh where the flag is already set).
     if (isPwaUpdateAvailable()) setOpen(true);
 
-    // Also respect the localStorage marker in case the module state was lost.
     try {
       if (window.localStorage.getItem("fieldflow_pwa_update_available") === "1") setOpen(true);
     } catch {
@@ -30,53 +27,71 @@ export default function PwaUpdatePrompt() {
     return subscribePwaUpdate(() => setOpen(true));
   }, []);
 
+  const handleDismiss = React.useCallback(() => {
+    try {
+      window.localStorage.removeItem("fieldflow_pwa_update_available");
+    } catch {
+      // ignore
+    }
+    setOpen(false);
+  }, []);
+
+  const handleUpdate = React.useCallback(async () => {
+    setBusy(true);
+    try {
+      await applyPwaUpdate();
+      // Force reload after a short delay if applyPwaUpdate didn't reload
+      window.setTimeout(() => {
+        try {
+          window.localStorage.removeItem("fieldflow_pwa_update_available");
+        } catch {
+          // ignore
+        }
+        window.location.reload();
+      }, 1500);
+    } catch {
+      // Fallback: just reload the page
+      try {
+        window.localStorage.removeItem("fieldflow_pwa_update_available");
+      } catch {
+        // ignore
+      }
+      window.location.reload();
+    }
+  }, []);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[60] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-      <div className="mx-auto max-w-xl rounded-xl border bg-background/95 shadow-lg backdrop-blur p-4">
-        <div className="text-sm font-semibold">Update available</div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          {standalone
-            ? "A new version is ready. Please close the app completely and open it again to update."
-            : "A new version is ready. Reload to update."}
+    <div className="fixed top-4 right-4 z-[100] animate-fade-in">
+      <div className="flex items-center gap-3 rounded-lg border bg-card shadow-lg backdrop-blur px-4 py-3 max-w-sm">
+        <RefreshCw className="h-4 w-4 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-tight">Update available</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {standalone ? "Close & reopen the app to update." : "Reload to get the latest version."}
+          </p>
         </div>
-        <div className="mt-3 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={() => {
-              try {
-                window.localStorage.removeItem("fieldflow_pwa_update_available");
-              } catch {
-                // ignore
-              }
-              setOpen(false);
-            }}
-          >
-            Later
-          </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button
             type="button"
             size="sm"
             disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                // Best-effort: this activates the waiting service worker and reloads.
-                await applyPwaUpdate();
-              } finally {
-                setBusy(false);
-              }
-            }}
+            onClick={handleUpdate}
+            className="h-7 px-3 text-xs"
           >
-            {busy ? "Updating..." : standalone ? "Update now" : "Reload"}
+            {busy ? "Updating…" : standalone ? "Update" : "Reload"}
           </Button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleDismiss}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
