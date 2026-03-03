@@ -58,6 +58,8 @@ import MyQuotes from "./pages/portal/MyQuotes";
 import QuoteDetail from "./pages/portal/QuoteDetail";
 import PortalSettings from "./pages/portal/PortalSettings";
 import PortalNotFound from "./pages/portal/PortalNotFound";
+import { isNativeApp, NATIVE_DEFAULT_ROUTE } from "./lib/native-app";
+import { Navigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
@@ -73,7 +75,8 @@ const App = () => (
         <AuthRedirectHandler />
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
+            {/* Native app (Capacitor) skips landing page → go straight to /tech */}
+            <Route path="/" element={isNativeApp() ? <Navigate to={NATIVE_DEFAULT_ROUTE} replace /> : <Index />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

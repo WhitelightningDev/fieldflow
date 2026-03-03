@@ -10,6 +10,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isNativeApp } from "@/lib/native-app";
+import TechIconPng from "@/assets/fieldflow-tech-icon.png";
 
 type LoginMode = "company" | "technician" | "customer";
 
@@ -179,6 +181,44 @@ export default function Login() {
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  // Native app: show tech-only login with dedicated branding
+  if (isNativeApp()) {
+    return (
+      <AuthLayout
+        title="FieldFlow Tech"
+        subtitle="Sign in with your technician credentials."
+        topRight={null}
+        side={
+          <div className="flex flex-col items-center gap-6">
+            <img src={TechIconPng} alt="FieldFlow Tech" className="w-24 h-24 rounded-2xl shadow-lg" />
+            <div className="space-y-2 text-center">
+              <div className="text-sm font-semibold">Your mobile toolkit</div>
+              <ul className="space-y-2 text-sm text-muted-foreground text-left">
+                <li className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-primary mt-0.5" /><span>View and manage assigned jobs</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-primary mt-0.5" /><span>Track time, photos &amp; checklists</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-primary mt-0.5" /><span>Generate invoices &amp; capture signatures</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-primary mt-0.5" /><span>Real-time push notifications</span></li>
+              </ul>
+            </div>
+          </div>
+        }
+      >
+        {reason === "unauthorized" ? (
+          <div className="mb-4 rounded-md border border-border/60 bg-muted/30 px-4 py-3 text-sm">
+            This account isn't linked to a technician seat. Ask your administrator to add you.
+          </div>
+        ) : null}
+        <LoginForm
+          heading="Technician login"
+          description="Sign in with the credentials from your invite email."
+          showMagicLink={false}
+          showCreateAccount={false}
+          callbackNext="/tech"
+        />
+      </AuthLayout>
     );
   }
 
