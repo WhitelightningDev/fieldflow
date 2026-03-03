@@ -44,7 +44,7 @@ export default function PortalSettings() {
     <div className="space-y-6">
       <PageHeader title="Settings" subtitle="Manage your portal access." />
 
-      <Card className="border-border/60">
+      <Card className="border-border/40">
         <CardHeader className="space-y-1">
           <CardTitle className="text-base">Set a password</CardTitle>
           <CardDescription>
