@@ -68,6 +68,8 @@ self.addEventListener("push", (event) => {
   const icon = payload.icon ?? "/pwa-192.png";
   const badge = payload.badge ?? "/pwa-192.png";
 
+  // IMPORTANT: Always show notification on push, even when app is in foreground.
+  // This ensures Samsung/Apple devices show notifications when idle/locked.
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
@@ -77,6 +79,12 @@ self.addEventListener("push", (event) => {
       renotify: Boolean(tag),
       requireInteraction: false,
       data: { url },
+      // Vibrate pattern for Android (ignored on iOS)
+      vibrate: [200, 100, 200],
+      // Show timestamp for when the push was received
+      timestamp: Date.now(),
+      // Actions for interactive notifications (Android)
+      actions: payload.actions ?? [],
     }),
   );
 });

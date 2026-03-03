@@ -71,6 +71,9 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
       },
+      workbox: {
+        navigateFallbackDenylist: [/^\/~oauth/],
+      },
       // Helps test Web Push locally on http://localhost:8000
       devOptions: { enabled: true },
     }),
