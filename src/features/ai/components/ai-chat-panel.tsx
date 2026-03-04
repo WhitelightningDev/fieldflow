@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles, Trash2 } from "lucide-react";
 import type { AiChatMessage } from "@/features/ai/hooks/use-ai-assistant-chat";
+import { useNavigate } from "react-router-dom";
 
 function Bubble({ role, children }: { role: "user" | "assistant"; children: React.ReactNode }) {
   const isUser = role === "user";
@@ -11,7 +12,7 @@ function Bubble({ role, children }: { role: "user" | "assistant"; children: Reac
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap border",
+          "max-w-[85%] rounded-2xl px-3 py-2 text-sm border",
           isUser
             ? "bg-primary text-primary-foreground border-primary/40"
             : "bg-background/70 border-border/60",
@@ -33,6 +34,7 @@ export function AiChatPanel({
   onSend,
   onClear,
   quickPrompts,
+  onAction,
   className,
 }: {
   title?: string;
@@ -44,9 +46,11 @@ export function AiChatPanel({
   onSend: (text: string) => void | Promise<void>;
   onClear?: () => void;
   quickPrompts?: string[];
+  onAction?: (action: NonNullable<AiChatMessage["actions"]>[number]) => void;
   className?: string;
 }) {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     const el = scrollRef.current;
@@ -112,7 +116,25 @@ export function AiChatPanel({
           ) : null}
           {messages.map((m, idx) => (
             <Bubble key={idx} role={m.role}>
-              {m.text}
+              <div className="space-y-2">
+                <div className="whitespace-pre-wrap">{m.text}</div>
+                {m.role === "assistant" && m.actions && m.actions.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {m.actions.map((a) => (
+                      <Button
+                        key={a.to}
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 text-xs"
+                        onClick={() => (onAction ? onAction(a) : navigate(a.to))}
+                      >
+                        {a.label}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </Bubble>
           ))}
           {loading ? (

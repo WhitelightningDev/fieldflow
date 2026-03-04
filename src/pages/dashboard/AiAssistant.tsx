@@ -9,10 +9,12 @@ import UpgradePrompt from "@/features/subscription/components/upgrade-prompt";
 import { buildAiChatContext } from "@/features/ai/lib/build-ai-context";
 import { useAiAssistantChat } from "@/features/ai/hooks/use-ai-assistant-chat";
 import { AiChatPanel } from "@/features/ai/components/ai-chat-panel";
+import { useNavigate } from "react-router-dom";
 
 export default function AiAssistant() {
   const { data } = useDashboardData();
   const { roles } = useAuth();
+  const navigate = useNavigate();
   const company = data.company;
   const gate = useFeatureGate(company?.subscription_tier as any);
   const canUseAi = React.useMemo(() => {
@@ -73,6 +75,7 @@ export default function AiAssistant() {
               onSend={chat.send}
               onClear={chat.clear}
               quickPrompts={quickPrompts}
+              onAction={(a) => navigate(a.to)}
             />
           </div>
         </CardContent>

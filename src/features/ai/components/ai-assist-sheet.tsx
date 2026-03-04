@@ -81,6 +81,10 @@ export function AiAssistSheet() {
             onSend={chat.send}
             onClear={chat.clear}
             quickPrompts={QUICK_PROMPTS}
+            onAction={(a) => {
+              closeAssist();
+              navigate(a.to);
+            }}
           />
         )}
       </SheetContent>

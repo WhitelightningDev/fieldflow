@@ -2,8 +2,9 @@ import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toastError } from "@/lib/toast-helpers";
 import { getFunctionsInvokeErrorMessage } from "@/lib/supabase-error";
+import { type AiDashboardAction, deriveDashboardActions } from "@/features/ai/lib/derive-dashboard-actions";
 
-export type AiChatMessage = { role: "user" | "assistant"; text: string };
+export type AiChatMessage = { role: "user" | "assistant"; text: string; actions?: AiDashboardAction[] };
 
 export function useAiAssistantChat({
   enabled,
@@ -41,7 +42,11 @@ export function useAiAssistantChat({
       }
 
       const out = (fnData as any)?.text as string | undefined;
-      setMessages((prev) => [...prev, { role: "assistant", text: out?.trim() || "No response." }]);
+      const assistantText = out?.trim() || "No response.";
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: assistantText, actions: deriveDashboardActions(assistantText) },
+      ]);
     } catch (e: any) {
       toastError("AI request failed", e?.message ?? "Unknown error");
       setMessages((prev) => [...prev, { role: "assistant", text: "Sorry — I couldn’t complete that request." }]);
