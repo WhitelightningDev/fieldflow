@@ -41,6 +41,8 @@ import DashboardNotFound from "./pages/dashboard/DashboardNotFound";
 import AiAssistant from "./pages/dashboard/AiAssistant";
 import QuoteRequests from "./pages/dashboard/QuoteRequests";
 import LoadShedding from "./pages/dashboard/LoadShedding";
+import TaxReports from "./pages/dashboard/TaxReports";
+import PopiaManagement from "./pages/dashboard/PopiaManagement";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
