@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -9,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { TRADE_JOB_CHECKLISTS } from "@/features/dashboard/constants/job-checklists";
+import { tradeRequiresPower } from "@/features/loadshedding/hooks/use-loadshedding";
 import { fromDatetimeLocal } from "@/features/dashboard/lib/datetime";
 import { getJobSuggestions, suggestAssignee } from "@/features/dashboard/lib/job-suggestions";
 import { parseScopeTemplateV1 } from "@/features/dashboard/components/sites/scope-template-builder";
@@ -35,6 +37,7 @@ const schema = z.object({
   scheduledAt: z.string().optional(),
   checklist: z.string().optional(),
   notes: z.string().optional(),
+  requiresPower: z.boolean(),
 });
 
 type Values = z.infer<typeof schema>;
@@ -71,6 +74,7 @@ export default function CreateJobCardDialog({
       scheduledAt: "",
       checklist: TRADE_JOB_CHECKLISTS[defaultTradeId].join("\n"),
       notes: "",
+      requiresPower: tradeRequiresPower(defaultTradeId),
     },
     mode: "onTouched",
   });
@@ -80,6 +84,7 @@ export default function CreateJobCardDialog({
     const nextTradeId = lockedTradeId ?? defaultTradeId;
     form.setValue("tradeId", nextTradeId);
     form.setValue("checklist", TRADE_JOB_CHECKLISTS[nextTradeId].join("\n"));
+    form.setValue("requiresPower", tradeRequiresPower(nextTradeId));
   }, [defaultTradeId, form, lockedTradeId, open]);
 
   React.useEffect(() => {
@@ -179,6 +184,7 @@ export default function CreateJobCardDialog({
         .map((s) => s.trim())
         .filter(Boolean),
       notes: values.notes || null,
+      requires_power: values.requiresPower,
     } as any);
     if (!created) return;
     toast({ title: "Job card created" });
@@ -546,6 +552,22 @@ export default function CreateJobCardDialog({
                 </CardContent>
               </Card>
             ) : null}
+
+            <FormField
+              control={form.control}
+              name="requiresPower"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2 space-y-0 rounded-md border border-border/40 px-3 py-2.5">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium cursor-pointer">Requires power ⚡</FormLabel>
+                    <p className="text-xs text-muted-foreground">Flag this job for load shedding schedule checks</p>
+                  </div>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

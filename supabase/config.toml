@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.provision-quote-requester]
 verify_jwt = false
+
+[functions.loadshedding]
+verify_jwt = false

@@ -40,6 +40,7 @@ import DashboardSettings from "./pages/dashboard/Settings";
 import DashboardNotFound from "./pages/dashboard/DashboardNotFound";
 import AiAssistant from "./pages/dashboard/AiAssistant";
 import QuoteRequests from "./pages/dashboard/QuoteRequests";
+import LoadShedding from "./pages/dashboard/LoadShedding";
 import TechDashboard from "./pages/TechDashboard";
 import TechDispatch from "./pages/tech/TechDispatch";
 import TechMyJobs from "./pages/tech/TechMyJobs";
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="repair-history" element={<RepairHistory />} />
               <Route path="messages" element={<Messages />} />
               <Route path="quotes" element={<QuoteRequests />} />
+              <Route path="loadshedding" element={<LoadShedding />} />
               <Route path="*" element={<DashboardNotFound />} />
             </Route>
             {/* Technician dashboard */}

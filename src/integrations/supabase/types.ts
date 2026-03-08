@@ -315,6 +315,44 @@ export type Database = {
           },
         ]
       }
+      company_loadshedding_config: {
+        Row: {
+          area_id: string
+          area_name: string
+          company_id: string
+          created_at: string
+          id: string
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          area_id: string
+          area_name: string
+          company_id: string
+          created_at?: string
+          id?: string
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area_id?: string
+          area_name?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          region?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_loadshedding_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -588,6 +626,7 @@ export type Database = {
           id: string
           notes: string | null
           priority: string
+          requires_power: boolean
           revenue_cents: number | null
           scheduled_at: string | null
           site_id: string | null
@@ -606,6 +645,7 @@ export type Database = {
           id?: string
           notes?: string | null
           priority?: string
+          requires_power?: boolean
           revenue_cents?: number | null
           scheduled_at?: string | null
           site_id?: string | null
@@ -624,6 +664,7 @@ export type Database = {
           id?: string
           notes?: string | null
           priority?: string
+          requires_power?: boolean
           revenue_cents?: number | null
           scheduled_at?: string | null
           site_id?: string | null

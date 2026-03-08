@@ -48,6 +48,7 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  ZapOff,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import NoCompanyStateCard from "@/features/dashboard/components/no-company-state-card";
@@ -63,6 +64,7 @@ import ElectricalDashboard from "@/features/dashboard/components/trade-dashboard
 import MobileMechanicsDashboard from "@/features/dashboard/components/trade-dashboards/mechanics-dashboard";
 import RefrigerationDashboard from "@/features/dashboard/components/trade-dashboards/refrigeration-dashboard";
 import ApplianceRepairDashboard from "@/features/dashboard/components/trade-dashboards/appliance-dashboard";
+import { LoadsheddingStatusWidget } from "@/features/loadshedding/components/loadshedding-status-widget";
 import * as React from "react";
 
 /* ─── Dashboard greeting ─── */
@@ -285,6 +287,14 @@ function useWidgetRegistry(data: any, allJobs: any[], attentionItems: any[]): Wi
         defaultSize: "sm",
         render: () => <CustomerSatisfactionWidget jobs={allJobs} />,
       },
+      {
+        id: "loadshedding",
+        label: "Load Shedding",
+        icon: ZapOff,
+        description: "Live Eskom load shedding status and job warnings",
+        defaultSize: "sm",
+        render: () => <LoadsheddingStatusWidget companyId={data.company?.id} jobs={allJobs} />,
+      },
     ];
   }, [data, allJobs, attentionItems]);
 }
@@ -292,6 +302,7 @@ function useWidgetRegistry(data: any, allJobs: any[], attentionItems: any[]): Wi
 const DEFAULT_WIDGET_LAYOUT = [
   "jobs-donut",
   "invoice-overview",
+  "loadshedding",
   "attention",
   "recent-jobs",
   "ai-insights",
