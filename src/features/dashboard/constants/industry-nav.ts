@@ -13,6 +13,7 @@ import {
   Refrigerator,
   Receipt,
   Settings,
+  Shield,
   ShieldCheck,
   Sun,
   Timer,
@@ -24,6 +25,7 @@ import {
   ScrollText,
   Package,
   ZapOff,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export type NavItem = {
