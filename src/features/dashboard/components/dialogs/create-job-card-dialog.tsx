@@ -36,6 +36,7 @@ const schema = z.object({
   scheduledAt: z.string().optional(),
   checklist: z.string().optional(),
   notes: z.string().optional(),
+  requiresPower: z.boolean(),
 });
 
 type Values = z.infer<typeof schema>;
