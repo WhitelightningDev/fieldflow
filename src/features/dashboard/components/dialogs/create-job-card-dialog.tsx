@@ -73,6 +73,7 @@ export default function CreateJobCardDialog({
       scheduledAt: "",
       checklist: TRADE_JOB_CHECKLISTS[defaultTradeId].join("\n"),
       notes: "",
+      requiresPower: tradeRequiresPower(defaultTradeId),
     },
     mode: "onTouched",
   });
