@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Sparkles, Trash2, X } from "lucide-react";
 import type { AiChatMessage } from "@/features/ai/hooks/use-ai-assistant-chat";
 import { useNavigate } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
 
 function Bubble({ role, children }: { role: "user" | "assistant"; children: React.ReactNode }) {
   const isUser = role === "user";
@@ -125,9 +124,7 @@ export function AiChatPanel({
             <Bubble key={idx} role={m.role}>
               <div className="space-y-2">
                 {m.role === "assistant" ? (
-                  <div className="prose prose-sm max-w-none text-foreground [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
-                    <ReactMarkdown>{m.text}</ReactMarkdown>
-                  </div>
+                  <div className="whitespace-pre-wrap">{m.text}</div>
                 ) : (
                   <div className="whitespace-pre-wrap">{m.text}</div>
                 )}
