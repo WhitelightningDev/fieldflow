@@ -23,6 +23,7 @@ import {
   CalendarClock,
   ScrollText,
   Package,
+  ZapOff,
 } from "lucide-react";
 
 export type NavItem = {
