@@ -427,7 +427,7 @@ export default function Technicians() {
                             {where.distanceLine ? (
                               <div className="text-xs text-muted-foreground">
                                 {where.distanceLine === "Arrived" ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Arrived</span>
+                                  <span className="text-primary font-medium">Arrived</span>
                                 ) : (
                                   <span>{where.distanceLine}</span>
                                 )}
