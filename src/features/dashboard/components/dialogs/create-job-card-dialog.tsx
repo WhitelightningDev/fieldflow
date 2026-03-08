@@ -555,6 +555,22 @@ export default function CreateJobCardDialog({
 
             <FormField
               control={form.control}
+              name="requiresPower"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2 space-y-0 rounded-md border border-border/40 px-3 py-2.5">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium cursor-pointer">Requires power ⚡</FormLabel>
+                    <p className="text-xs text-muted-foreground">Flag this job for load shedding schedule checks</p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+
+              control={form.control}
               name="scheduledAt"
               render={({ field }) => (
                 <FormItem>
