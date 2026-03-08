@@ -119,6 +119,8 @@ const App = () => (
               <Route path="messages" element={<Messages />} />
               <Route path="quotes" element={<QuoteRequests />} />
               <Route path="loadshedding" element={<LoadShedding />} />
+              <Route path="tax-reports" element={<TaxReports />} />
+              <Route path="popia" element={<PopiaManagement />} />
               <Route path="*" element={<DashboardNotFound />} />
             </Route>
             {/* Technician dashboard */}
