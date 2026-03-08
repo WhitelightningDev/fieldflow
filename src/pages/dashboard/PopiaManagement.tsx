@@ -110,9 +110,6 @@ export default function PopiaManagement() {
     fetchData();
   };
 
-  // Count quote requests with consent
-  const quoteConsents = (data.quoteRequests ?? []).filter((q: any) => q.profile_consent).length;
-  const totalQuotes = (data.quoteRequests ?? []).length;
   const pendingDeletions = deletionRequests.filter((d) => d.status === "pending").length;
 
   if (loading) return <div className="p-4 text-sm text-muted-foreground">Loading…</div>;
