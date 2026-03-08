@@ -116,6 +116,7 @@ const App = () => (
               <Route path="repair-history" element={<RepairHistory />} />
               <Route path="messages" element={<Messages />} />
               <Route path="quotes" element={<QuoteRequests />} />
+              <Route path="loadshedding" element={<LoadShedding />} />
               <Route path="*" element={<DashboardNotFound />} />
             </Route>
             {/* Technician dashboard */}

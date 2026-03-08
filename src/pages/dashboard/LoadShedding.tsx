@@ -96,7 +96,7 @@ export default function LoadShedding() {
     <div className="space-y-6">
       <PageHeader
         title="Load Shedding"
-        description="Monitor Eskom schedules and manage power-dependent jobs."
+        subtitle="Monitor Eskom schedules and manage power-dependent jobs."
       />
 
       {/* National status */}
