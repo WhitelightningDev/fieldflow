@@ -35,33 +35,19 @@ export default function CreateCompany() {
   const [existingCompanyCheckError, setExistingCompanyCheckError] = React.useState<string | null>(null);
   const canCreateCompany = roles.includes("owner") || roles.includes("admin");
 
-  if (!canCreateCompany) {
-    return (
-      <div className="max-w-lg mx-auto pt-12">
-        <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-          <CardContent className="p-8 text-center space-y-4">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-destructive" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">Company creation restricted</h2>
-              <p className="text-sm text-muted-foreground mt-1">Only an owner or admin can create a company workspace.</p>
-            </div>
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <Button variant="outline" onClick={() => navigate("/dashboard", { replace: true })}>
-                Back to dashboard
-              </Button>
-              <Button variant="ghost" className="text-muted-foreground" onClick={() => void signOut().finally(() => navigate("/login"))}>
-                Sign out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      companyName: "",
+      industry: TRADES[0].id,
+      teamSize: "2-5",
+    },
+    mode: "onTouched",
+  });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const selectedIndustry = form.watch("industry");
+  const selectedTrade = TRADES.find((t) => t.id === selectedIndustry);
+
   React.useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -93,20 +79,6 @@ export default function CreateCompany() {
     void run();
     return () => { cancelled = true; };
   }, [navigate, profile?.company_id, refreshProfile, user]);
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const form = useForm<Values>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      companyName: "",
-      industry: TRADES[0].id,
-      teamSize: "2-5",
-    },
-    mode: "onTouched",
-  });
-
-  const selectedIndustry = form.watch("industry");
-  const selectedTrade = TRADES.find((t) => t.id === selectedIndustry);
 
   const submit = form.handleSubmit(async (values) => {
     if (!user) return;
@@ -164,6 +136,32 @@ export default function CreateCompany() {
     await refreshProfile();
     navigate("/dashboard", { replace: true });
   });
+
+  if (!canCreateCompany) {
+    return (
+      <div className="max-w-lg mx-auto pt-12">
+        <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <Building2 className="h-6 w-6 text-destructive" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Company creation restricted</h2>
+              <p className="text-sm text-muted-foreground mt-1">Only an owner or admin can create a company workspace.</p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Button variant="outline" onClick={() => navigate("/dashboard", { replace: true })}>
+                Back to dashboard
+              </Button>
+              <Button variant="ghost" className="text-muted-foreground" onClick={() => void signOut().finally(() => navigate("/login"))}>
+                Sign out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[60vh] flex items-start justify-center pt-4 sm:pt-10">
@@ -238,7 +236,7 @@ export default function CreateCompany() {
                                   >
                                     <trade.icon
                                       className={cn(
-                                        "h-4.5 w-4.5",
+                                        "h-4 w-4",
                                         isSelected ? "text-primary-foreground" : "text-muted-foreground",
                                       )}
                                     />
