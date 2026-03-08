@@ -9,6 +9,7 @@ import EditTechnicianDialog from "@/features/dashboard/components/dialogs/edit-t
 import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
 import ImportTechniciansCsvDialog from "@/features/dashboard/components/dialogs/import-technicians-csv-dialog";
 import SetTechnicianAccessDialog from "@/features/dashboard/components/dialogs/set-technician-access-dialog";
+import TechnicianCredentialsDialog from "@/features/credentials/components/technician-credentials-dialog";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -91,6 +92,8 @@ export default function Technicians() {
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [deleteTechnicianId, setDeleteTechnicianId] = React.useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [credsTechnicianId, setCredsTechnicianId] = React.useState<string | null>(null);
+  const [credsOpen, setCredsOpen] = React.useState(false);
 
   const includedTechLimit = React.useMemo(() => {
     const v = company?.included_techs;
@@ -159,6 +162,18 @@ export default function Technicians() {
           if (!open) setDeleteTechnicianId(null);
         }}
       />
+      {credsTechnicianId && company?.id && (
+        <TechnicianCredentialsDialog
+          technicianId={credsTechnicianId}
+          technicianName={data.technicians.find((t) => t.id === credsTechnicianId)?.name ?? ""}
+          companyId={company.id}
+          open={credsOpen}
+          onOpenChange={(open) => {
+            setCredsOpen(open);
+            if (!open) setCredsTechnicianId(null);
+          }}
+        />
+      )}
       <PageHeader
         title="Technicians"
         subtitle="Add technicians and assign trades for dispatching."
@@ -313,6 +328,14 @@ export default function Technicians() {
                       }}
                     >
                       Set access
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setCredsTechnicianId(t.id);
+                        setCredsOpen(true);
+                      }}
+                    >
+                      Credentials
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -471,6 +494,14 @@ export default function Technicians() {
                             }}
                           >
                             Set access
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setCredsTechnicianId(t.id);
+                              setCredsOpen(true);
+                            }}
+                          >
+                            Credentials
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

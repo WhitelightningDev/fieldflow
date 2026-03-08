@@ -13,6 +13,7 @@ import {
   Refrigerator,
   Receipt,
   Settings,
+  Shield,
   ShieldCheck,
   Sun,
   Timer,
@@ -24,6 +25,7 @@ import {
   ScrollText,
   Package,
   ZapOff,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export type NavItem = {
@@ -44,6 +46,8 @@ const SHARED_NAV: NavItem[] = [
   { to: "/dashboard/inventory", label: "Inventory", icon: Boxes },
   { to: "/dashboard/quotes", label: "Quote requests", icon: FileText },
   { to: "/dashboard/loadshedding", label: "Load shedding", icon: ZapOff },
+  { to: "/dashboard/tax-reports", label: "Tax reports", icon: FileSpreadsheet },
+  { to: "/dashboard/popia", label: "POPIA compliance", icon: Shield },
   { to: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { to: "/dashboard/ai", label: "AI Assistant", icon: Sparkles },
   { to: "/dashboard/settings", label: "Settings", icon: Settings },
