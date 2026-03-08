@@ -48,6 +48,7 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  ZapOff,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import NoCompanyStateCard from "@/features/dashboard/components/no-company-state-card";
