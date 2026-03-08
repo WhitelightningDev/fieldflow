@@ -92,6 +92,8 @@ export default function Technicians() {
   const [accessOpen, setAccessOpen] = React.useState(false);
   const [deleteTechnicianId, setDeleteTechnicianId] = React.useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [credsTechnicianId, setCredsTechnicianId] = React.useState<string | null>(null);
+  const [credsOpen, setCredsOpen] = React.useState(false);
 
   const includedTechLimit = React.useMemo(() => {
     const v = company?.included_techs;
