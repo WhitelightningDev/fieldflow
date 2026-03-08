@@ -184,6 +184,7 @@ export default function CreateJobCardDialog({
         .map((s) => s.trim())
         .filter(Boolean),
       notes: values.notes || null,
+      requires_power: values.requiresPower,
     } as any);
     if (!created) return;
     toast({ title: "Job card created" });
