@@ -48,11 +48,11 @@ function getTechWhere(data: any, technicianId: string) {
           : "Idle";
   const dotClass =
     currentStatus === "in-progress"
-      ? "bg-emerald-500"
+      ? "bg-primary"
       : currentStatus === "scheduled"
-        ? "bg-blue-500"
+        ? "bg-accent-foreground"
         : isLive
-          ? "bg-amber-500"
+          ? "bg-chart-4"
           : "bg-muted";
 
   const techCoords = getLatLngFromAny(loc);
