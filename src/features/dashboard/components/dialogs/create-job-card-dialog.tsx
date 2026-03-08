@@ -84,6 +84,7 @@ export default function CreateJobCardDialog({
     const nextTradeId = lockedTradeId ?? defaultTradeId;
     form.setValue("tradeId", nextTradeId);
     form.setValue("checklist", TRADE_JOB_CHECKLISTS[nextTradeId].join("\n"));
+    form.setValue("requiresPower", tradeRequiresPower(nextTradeId));
   }, [defaultTradeId, form, lockedTradeId, open]);
 
   React.useEffect(() => {
