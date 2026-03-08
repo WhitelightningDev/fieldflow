@@ -287,6 +287,14 @@ function useWidgetRegistry(data: any, allJobs: any[], attentionItems: any[]): Wi
         defaultSize: "sm",
         render: () => <CustomerSatisfactionWidget jobs={allJobs} />,
       },
+      {
+        id: "loadshedding",
+        label: "Load Shedding",
+        icon: ZapOff,
+        description: "Live Eskom load shedding status and job warnings",
+        defaultSize: "sm",
+        render: () => <LoadsheddingStatusWidget companyId={data.company?.id} jobs={allJobs} />,
+      },
     ];
   }, [data, allJobs, attentionItems]);
 }
@@ -294,6 +302,7 @@ function useWidgetRegistry(data: any, allJobs: any[], attentionItems: any[]): Wi
 const DEFAULT_WIDGET_LAYOUT = [
   "jobs-donut",
   "invoice-overview",
+  "loadshedding",
   "attention",
   "recent-jobs",
   "ai-insights",

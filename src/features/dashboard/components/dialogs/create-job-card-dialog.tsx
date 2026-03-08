@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { TRADES, type TradeId } from "@/features/company-signup/content/trades";
 import { TRADE_JOB_CHECKLISTS } from "@/features/dashboard/constants/job-checklists";
+import { tradeRequiresPower } from "@/features/loadshedding/hooks/use-loadshedding";
 import { fromDatetimeLocal } from "@/features/dashboard/lib/datetime";
 import { getJobSuggestions, suggestAssignee } from "@/features/dashboard/lib/job-suggestions";
 import { parseScopeTemplateV1 } from "@/features/dashboard/components/sites/scope-template-builder";
