@@ -132,7 +132,7 @@ export default function PopiaManagement() {
         <Card className="bg-card/70 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground">Pending deletions</div>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingDeletions}</div>
+            <div className="text-2xl font-bold text-destructive">{pendingDeletions}</div>
           </CardContent>
         </Card>
         <Card className="bg-card/70 backdrop-blur-sm">

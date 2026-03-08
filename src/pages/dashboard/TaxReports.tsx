@@ -196,7 +196,7 @@ export default function TaxReports() {
                 </TableRow>
                 <TableRow>
                   <TableCell>Payments received</TableCell>
-                  <TableCell className="text-right text-emerald-600 dark:text-emerald-400">{formatZarFromCents(totalPaid)}</TableCell>
+                  <TableCell className="text-right text-primary">{formatZarFromCents(totalPaid)}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>Outstanding</TableCell>
