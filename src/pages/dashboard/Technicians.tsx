@@ -48,11 +48,11 @@ function getTechWhere(data: any, technicianId: string) {
           : "Idle";
   const dotClass =
     currentStatus === "in-progress"
-      ? "bg-emerald-500"
+      ? "bg-primary"
       : currentStatus === "scheduled"
-        ? "bg-blue-500"
+        ? "bg-accent-foreground"
         : isLive
-          ? "bg-amber-500"
+          ? "bg-chart-4"
           : "bg-muted";
 
   const techCoords = getLatLngFromAny(loc);
@@ -273,7 +273,7 @@ export default function Technicians() {
                   {where.distanceLine ? (
                     <div className="mt-1 text-xs text-muted-foreground">
                       {where.distanceLine === "Arrived" ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">Arrived</span>
+                        <span className="text-primary font-medium">Arrived</span>
                       ) : (
                         <span>{where.distanceLine}</span>
                       )}
@@ -427,7 +427,7 @@ export default function Technicians() {
                             {where.distanceLine ? (
                               <div className="text-xs text-muted-foreground">
                                 {where.distanceLine === "Arrived" ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Arrived</span>
+                                  <span className="text-primary font-medium">Arrived</span>
                                 ) : (
                                   <span>{where.distanceLine}</span>
                                 )}

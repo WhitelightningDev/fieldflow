@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
 import { formatZarFromCents } from "@/lib/money";
-import { format, startOfMonth, endOfMonth, subMonths, getMonth, getYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { Download, FileSpreadsheet, Receipt } from "lucide-react";
 import * as React from "react";
 
