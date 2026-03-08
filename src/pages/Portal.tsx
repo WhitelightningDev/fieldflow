@@ -112,7 +112,7 @@ export default function Portal() {
           </SheetContent>
         </Sheet>
 
-        <main className="mx-auto max-w-5xl px-4 py-5 sm:py-8">
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8 pb-[max(env(safe-area-inset-bottom),1.5rem)]">
           <Outlet />
         </main>
       </div>

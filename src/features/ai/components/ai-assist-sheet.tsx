@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAiAssist } from "@/features/ai/ai-assist-context";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
@@ -13,10 +13,10 @@ import { Lock, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const QUICK_PROMPTS = [
-  "Give me a short owner briefing for today based on my dashboard.",
-  "Summarize the biggest operational risks you see and what to do next.",
-  "Draft a polite invoice follow-up message for overdue invoices.",
-  "Spot any anomalies in jobs/invoices and suggest actions.",
+  "Give me a short owner briefing for today.",
+  "Summarize my biggest operational risks.",
+  "Draft a polite invoice follow-up message.",
+  "Spot any anomalies and suggest actions.",
 ];
 
 export function AiAssistSheet() {
@@ -35,45 +35,45 @@ export function AiAssistSheet() {
 
   return (
     <Sheet open={open} onOpenChange={(v) => (v ? null : closeAssist())}>
-      <SheetContent side="right" className="w-full sm:max-w-[460px] p-0">
+      <SheetContent side="right" className="w-full sm:max-w-[440px] p-0 flex flex-col">
+        <SheetTitle className="sr-only">AI Assistant</SheetTitle>
         {!gate.hasFeature("ai_job_summaries") ? (
-          <div className="p-4">
-            <Card className="w-full text-center">
+          <div className="flex-1 flex items-center justify-center p-6">
+            <Card className="w-full text-center shadow-sm">
               <CardHeader>
                 <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                   <Lock className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <CardTitle>AI Assistant requires Business</CardTitle>
+                <CardTitle className="text-base">AI Assistant requires Business</CardTitle>
                 <CardDescription>
-                  Upgrade to Business to unlock AI insights and chat across your dashboard.
+                  Upgrade to Business to unlock AI insights and chat.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button type="button" className="w-full" onClick={() => navigate("/subscribe?plan=business")}>
+                <Button type="button" className="w-full" onClick={() => { closeAssist(); navigate("/subscribe?plan=business"); }}>
                   <Zap className="h-4 w-4 mr-2" /> Upgrade to Business
                 </Button>
               </CardContent>
             </Card>
           </div>
         ) : !canUseAiByRole ? (
-          <div className="p-4">
-            <Card className="w-full text-center">
+          <div className="flex-1 flex items-center justify-center p-6">
+            <Card className="w-full text-center shadow-sm">
               <CardHeader>
                 <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                   <Lock className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <CardTitle>AI Assistant access restricted</CardTitle>
+                <CardTitle className="text-base">Access restricted</CardTitle>
                 <CardDescription>
                   Only owners, admins, and office staff can use AI tools.
                 </CardDescription>
               </CardHeader>
-              <CardContent />
             </Card>
           </div>
         ) : (
           <AiChatPanel
             title="FieldFlow AI"
-            subtitle="Ask for insights, recommendations, and drafts."
+            subtitle="Insights, recommendations & drafts"
             messages={chat.messages}
             loading={chat.loading}
             draft={draft}

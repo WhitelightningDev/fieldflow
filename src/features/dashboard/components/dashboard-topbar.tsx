@@ -42,8 +42,8 @@ export default function DashboardTopbar({ onOpenCompliance }: { onOpenCompliance
 
   return (
     <div className="sticky top-0 z-30 border-b border-border/30 bg-card/80 backdrop-blur-xl pt-[max(env(safe-area-inset-top),0.25rem)]">
-      <div className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-4 h-12 sm:h-14">
-        <SidebarTrigger className="text-muted-foreground hover:text-foreground shrink-0" />
+      <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-14">
+        <SidebarTrigger className="text-muted-foreground hover:text-foreground shrink-0 h-9 w-9" />
         <div className="flex-1 flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 text-sm font-medium text-foreground">
             <LayoutGrid className="h-4 w-4 text-primary" />
