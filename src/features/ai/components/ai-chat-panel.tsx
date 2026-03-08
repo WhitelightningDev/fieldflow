@@ -2,9 +2,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Send, Sparkles, Trash2, X } from "lucide-react";
 import type { AiChatMessage } from "@/features/ai/hooks/use-ai-assistant-chat";
 import { useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 
 function Bubble({ role, children }: { role: "user" | "assistant"; children: React.ReactNode }) {
   const isUser = role === "user";
@@ -12,10 +13,10 @@ function Bubble({ role, children }: { role: "user" | "assistant"; children: Reac
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-3 py-2 text-sm border",
+          "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm",
           isUser
-            ? "bg-primary text-primary-foreground border-primary/40"
-            : "bg-background/70 border-border/60",
+            ? "bg-primary text-primary-foreground rounded-br-md"
+            : "bg-muted/50 border border-border/40 rounded-bl-md",
         )}
       >
         {children}
@@ -33,6 +34,7 @@ export function AiChatPanel({
   setDraft,
   onSend,
   onClear,
+  onClose,
   quickPrompts,
   onAction,
   className,
@@ -45,6 +47,7 @@ export function AiChatPanel({
   setDraft: (v: string) => void;
   onSend: (text: string) => void | Promise<void>;
   onClear?: () => void;
+  onClose?: () => void;
   quickPrompts?: string[];
   onAction?: (action: NonNullable<AiChatMessage["actions"]>[number]) => void;
   className?: string;
@@ -62,71 +65,81 @@ export function AiChatPanel({
 
   return (
     <div className={cn("flex h-full flex-col", className)}>
-      <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3 bg-background/70 backdrop-blur">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <div className="font-semibold truncate">{title}</div>
+      {/* Compact header */}
+      <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-2.5 bg-card/80 backdrop-blur shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
           </div>
-          {subtitle ? <div className="mt-1 text-xs text-muted-foreground">{subtitle}</div> : null}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold truncate leading-tight">{title}</div>
+            {subtitle ? <div className="text-[10px] text-muted-foreground truncate">{subtitle}</div> : null}
+          </div>
         </div>
-        {onClear ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onClear}
-            disabled={loading || messages.length === 0}
-            aria-label="Clear chat"
-            title="Clear chat"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-1">
+          {onClear ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onClear}
+              disabled={loading || messages.length === 0}
+              aria-label="Clear chat"
+              title="Clear chat"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+          {onClose ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+        </div>
       </div>
 
-      {quickPrompts && quickPrompts.length > 0 && messages.length === 0 ? (
-        <div className="px-4 pt-3">
-          <div className="text-xs text-muted-foreground mb-2">Try a quick prompt:</div>
-          <div className="flex flex-wrap gap-2">
-            {quickPrompts.slice(0, 6).map((p) => (
-              <Button
-                key={p}
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setDraft(p)}
-                disabled={loading}
-              >
-                {p}
-              </Button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Messages area */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
         <div className="space-y-3 pb-2">
-          {messages.length === 0 ? (
-            <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm text-muted-foreground">
-              Ask for insights like: “What should I focus on today?” or “Draft an invoice follow-up message.”
+          {messages.length === 0 && !loading ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">How can I help?</p>
+              <p className="text-xs text-muted-foreground max-w-[240px]">
+                Ask for insights, recommendations, or drafts based on your dashboard data.
+              </p>
             </div>
           ) : null}
+
           {messages.map((m, idx) => (
             <Bubble key={idx} role={m.role}>
               <div className="space-y-2">
-                <div className="whitespace-pre-wrap">{m.text}</div>
+                {m.role === "assistant" ? (
+                  <div className="prose prose-sm max-w-none text-foreground [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
+                    <ReactMarkdown>{m.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap">{m.text}</div>
+                )}
                 {m.role === "assistant" && m.actions && m.actions.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
                     {m.actions.map((a) => (
                       <Button
                         key={a.to}
                         type="button"
                         size="sm"
                         variant="secondary"
-                        className="h-7 text-xs"
+                        className="h-6 text-[11px] px-2"
                         onClick={() => (onAction ? onAction(a) : navigate(a.to))}
                       >
                         {a.label}
@@ -139,21 +152,43 @@ export function AiChatPanel({
           ))}
           {loading ? (
             <Bubble role="assistant">
-              <span className="inline-flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Thinking…
+              <span className="inline-flex items-center gap-2 text-muted-foreground text-xs">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking…
               </span>
             </Bubble>
           ) : null}
         </div>
       </div>
 
-      <div className="border-t border-border/60 bg-background/70 backdrop-blur px-4 py-3">
+      {/* Quick prompts - shown inline below messages when empty */}
+      {quickPrompts && quickPrompts.length > 0 && messages.length === 0 ? (
+        <div className="px-4 pb-2 shrink-0">
+          <div className="flex flex-wrap gap-1.5">
+            {quickPrompts.slice(0, 4).map((p) => (
+              <Button
+                key={p}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-auto py-1.5 px-2.5 text-[11px] leading-tight text-muted-foreground hover:text-foreground whitespace-normal text-left"
+                onClick={() => setDraft(p)}
+                disabled={loading}
+              >
+                {p}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Input area */}
+      <div className="border-t border-border/40 bg-card/80 backdrop-blur px-3 py-2.5 shrink-0 pb-[max(env(safe-area-inset-bottom),0.625rem)]">
         <div className="flex items-end gap-2">
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Ask FieldFlow AI…"
-            className="min-h-[44px] max-h-[140px] resize-none bg-background"
+            className="min-h-[40px] max-h-[120px] resize-none bg-background text-sm rounded-xl"
             rows={1}
             disabled={loading}
             onKeyDown={(e) => {
@@ -168,19 +203,18 @@ export function AiChatPanel({
           />
           <Button
             type="button"
-            className="h-[44px] gradient-bg hover:opacity-90 shadow-glow"
+            size="icon"
+            className="h-10 w-10 rounded-xl gradient-bg hover:opacity-90 shrink-0"
             disabled={!canSend}
             onClick={() => {
               const text = draft;
               setDraft("");
               void onSend(text);
             }}
+            aria-label="Send message"
           >
-            Send
+            <Send className="h-4 w-4" />
           </Button>
-        </div>
-        <div className="mt-2 text-[11px] text-muted-foreground">
-          Tip: Press <span className="font-medium">Enter</span> to send, <span className="font-medium">Shift+Enter</span> for a new line.
         </div>
       </div>
     </div>
