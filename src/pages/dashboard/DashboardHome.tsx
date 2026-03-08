@@ -63,6 +63,7 @@ import ElectricalDashboard from "@/features/dashboard/components/trade-dashboard
 import MobileMechanicsDashboard from "@/features/dashboard/components/trade-dashboards/mechanics-dashboard";
 import RefrigerationDashboard from "@/features/dashboard/components/trade-dashboards/refrigeration-dashboard";
 import ApplianceRepairDashboard from "@/features/dashboard/components/trade-dashboards/appliance-dashboard";
+import { LoadsheddingStatusWidget } from "@/features/loadshedding/components/loadshedding-status-widget";
 import * as React from "react";
 
 /* ─── Dashboard greeting ─── */
