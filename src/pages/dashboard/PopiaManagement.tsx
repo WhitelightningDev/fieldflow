@@ -122,13 +122,7 @@ export default function PopiaManagement() {
       />
 
       {/* Overview KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="bg-card/70 backdrop-blur-sm">
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Quote consents</div>
-            <div className="text-2xl font-bold">{quoteConsents}/{totalQuotes}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Card className="bg-card/70 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground">Consent records</div>
@@ -138,7 +132,7 @@ export default function PopiaManagement() {
         <Card className="bg-card/70 backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground">Pending deletions</div>
-            <div className="text-2xl font-bold text-amber-600">{pendingDeletions}</div>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingDeletions}</div>
           </CardContent>
         </Card>
         <Card className="bg-card/70 backdrop-blur-sm">
