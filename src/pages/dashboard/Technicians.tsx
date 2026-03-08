@@ -162,6 +162,18 @@ export default function Technicians() {
           if (!open) setDeleteTechnicianId(null);
         }}
       />
+      {credsTechnicianId && company?.id && (
+        <TechnicianCredentialsDialog
+          technicianId={credsTechnicianId}
+          technicianName={data.technicians.find((t) => t.id === credsTechnicianId)?.name ?? ""}
+          companyId={company.id}
+          open={credsOpen}
+          onOpenChange={(open) => {
+            setCredsOpen(open);
+            if (!open) setCredsTechnicianId(null);
+          }}
+        />
+      )}
       <PageHeader
         title="Technicians"
         subtitle="Add technicians and assign trades for dispatching."
