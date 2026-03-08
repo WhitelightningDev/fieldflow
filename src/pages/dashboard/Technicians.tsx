@@ -9,6 +9,7 @@ import EditTechnicianDialog from "@/features/dashboard/components/dialogs/edit-t
 import EditTechnicianRatesDialog from "@/features/dashboard/components/dialogs/edit-technician-rates-dialog";
 import ImportTechniciansCsvDialog from "@/features/dashboard/components/dialogs/import-technicians-csv-dialog";
 import SetTechnicianAccessDialog from "@/features/dashboard/components/dialogs/set-technician-access-dialog";
+import TechnicianCredentialsDialog from "@/features/credentials/components/technician-credentials-dialog";
 import JobStatusBadge from "@/features/dashboard/components/job-status-badge";
 import PageHeader from "@/features/dashboard/components/page-header";
 import { useDashboardData } from "@/features/dashboard/store/dashboard-data-store";
