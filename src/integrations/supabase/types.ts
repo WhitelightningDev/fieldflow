@@ -835,6 +835,115 @@ export type Database = {
           },
         ]
       }
+      popia_consent_records: {
+        Row: {
+          company_id: string
+          consent_given: boolean
+          consent_type: string
+          consented_at: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          ip_address: string | null
+          notes: string | null
+          withdrawn_at: string | null
+        }
+        Insert: {
+          company_id: string
+          consent_given?: boolean
+          consent_type?: string
+          consented_at?: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          withdrawn_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          consent_given?: boolean
+          consent_type?: string
+          consented_at?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popia_consent_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      popia_deletion_requests: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          denial_reason: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          notes: string | null
+          requested_at: string
+          requester_email: string
+          requester_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          denial_reason?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          notes?: string | null
+          requested_at?: string
+          requester_email: string
+          requester_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          denial_reason?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          notes?: string | null
+          requested_at?: string
+          requester_email?: string
+          requester_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popia_deletion_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -1649,6 +1758,72 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      technician_credentials: {
+        Row: {
+          certificate_storage_path: string | null
+          company_id: string
+          created_at: string
+          credential_type: string
+          expiry_date: string | null
+          holder_name: string | null
+          id: string
+          issued_date: string | null
+          notes: string | null
+          registration_number: string
+          status: string
+          technician_id: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          certificate_storage_path?: string | null
+          company_id: string
+          created_at?: string
+          credential_type?: string
+          expiry_date?: string | null
+          holder_name?: string | null
+          id?: string
+          issued_date?: string | null
+          notes?: string | null
+          registration_number: string
+          status?: string
+          technician_id: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          certificate_storage_path?: string | null
+          company_id?: string
+          created_at?: string
+          credential_type?: string
+          expiry_date?: string | null
+          holder_name?: string | null
+          id?: string
+          issued_date?: string | null
+          notes?: string | null
+          registration_number?: string
+          status?: string
+          technician_id?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_credentials_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_credentials_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       technician_locations: {
         Row: {
