@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Sparkles, Trash2, X } from "lucide-react";
 import type { AiChatMessage } from "@/features/ai/hooks/use-ai-assistant-chat";
 import { useNavigate } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
 
 function Bubble({ role, children }: { role: "user" | "assistant"; children: React.ReactNode }) {
   const isUser = role === "user";
