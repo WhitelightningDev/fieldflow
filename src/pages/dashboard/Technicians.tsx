@@ -495,6 +495,14 @@ export default function Technicians() {
                           >
                             Set access
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setCredsTechnicianId(t.id);
+                              setCredsOpen(true);
+                            }}
+                          >
+                            Credentials
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
